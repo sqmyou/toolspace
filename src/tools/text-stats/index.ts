@@ -1,12 +1,33 @@
+import {
+  actions,
+  button,
+  note,
+  panel,
+  stat,
+  stats,
+  textarea,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
 import type { Tool } from '../../core/types'
 import { analyzeText, readingEaseLabel } from './stats'
+
+const SAMPLE =
+  'toolspace keeps every tool in your browser. Nothing you paste here is ever uploaded, ' +
+  'which is the whole point: your text stays on your machine.'
 
 function formatDuration(seconds: number): string {
   if (seconds <= 0) return '0s'
   const minutes = Math.floor(seconds / 60)
   const rest = seconds % 60
   return minutes ? `${minutes}m ${rest}s` : `${rest}s`
+}
+
+/** Colour the readability score so a glance is enough to judge the text. */
+function easeTone(score: number): 'ok' | 'warn' | 'danger' {
+  if (score >= 60) return 'ok'
+  if (score >= 30) return 'warn'
+  return 'danger'
 }
 
 const tool: Tool = {
@@ -16,72 +37,82 @@ const tool: Tool = {
   category: 'Text',
   keywords: ['word count', 'character count', 'readability', 'flesch', 'gunning fog', 'reading time'],
   render(root) {
-    const input = el('textarea', {
-      class: 'ts-textarea',
+    const input = textarea({
       rows: 8,
       placeholder: 'Paste text to analyse…',
-      'aria-label': 'Text to analyse',
-    }) as HTMLTextAreaElement
+      mono: false,
+      onInput: () => update(),
+    })
 
-    const grid = el('div', { class: 'ts-stat-grid' })
-    const readout = el('div', { class: 'ts-copy-list' })
+    const figures = stats()
+    const readability = el('div', { class: 'ts-read-grid' })
 
-    function stat(label: string, value: string) {
-      return el('div', { class: 'ts-stat' }, el('span', { class: 'ts-muted' }, label), el('span', { class: 'ts-stat-value' }, value))
+    function score(label: string, value: string, hint: string, tone: 'ok' | 'warn' | 'danger') {
+      return el(
+        'div',
+        { class: `ts-read ts-read--${tone}` },
+        el('span', { class: 'ts-read__label' }, label),
+        el('span', { class: 'ts-read__value ts-k-mono' }, value),
+        el('span', { class: 'ts-read__hint' }, hint),
+      )
     }
 
     function update() {
-      const stats = analyzeText(input.value)
-      grid.replaceChildren(
-        stat('Characters', String(stats.characters)),
-        stat('Characters (no spaces)', String(stats.charactersNoSpaces)),
-        stat('Words', String(stats.words)),
-        stat('Unique words', String(stats.uniqueWords)),
-        stat('Sentences', String(stats.sentences)),
-        stat('Paragraphs', String(stats.paragraphs)),
-        stat('Lines', String(stats.lines)),
-        stat('Avg word length', stats.averageWordLength.toFixed(1)),
-        stat('Longest word', stats.longestWord || '—'),
-        stat('Reading time', formatDuration(stats.readingSeconds)),
-        stat('Speaking time', formatDuration(stats.speakingSeconds)),
+      const result = analyzeText(input.value)
+      figures.replaceChildren(
+        stat({ label: 'Words', value: String(result.words) }),
+        stat({ label: 'Characters', value: String(result.characters), hint: `${result.charactersNoSpaces} without spaces` }),
+        stat({ label: 'Sentences', value: String(result.sentences) }),
+        stat({ label: 'Paragraphs', value: String(result.paragraphs) }),
+        stat({ label: 'Unique words', value: String(result.uniqueWords) }),
+        stat({ label: 'Lines', value: String(result.lines) }),
+        stat({ label: 'Avg word length', value: result.averageWordLength.toFixed(1) }),
+        stat({ label: 'Longest word', value: result.longestWord || '—' }),
+        stat({ label: 'Reading time', value: formatDuration(result.readingSeconds) }),
+        stat({ label: 'Speaking time', value: formatDuration(result.speakingSeconds) }),
       )
-      readout.replaceChildren(
-        el(
-          'div',
-          { class: 'ts-copy-row' },
-          el('span', { class: 'ts-muted' }, 'Flesch reading ease'),
-          el('span', { class: 'ts-value' }, `${stats.fleschReadingEase.toFixed(1)} · ${readingEaseLabel(stats.fleschReadingEase)}`),
+      readability.replaceChildren(
+        score(
+          'Flesch reading ease',
+          result.fleschReadingEase.toFixed(1),
+          readingEaseLabel(result.fleschReadingEase),
+          easeTone(result.fleschReadingEase),
         ),
-        el(
-          'div',
-          { class: 'ts-copy-row' },
-          el('span', { class: 'ts-muted' }, 'Flesch–Kincaid grade'),
-          el('span', { class: 'ts-value' }, stats.fleschKincaidGrade.toFixed(1)),
-        ),
-        el(
-          'div',
-          { class: 'ts-copy-row' },
-          el('span', { class: 'ts-muted' }, 'Gunning Fog index'),
-          el('span', { class: 'ts-value' }, stats.gunningFog.toFixed(1)),
-        ),
+        score('Flesch–Kincaid grade', result.fleschKincaidGrade.toFixed(1), 'US school grade level', 'ok'),
+        score('Gunning Fog index', result.gunningFog.toFixed(1), 'Years of formal education', 'ok'),
       )
     }
 
-    input.addEventListener('input', update)
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'Text'), input),
-        el('h3', { class: 'ts-subhead' }, 'Counts'),
-        grid,
-        el('h3', { class: 'ts-subhead' }, 'Readability'),
-        readout,
-        el('p', { class: 'ts-note' }, 'Analysis runs entirely in your browser.'),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Text', icon: 'text' },
+          input,
+          actions(
+            button('Load sample', {
+              icon: 'refresh',
+              onClick: () => {
+                input.value = SAMPLE
+                update()
+              },
+            }),
+            button('Clear', {
+              icon: 'x',
+              onClick: () => {
+                input.value = ''
+                update()
+              },
+            }),
+          ),
+        ),
+        panel({ title: 'Counts', icon: 'hash' }, figures),
+        panel({ title: 'Readability', icon: 'eye' }, readability),
+        note('Analysis runs entirely in your browser.'),
       ),
     )
 
+    input.value = SAMPLE
     update()
   },
 }
