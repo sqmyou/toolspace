@@ -375,3 +375,7 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 .ts-stop-row { border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
 .ts-code { margin: 0; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-soft); font-family: var(--mono); font-size: 13px; white-space: pre-wrap; word-break: break-word; }
 @media (max-width: 620px) { .ts-slider-field { grid-template-columns: 1fr; } }
+
+/* Image converter */
+.ts-image-preview { max-width: 100%; max-height: 260px; border-radius: 10px; border: 1px solid var(--border); background: repeating-conic-gradient(#2a2a2a 0% 25%, #222 0% 50%) 0 0 / 20px 20px; }
+.ts-image-figure { display: flex; flex-direction: column; gap: 6px; margin: 0; align-items: flex-start; }
