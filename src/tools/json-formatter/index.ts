@@ -1,5 +1,16 @@
-import { el } from '../../core/dom'
-import { copyChip, download, readFileAsText } from '../../core/ui'
+import {
+  actions,
+  button,
+  checkbox,
+  field,
+  note,
+  outputBlock,
+  panel,
+  select,
+  textarea,
+  toolLayout,
+} from '../../core/components'
+import { download, readFileAsText } from '../../core/ui'
 import type { Tool } from '../../core/types'
 import { formatJson, jsonStats, parseJson, sortJsonValue, validateJson } from './json'
 
@@ -10,48 +21,57 @@ const tool: Tool = {
   category: 'Data',
   keywords: ['json', 'format', 'pretty', 'beautify', 'minify', 'validate', 'lint', 'sort'],
   render(root) {
-    const input = el('textarea', {
-      class: 'ts-textarea ts-mono',
-      rows: 12,
-      spellcheck: false,
-      placeholder: 'Paste JSON…',
-    }) as HTMLTextAreaElement
-
-    const output = el('pre', { class: 'ts-json-block' })
-    const error = el('p', { class: 'ts-error', hidden: true })
-    const stats = el('p', { class: 'ts-muted' })
+    const input = textarea({ rows: 12, placeholder: 'Paste JSON…' })
 
     let indent: number | '\t' = 2
     let sortKeys = false
     let value: unknown = null
     let valid = false
 
-    const indentSelect = el('select', { class: 'ts-select' }) as HTMLSelectElement
-    for (const [label, option] of [['2 spaces', '2'], ['4 spaces', '4'], ['Tab', 'tab'], ['Minify', '0']] as const) {
-      indentSelect.append(el('option', { value: option }, label))
-    }
-    const sortToggle = el('input', { type: 'checkbox' }) as HTMLInputElement
+    const indentSelect = select({
+      value: '2',
+      options: [
+        { value: '2', label: '2 spaces' },
+        { value: '4', label: '4 spaces' },
+        { value: 'tab', label: 'Tab' },
+        { value: '0', label: 'Minify' },
+      ],
+      onChange: (next) => {
+        indent = next === 'tab' ? '\t' : Number(next)
+        if (valid) output.setValue(pretty())
+      },
+    })
+
+    const sortToggle = checkbox({
+      label: 'Sort keys',
+      onChange: (checked) => {
+        sortKeys = checked
+        if (valid) output.setValue(pretty())
+      },
+    })
+
+    const error = note('', 'danger')
+    error.hidden = true
+    const output = outputBlock('', { label: 'Output', copy: () => pretty() })
+    output.hidden = true
 
     function pretty(): string {
       if (!valid) return ''
-      const target = sortKeys ? sortJsonValue(value) : value
-      return formatJson(target, indent)
+      return formatJson(sortKeys ? sortJsonValue(value) : value, indent)
     }
 
     function run() {
       const text = input.value
       if (!text.trim()) {
         error.hidden = true
-        output.textContent = ''
-        stats.textContent = ''
+        output.hidden = true
         valid = false
         return
       }
       const issue = validateJson(text)
       if (issue) {
         valid = false
-        output.textContent = ''
-        stats.textContent = ''
+        output.hidden = true
         error.textContent = issue.line
           ? `Invalid JSON — ${issue.message} (line ${issue.line}, column ${issue.column})`
           : `Invalid JSON — ${issue.message}`
@@ -61,22 +81,17 @@ const tool: Tool = {
       valid = true
       value = parseJson(text)
       error.hidden = true
-      output.textContent = pretty()
+      output.hidden = false
+      output.setValue(pretty())
       const info = jsonStats(value, text)
-      stats.textContent = `${info.nodes} values · depth ${info.depth} · ${info.bytes} bytes in`
+      output.setLabel(`Valid · ${info.nodes} values · depth ${info.depth} · ${info.bytes} bytes`)
     }
 
-    indentSelect.addEventListener('change', () => {
-      indent = indentSelect.value === 'tab' ? '\t' : Number(indentSelect.value)
-      if (valid) output.textContent = pretty()
-    })
-    sortToggle.addEventListener('change', () => {
-      sortKeys = sortToggle.checked
-      if (valid) output.textContent = pretty()
-    })
     input.addEventListener('input', run)
 
-    const fileInput = el('input', { type: 'file', accept: '.json,application/json,text/plain' }) as HTMLInputElement
+    const fileInput = document.createElement('input')
+    fileInput.type = 'file'
+    fileInput.accept = '.json,application/json,text/plain'
     fileInput.addEventListener('change', async () => {
       const file = fileInput.files?.[0]
       if (!file) return
@@ -85,32 +100,24 @@ const tool: Tool = {
     })
 
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el(
-          'div',
-          { class: 'ts-row ts-wrap ts-between' },
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Indent'), indentSelect),
-          el('label', { class: 'ts-inline-field' }, sortToggle, 'Sort keys'),
-          el('div', { class: 'ts-field ts-grow' }, el('label', {}, 'Load a file'), fileInput),
-        ),
-        el('div', { class: 'ts-field' }, el('label', {}, 'Input'), input),
-        error,
-        stats,
-        el(
-          'div',
-          { class: 'ts-row ts-between' },
-          el('h3', { class: 'ts-subhead' }, 'Output'),
-          el(
-            'div',
-            { class: 'ts-tool-actions' },
-            copyChip(pretty, 'Copy'),
-            el('button', { class: 'ts-button', type: 'button', onclick: () => download('formatted.json', pretty(), 'application/json') }, 'Download'),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'JSON', icon: 'braces' },
+          input,
+          actions(
+            field(indentSelect, { label: 'Indent', grow: false }),
+            sortToggle,
+            button('Load a file', { icon: 'upload', onClick: () => fileInput.click() }),
+            button('Download', {
+              icon: 'download',
+              onClick: () => download('formatted.json', pretty(), 'application/json'),
+            }),
           ),
         ),
+        error,
         output,
-        el('p', { class: 'ts-note' }, 'Your JSON is parsed in the browser and never uploaded.'),
+        note('Your JSON is parsed in the browser and never uploaded.'),
       ),
     )
 

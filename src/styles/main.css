@@ -926,7 +926,7 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 .ts-tool-body canvas,
 .ts-tool-body video {
   max-width: 100%;
-  max-height: var(--ts-media-max, 70vh);
+  max-height: min(var(--ts-media-max, 460px), 70vh);
   height: auto;
   object-fit: contain;
 }
@@ -1286,6 +1286,8 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 }
 
 /* --- Key/value rows ------------------------------------------------------- */
+/* A vertical list of key/value rows, e.g. one row per digest. */
+.ts-k-kvlist { display: flex; flex-direction: column; }
 .ts-k-kv {
   display: grid;
   grid-template-columns: minmax(84px, 140px) 1fr auto;

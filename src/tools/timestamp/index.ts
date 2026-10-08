@@ -1,4 +1,4 @@
-import { el } from '../../core/dom'
+import { actions, button, copyRow, note, panel, textField, toolLayout } from '../../core/components'
 import type { Tool } from '../../core/types'
 import {
   COMMON_ZONES,
@@ -20,40 +20,24 @@ const tool: Tool = {
   category: 'Data',
   keywords: ['timestamp', 'epoch', 'unix', 'date', 'time', 'timezone', 'iso', 'utc'],
   render(root) {
-    const input = el('input', {
-      class: 'ts-input ts-mono',
+    const input = textField({
       value: nowSeconds(),
       spellcheck: false,
-      'aria-label': 'Timestamp or date',
-    }) as HTMLInputElement
+      mono: true,
+      onInput: () => update(),
+    })
 
-    const error = el('p', { class: 'ts-error', hidden: true })
-    const interpretation = el('span', { class: 'ts-muted' })
-    const relative = el('span', { class: 'ts-badge ts-pass' })
-    const summary = el('div', { class: 'ts-copy-list' })
-    const zones = el('div', { class: 'ts-copy-list' })
+    const error = note('', 'danger')
+    error.hidden = true
+    const interpretation = document.createElement('span')
+    interpretation.className = 'ts-k-hint'
+    const relative = document.createElement('span')
+    relative.className = 'ts-k-badge'
 
-    function copyRow(label: string, value: string) {
-      const chip = el(
-        'button',
-        {
-          class: 'ts-copy-chip',
-          type: 'button',
-          title: `Copy ${value}`,
-          onclick: async () => {
-            try {
-              await navigator.clipboard.writeText(value)
-              chip.textContent = 'Copied'
-              setTimeout(() => (chip.textContent = value), 900)
-            } catch {
-              /* ignore */
-            }
-          },
-        },
-        value,
-      )
-      return el('div', { class: 'ts-copy-row' }, el('span', { class: 'ts-muted' }, label), chip)
-    }
+    const summary = document.createElement('div')
+    summary.className = 'ts-k-kvlist'
+    const zones = document.createElement('div')
+    zones.className = 'ts-k-kvlist'
 
     function useNow() {
       input.value = nowSeconds()
@@ -68,14 +52,14 @@ const tool: Tool = {
 
         const rel = relativeTo(date)
         relative.textContent = rel.text
-        relative.className = 'ts-badge ' + (rel.deltaMs < 0 ? 'ts-warn' : 'ts-pass')
+        relative.className = `ts-k-badge ts-k-badge--${rel.deltaMs < 0 ? 'warn' : 'ok'}`
 
         summary.replaceChildren(
           copyRow('ISO', toIso(date)),
           copyRow('UTC', formatInZone(date, 'UTC').formatted),
           copyRow('Local', date.toLocaleString()),
-          copyRow('Sec', String(Math.floor(date.getTime() / 1000))),
-          copyRow('ms', String(date.getTime())),
+          copyRow('Seconds', String(Math.floor(date.getTime() / 1000))),
+          copyRow('Milliseconds', String(date.getTime())),
         )
 
         zones.replaceChildren(
@@ -94,22 +78,18 @@ const tool: Tool = {
       }
     }
 
-    const nowButton = el('button', { class: 'ts-button', onclick: useNow }, 'Now')
-
-    input.addEventListener('input', update)
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'Timestamp or date'), input),
-        el('div', { class: 'ts-row ts-between' }, el('div', { class: 'ts-row' }, interpretation, relative), nowButton),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Value', icon: 'clock' },
+          input,
+          actions(interpretation, relative, button('Now', { icon: 'refresh', onClick: useNow })),
+        ),
         error,
-        el('h3', { class: 'ts-subhead' }, 'Values'),
-        summary,
-        el('h3', { class: 'ts-subhead' }, 'Same instant worldwide'),
-        zones,
-        el('p', { class: 'ts-note' }, 'Conversion uses your browser timezone data. Nothing is sent anywhere.'),
+        panel({ title: 'Same instant', icon: 'calendar' }, summary),
+        panel({ title: 'Around the world', icon: 'globe' }, zones),
+        note('Conversion uses your browser timezone data. Nothing is sent anywhere.'),
       ),
     )
 

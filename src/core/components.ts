@@ -457,14 +457,29 @@ export interface OutputOptions {
  * result", "JSON", "digest" and "file info" cases that were previously four
  * hand-rolled variations.
  */
-export function outputBlock(value: string | Node, options: OutputOptions = {}): HTMLElement {
+export interface OutputBlock extends HTMLElement {
+  body: HTMLElement
+  /** Replace the body contents without rebuilding the block. */
+  setValue: (value: string | Node) => void
+  /** Change the head label, e.g. to report a live status. */
+  setLabel: (label: string) => void
+}
+
+export function outputBlock(value: string | Node, options: OutputOptions = {}): OutputBlock {
   const body = el('div', { class: 'ts-k-out__body ts-k-mono' })
   body.append(typeof value === 'string' ? value : value)
-  const head = el('div', { class: 'ts-k-out__head' })
-  head.append(el('span', { class: `ts-k-out__label${options.tone ? ` is-${options.tone}` : ''}` }, options.label ?? 'Output'))
+  const label = el('span', { class: `ts-k-out__label${options.tone ? ` is-${options.tone}` : ''}` }, options.label ?? 'Output')
+  const head = el('div', { class: 'ts-k-out__head' }, label)
   if (options.meta) head.append(el('span', { class: 'ts-k-out__meta' }, options.meta))
   if (options.copy != null) head.append(copyButton(options.copy, { label: 'Copy', size: 'sm' }))
-  return el('div', { class: 'ts-k-out' }, head, body)
+  const root = el('div', { class: 'ts-k-out' }, head, body)
+  return Object.assign(root, {
+    body,
+    setValue: (next: string | Node) => body.replaceChildren(typeof next === 'string' ? next : next),
+    setLabel: (text: string) => {
+      label.textContent = text
+    },
+  })
 }
 
 export interface CopyButtonOptions {

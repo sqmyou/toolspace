@@ -1,4 +1,4 @@
-import { el } from '../../core/dom'
+import { actions, button, note, outputBlock, panel, textField, toolLayout } from '../../core/components'
 import type { Tool } from '../../core/types'
 import { yourLogic } from './tool'
 
@@ -7,7 +7,11 @@ import { yourLogic } from './tool'
  *   1. rename `slug` below to the folder name
  *   2. fill in the metadata
  *   3. move the real work into `tool.ts` and test it there
- *   4. build the UI in `render(root)`
+ *   4. compose the UI in `render(root)` from `core/components`
+ *
+ * The components in `core/components.ts` already carry the shared look,
+ * spacing and responsive behaviour. Prefer them over hand-built markup: a
+ * panel here, a field there, and the page matches every other tool.
  */
 const tool: Tool = {
   slug: 'tool',
@@ -16,21 +20,24 @@ const tool: Tool = {
   category: 'Misc',
   keywords: ['example', 'starter'],
   render(root) {
-    const input = el('input', { class: 'ts-output', placeholder: 'Type something…' }) as HTMLInputElement
-    const output = el('p', { class: 'ts-muted' })
+    const input = textField({ placeholder: 'Type something…' })
+    const output = outputBlock('')
 
     function run() {
-      output.textContent = yourLogic(input.value)
+      output.setValue(yourLogic(input.value))
     }
 
     input.addEventListener('input', run)
 
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'Input'), input),
-        el('div', { class: 'ts-field' }, el('label', {}, 'Result'), output),
+      toolLayout(
+        panel(
+          { title: 'Input', icon: 'braces' },
+          input,
+          actions(button('Run', { variant: 'primary', icon: 'play', onClick: run })),
+        ),
+        panel({ title: 'Result', icon: 'check' }, output),
+        note('This tool runs entirely in your browser. Nothing is uploaded.'),
       ),
     )
 
