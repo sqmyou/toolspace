@@ -1206,7 +1206,16 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
   cursor: pointer;
 }
 
-.ts-k-check { display: flex; align-items: flex-start; gap: 9px; font-size: 13.5px; cursor: pointer; }
+.ts-k-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 13.5px;
+  cursor: pointer;
+  /* Grow the tappable band to a finger width without shifting the layout. */
+  padding: 4px 0;
+  margin: -4px 0;
+}
 .ts-k-check input { margin-top: 3px; accent-color: var(--accent-strong); width: 16px; height: 16px; flex: none; }
 .ts-k-check__text { line-height: 1.4; }
 .ts-k-check small { color: var(--faint); }
@@ -1388,7 +1397,7 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 .ts-k-out__label.is-accent { color: var(--accent); }
 .ts-k-out__meta { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--faint); }
 .ts-k-out__head .ts-k-btn { margin-left: auto; }
-.ts-k-out__head .ts-k-out__meta + .ts-k-btn { margin-left: 0; }
+.ts-k-out__head .ts-k-out__meta:not([hidden]) + .ts-k-btn { margin-left: 0; }
 .ts-k-out__body {
   padding: 12px 14px;
   font-size: 13px;
@@ -1424,6 +1433,7 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
   border-radius: var(--radius);
   overflow: hidden;
 }
+.ts-k-stats:empty { display: none; }
 .ts-k-stat { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; background: var(--bg-soft); }
 /* A stat used as a standalone card rather than a cell in a strip. */
 .ts-k-stat--box { border: 1px solid var(--border); border-radius: var(--radius); }

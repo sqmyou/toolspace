@@ -29,7 +29,7 @@ const tool: Tool = {
     const outputArea = textarea({ rows: 10, readonly: true })
     const output = outputBlock('', { label: 'Output', copy: () => outputArea.value })
     output.body.replaceChildren(outputArea)
-    const meta = output.querySelector('.ts-k-out__meta') as HTMLElement
+    
 
     const delimiter = select({
       options: [
@@ -67,7 +67,7 @@ const tool: Tool = {
       if (!text.trim()) {
         outputArea.value = ''
         error.hidden = true
-        meta.textContent = ''
+        output.setMeta( '')
         output.setLabel('Output')
         return
       }
@@ -80,7 +80,7 @@ const tool: Tool = {
         error.textContent = jsonError ?? ''
         output.setLabel('CSV')
         const lines = csv.trim() ? csv.trim().split('\n').length : 0
-        meta.textContent = lines ? `${lines} line${lines === 1 ? '' : 's'}` : ''
+        output.setMeta( lines ? `${lines} line${lines === 1 ? '' : 's'}` : '')
       } else {
         const separator: Delimiter = delimiter.value === 'auto' ? detectDelimiter(text) : (delimiter.value as Delimiter)
         const parsed = csvToJson(text, { delimiter: separator, hasHeader })
@@ -88,7 +88,7 @@ const tool: Tool = {
         error.hidden = true
         output.setLabel('JSON')
         const rows = parseCsv(text, separator).length
-        meta.textContent = `${rows} row${rows === 1 ? '' : 's'} · ${separator === '\t' ? 'tab' : separator}`
+        output.setMeta( `${rows} row${rows === 1 ? '' : 's'} · ${separator === '\t' ? 'tab' : separator}`)
       }
     }
 

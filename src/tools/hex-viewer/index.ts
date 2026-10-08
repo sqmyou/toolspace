@@ -61,7 +61,7 @@ const tool: Tool = {
     dump.className = 'ts-pre ts-hex-dump'
     const dumpOut = outputBlock(dump, { label: 'Hex dump', meta: '16 bytes per line' })
     dumpOut.body.replaceChildren(dump)
-    const dumpMeta = dumpOut.querySelector('.ts-k-out__meta') as HTMLElement
+    
 
     const figure = stats()
     const conversions = document.createElement('div')
@@ -89,7 +89,7 @@ const tool: Tool = {
       const perLine = Number(bytesPerLine.value) || 16
 
       dump.textContent = bytes.length ? hexDump(bytes, { bytesPerLine: perLine }) : '(no bytes)'
-      dumpMeta.textContent = `${perLine} bytes per line`
+      dumpOut.setMeta( `${perLine} bytes per line`)
       figure.replaceChildren(
         stat({ label: 'Bytes', value: String(bytes.length) }),
         stat({ label: 'Bits', value: String(bytes.length * 8) }),

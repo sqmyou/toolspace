@@ -459,26 +459,37 @@ export interface OutputOptions {
  */
 export interface OutputBlock extends HTMLElement {
   body: HTMLElement
+  /** The live meta slot; create it up front so callers can always write to it. */
+  meta: HTMLElement
   /** Replace the body contents without rebuilding the block. */
   setValue: (value: string | Node) => void
   /** Change the head label, e.g. to report a live status. */
   setLabel: (label: string) => void
+  /** Change the head meta text. */
+  setMeta: (text: string) => void
 }
 
 export function outputBlock(value: string | Node, options: OutputOptions = {}): OutputBlock {
   const body = el('div', { class: 'ts-k-out__body ts-k-mono' })
   body.append(typeof value === 'string' ? value : value)
   const label = el('span', { class: `ts-k-out__label${options.tone ? ` is-${options.tone}` : ''}` }, options.label ?? 'Output')
-  const head = el('div', { class: 'ts-k-out__head' }, label)
-  if (options.meta) head.append(el('span', { class: 'ts-k-out__meta' }, options.meta))
+  const meta = el('span', { class: 'ts-k-out__meta' }, options.meta ?? '')
+  if (!options.meta) meta.hidden = true
+  const head = el('div', { class: 'ts-k-out__head' }, label, meta)
   if (options.copy != null) head.append(copyButton(options.copy, { label: 'Copy', size: 'sm' }))
   const root = el('div', { class: 'ts-k-out' }, head, body)
+  const setMeta = (text: string) => {
+    meta.textContent = text
+    meta.hidden = text === ''
+  }
   return Object.assign(root, {
     body,
+    meta,
     setValue: (next: string | Node) => body.replaceChildren(typeof next === 'string' ? next : next),
     setLabel: (text: string) => {
       label.textContent = text
     },
+    setMeta,
   })
 }
 

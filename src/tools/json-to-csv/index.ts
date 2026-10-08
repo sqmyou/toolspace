@@ -66,7 +66,7 @@ const tool: Tool = {
     const outputArea = textarea({ rows: 14, readonly: true })
     const output = outputBlock('', { label: 'Output', copy: () => outputArea.value })
     output.body.replaceChildren(outputArea)
-    const meta = output.querySelector('.ts-k-out__meta') as HTMLElement
+    
 
     const error = note('', 'danger')
     error.hidden = true
@@ -85,19 +85,19 @@ const tool: Tool = {
           const converted = jsonToCsv(parsed, { delimiter: separator, quoteAll })
           result = converted.csv
           output.setLabel('CSV')
-          meta.textContent = `${converted.rowCount} row${converted.rowCount === 1 ? '' : 's'} · ${converted.columns.length} column${converted.columns.length === 1 ? '' : 's'}`
+          output.setMeta( `${converted.rowCount} row${converted.rowCount === 1 ? '' : 's'} · ${converted.columns.length} column${converted.columns.length === 1 ? '' : 's'}`)
         } else {
           const rows = csvToJson(input.value, separator)
           result = JSON.stringify(rows, null, 2)
           output.setLabel('JSON')
-          meta.textContent = `${rows.length} row${rows.length === 1 ? '' : 's'}`
+          output.setMeta( `${rows.length} row${rows.length === 1 ? '' : 's'}`)
         }
         outputArea.value = result
         error.hidden = true
       } catch (err) {
         result = ''
         outputArea.value = ''
-        meta.textContent = ''
+        output.setMeta( '')
         error.textContent = err instanceof Error ? err.message : 'Could not convert that input.'
         error.hidden = false
       }
