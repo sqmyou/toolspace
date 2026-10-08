@@ -920,12 +920,90 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
    Tools render user files. A 6000px photo dropped into an <img> with no rules
    renders at its natural size and pushes the whole page sideways, so every
    image and canvas in a tool is clamped to its container by default. Tools
-   that need a different cap opt out with their own max-height.
+   that need a different cap opt out by setting `--ts-media-max` on an ancestor.
    ============================================================================ */
-.ts-tool img,
-.ts-tool canvas,
-.ts-tool video { max-width: 100%; height: auto; }
-.ts-tool canvas { max-width: 100%; }
+.ts-tool-body img,
+.ts-tool-body canvas,
+.ts-tool-body video {
+  max-width: 100%;
+  max-height: var(--ts-media-max, 70vh);
+  height: auto;
+  object-fit: contain;
+}
+/* A grid or flex track defaults to min-content width, so a wide image in a
+   column can still force the row to overflow. Let the tracks shrink. */
+.ts-tool-body figure,
+.ts-tool-body .ts-k-media,
+.ts-tool-body [class*="preview"],
+.ts-tool-body [class*="pane"],
+.ts-tool-body [class*="frame"],
+.ts-tool-body [class*="stage"] { min-width: 0; }
+.ts-tool-body svg { max-width: 100%; height: auto; }
+
+/* ============================================================================
+   Base controls
+   ----------------------------------------------------------------------------
+   A bare `<textarea>` or `<input>` renders as a browser default, which is the
+   single biggest reason a tool page reads as unfinished. Rather than edit
+   every tool, unclassed controls inside a tool body inherit the same look as
+   the kit. A tool that wants something different only has to set a class.
+   ============================================================================ */
+.ts-tool-body textarea:not([class]),
+.ts-tool-body select:not([class]),
+.ts-tool-body input:not([class]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]) {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--fg);
+  font-family: var(--sans);
+  font-size: 15px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.ts-tool-body textarea:not([class]) {
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.6;
+  resize: vertical;
+  tab-size: 2;
+}
+.ts-tool-body select:not([class]) {
+  padding-right: 32px;
+  appearance: none;
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 16px) calc(50% + 1px), calc(100% - 11px) calc(50% + 1px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+.ts-tool-body textarea:not([class]):hover:not(:focus),
+.ts-tool-body select:not([class]):hover:not(:focus),
+.ts-tool-body input:not([class]):hover:not(:focus) { border-color: var(--border-strong); }
+.ts-tool-body textarea:not([class]):focus,
+.ts-tool-body select:not([class]):focus,
+.ts-tool-body input:not([class]):focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.ts-tool-body input[type="checkbox"],
+.ts-tool-body input[type="radio"] { accent-color: var(--accent-strong); }
+.ts-tool-body ::file-selector-button {
+  margin-right: 10px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  color: var(--fg);
+  font-family: var(--sans);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.ts-tool-body ::file-selector-button:hover { border-color: var(--border-strong); }
 
 /* ============================================================================
    Component kit (`ts-k-*`)
