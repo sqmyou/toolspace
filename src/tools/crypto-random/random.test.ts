@@ -152,7 +152,8 @@ describe('randomPassphrase', () => {
 
   it('can append digits to each word', () => {
     const phrase = randomPassphrase(['alpha', 'bravo'], 2, '.', 2)
-    expect(phrase).toMatch(/^alpha\d\d\.bravo\d\d$|^bravo\d\d\.alpha\d\d$/)
+    // Words are drawn independently, so the same word may appear twice.
+    for (const part of phrase.split('.')) expect(part).toMatch(/^(alpha|bravo)\d\d$/)
   })
 
   it('rejects bad input', () => {
