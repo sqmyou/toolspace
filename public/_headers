@@ -1,8 +1,13 @@
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://i.ytimg.com; font-src 'self'; connect-src 'self' https://i.ytimg.com; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://i.ytimg.com; font-src 'self'; connect-src 'self' https://i.ytimg.com; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
   Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=(), usb=()
+
+# img-src allows blob: because the image tools decode a chosen file by handing
+# an object URL to an <img>. Without it the browser refuses the load and every
+# upload looks like a corrupt file. blob: is same-origin, in-memory and never
+# leaves the tab, so this does not weaken the privacy promise.
 
 # i.ytimg.com is the single third-party origin toolspace is allowed to talk to,
 # and only for the YouTube thumbnail grabber. The app is a hash-routed SPA, so
