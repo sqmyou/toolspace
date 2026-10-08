@@ -1,0 +1,15 @@
+.ts-bezier-css { font-family: var(--mono); font-size: 15px; font-weight: 600; color: var(--accent); }
+
+.ts-bezier-curve { max-width: 260px; margin: 12px 0; }
+.ts-bezier-svg { width: 100%; height: auto; display: block; overflow: visible; }
+.ts-bezier-axis { stroke: var(--border); stroke-width: 1; }
+.ts-bezier-handle { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.ts-bezier-line { fill: none; stroke: var(--accent); stroke-width: 2; }
+.ts-bezier-point { fill: var(--accent); }
+.ts-bezier-anchor { fill: var(--muted); }
+
+.ts-bezier-track { position: relative; height: 24px; margin: 8px 0 16px; border-radius: 999px; background: var(--bg-input); border: 1px solid var(--border); }
+.ts-bezier-ball { position: absolute; top: 2px; left: 0; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); }
+
+.ts-bezier-name { width: 110px; flex: none; }
+.ts-bezier-value { flex: 1; font-family: var(--mono); font-size: 13px; }
