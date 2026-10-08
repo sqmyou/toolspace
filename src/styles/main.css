@@ -161,6 +161,34 @@ a { color: inherit; }
 
 .ts-error { color: var(--danger); }
 
+.ts-textarea {
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--fg);
+  resize: vertical;
+  width: 100%;
+  tab-size: 2;
+}
+
+.ts-tool-wide { max-width: 860px; }
+
+.ts-select {
+  padding: 7px 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--fg);
+  font-family: var(--sans);
+  font-size: 14px;
+}
+.ts-inline-field { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.ts-wrap { flex-wrap: wrap; }
+
 input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 
 @media (max-width: 720px) {
