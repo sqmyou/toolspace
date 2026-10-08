@@ -314,11 +314,16 @@ export interface SegmentedOptions {
   onChange?: (value: string) => void
 }
 
+export interface Segmented extends HTMLElement {
+  /** Move the highlight without firing `onChange`, for external state changes. */
+  setValue: (value: string) => void
+}
+
 /**
  * A segmented control: a set of mutually exclusive choices shown as buttons.
  * Replaces the "select + Apply" pattern that made many tools feel unfinished.
  */
-export function segmented(options: SegmentedOptions): HTMLElement {
+export function segmented(options: SegmentedOptions): Segmented {
   const root = el('div', {
     class: 'ts-k-seg',
     role: 'radiogroup',
@@ -351,7 +356,12 @@ export function segmented(options: SegmentedOptions): HTMLElement {
     root.append(node)
   })
   paint()
-  return root
+  return Object.assign(root, {
+    setValue: (value: string) => {
+      current = value
+      paint()
+    },
+  })
 }
 
 /* -------------------------------------------------------------------------
