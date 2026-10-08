@@ -632,7 +632,11 @@ a { color: inherit; }
 }
 .ts-to-top.is-visible { opacity: 1; pointer-events: auto; }
 
-/* --- Shared tool components ---------------------------------------------- */
+/* --- Shared tool components ----------------------------------------------
+   The legacy class names (`ts-button`, `ts-input`, …) stay supported because
+   dozens of tools use them, but they now share one control language: a soft
+   "raised" fill, a real hover lift, an inset top highlight, and a visible
+   pressed state. The `ts-k-*` kit below is the newer, preferred layer. */
 .ts-tool { display: flex; flex-direction: column; gap: 16px; max-width: 640px; }
 .ts-tool-wide { max-width: 900px; }
 .ts-field { display: flex; flex-direction: column; gap: 6px; }
@@ -652,8 +656,10 @@ a { color: inherit; }
   color: var(--fg);
   font-family: var(--sans);
   font-size: 15px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
+.ts-input:hover:not(:focus),
+.ts-search:hover:not(:focus) { border-color: var(--border-strong); }
 .ts-input:focus,
 .ts-search:focus,
 .ts-textarea:focus,
@@ -662,34 +668,58 @@ a { color: inherit; }
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
+.ts-input::placeholder,
+.ts-textarea::placeholder { color: var(--faint); }
 .ts-output { font-family: var(--mono); letter-spacing: 0.02em; }
 
 .ts-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   padding: 10px 16px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
-  background: var(--bg-soft);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 88%, var(--fg) 2%), var(--bg-soft));
   color: var(--fg);
   cursor: pointer;
   font-family: var(--sans);
   font-size: 14px;
   font-weight: 500;
-  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+  letter-spacing: -0.005em;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--fg) 6%, transparent);
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
 }
-.ts-button:hover { border-color: var(--accent-line); }
-.ts-button:active { transform: translateY(1px); }
-.ts-primary { background: var(--accent-strong); color: var(--accent-ink); border-color: transparent; font-weight: 600; }
-.ts-primary:hover { filter: brightness(1.06); border-color: transparent; }
+.ts-button:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+.ts-button:active { transform: translateY(0); }
+.ts-button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.ts-primary {
+  background: linear-gradient(180deg, var(--accent-strong), var(--accent));
+  color: var(--accent-ink);
+  border-color: transparent;
+  font-weight: 600;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+.ts-primary:hover { filter: brightness(1.05); border-color: transparent; }
 
 .ts-select {
-  padding: 9px 10px;
+  padding: 9px 32px 9px 11px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
-  background: var(--bg-input);
+  background-color: var(--bg-input);
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 16px) calc(50% + 1px), calc(100% - 11px) calc(50% + 1px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
   color: var(--fg);
   font-family: var(--sans);
   font-size: 14px;
+  appearance: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
+.ts-select:hover { border-color: var(--border-strong); }
 
 .ts-textarea {
   font-family: var(--mono);
@@ -841,4 +871,417 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 
 @media (max-width: 620px) {
   .ts-slider-field { grid-template-columns: 1fr; }
+}
+
+/* ============================================================================
+   Media safety
+   ----------------------------------------------------------------------------
+   Tools render user files. A 6000px photo dropped into an <img> with no rules
+   renders at its natural size and pushes the whole page sideways, so every
+   image and canvas in a tool is clamped to its container by default. Tools
+   that need a different cap opt out with their own max-height.
+   ============================================================================ */
+.ts-tool img,
+.ts-tool canvas,
+.ts-tool video { max-width: 100%; height: auto; }
+.ts-tool canvas { max-width: 100%; }
+
+/* ============================================================================
+   Component kit (`ts-k-*`)
+   ----------------------------------------------------------------------------
+   The preferred layer for new tools. `src/core/components.ts` builds these
+   parts; a tool composes them instead of hand-rolling markup, so every page
+   shares the same spacing, states and responsive behaviour.
+   ============================================================================ */
+
+/* --- Layout --------------------------------------------------------------- */
+.ts-k-tool { display: flex; flex-direction: column; gap: 18px; max-width: 680px; }
+.ts-k-tool--wide { max-width: 960px; }
+
+.ts-k-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-soft);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.ts-k-panel__head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-elevated) 55%, transparent);
+}
+.ts-k-panel__head .ts-ic { color: var(--muted); }
+.ts-k-panel__title {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-family: var(--mono);
+  color: var(--fg);
+}
+.ts-k-panel__meta { margin-left: auto; font-family: var(--mono); font-size: 11.5px; color: var(--faint); }
+.ts-k-panel__body { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.ts-k-panel__body--flush { padding: 0; gap: 0; }
+
+.ts-k-section { display: flex; flex-direction: column; gap: 12px; }
+.ts-k-section__title {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: var(--faint);
+}
+
+.ts-k-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; align-items: start; }
+.ts-k-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--ts-k-min, 180px), 1fr)); gap: 10px; }
+.ts-k-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ts-k-spacer { flex: 1; }
+
+/* --- Fields --------------------------------------------------------------- */
+.ts-k-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ts-k-field--grow { flex: 1; }
+.ts-k-label { font-size: 12px; font-weight: 500; letter-spacing: 0.02em; color: var(--muted); }
+.ts-k-hint { margin: 0; font-size: 12px; line-height: 1.5; color: var(--faint); }
+
+.ts-k-input,
+.ts-k-textarea,
+.ts-k-select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--fg);
+  font-family: var(--sans);
+  font-size: 15px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.ts-k-input:hover:not(:focus),
+.ts-k-textarea:hover:not(:focus),
+.ts-k-select:hover:not(:focus) { border-color: var(--border-strong); }
+.ts-k-input:focus,
+.ts-k-textarea:focus,
+.ts-k-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.ts-k-input::placeholder,
+.ts-k-textarea::placeholder { color: var(--faint); }
+.ts-k-textarea { font-size: 13px; line-height: 1.6; resize: vertical; tab-size: 2; }
+.ts-k-mono { font-family: var(--mono); }
+.ts-k-select {
+  padding-right: 32px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 16px) calc(50% + 1px), calc(100% - 11px) calc(50% + 1px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  appearance: none;
+  cursor: pointer;
+}
+
+.ts-k-check { display: flex; align-items: flex-start; gap: 9px; font-size: 13.5px; cursor: pointer; }
+.ts-k-check input { margin-top: 3px; accent-color: var(--accent-strong); width: 16px; height: 16px; flex: none; }
+.ts-k-check__text { line-height: 1.4; }
+.ts-k-check small { color: var(--faint); }
+
+.ts-k-slider { display: flex; flex-direction: column; gap: 6px; }
+.ts-k-slider__head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.ts-k-slider__value { font-size: 12.5px; color: var(--fg); }
+.ts-k-range {
+  width: 100%;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+.ts-k-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--accent-strong);
+  border: 2px solid var(--bg);
+  box-shadow: var(--shadow-sm);
+  cursor: grab;
+}
+.ts-k-range::-moz-range-thumb {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--accent-strong);
+  border: 2px solid var(--bg);
+  cursor: grab;
+}
+.ts-k-range:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 3px; }
+
+/* --- Buttons -------------------------------------------------------------- */
+.ts-k-btn,
+.ts-k-iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 15px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 88%, var(--fg) 2%), var(--bg-soft));
+  color: var(--fg);
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--fg) 6%, transparent);
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.08s ease, color 0.15s ease;
+}
+.ts-k-btn .ts-ic,
+.ts-k-iconbtn .ts-ic { display: inline-flex; flex: none; }
+.ts-k-btn:hover,
+.ts-k-iconbtn:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+.ts-k-btn:active,
+.ts-k-iconbtn:active { transform: translateY(0); }
+.ts-k-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.ts-k-btn--primary {
+  background: linear-gradient(180deg, var(--accent-strong), var(--accent));
+  color: var(--accent-ink);
+  border-color: transparent;
+  font-weight: 600;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+.ts-k-btn--primary:hover { filter: brightness(1.05); border-color: transparent; }
+.ts-k-btn--ghost { background: none; box-shadow: none; border-color: transparent; color: var(--muted); }
+.ts-k-btn--ghost:hover { background: var(--bg-input); border-color: var(--border); color: var(--fg); }
+.ts-k-btn--danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+.ts-k-btn--danger:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); border-color: var(--danger); }
+.ts-k-btn--sm { padding: 6px 11px; font-size: 12.5px; border-radius: var(--radius-sm); }
+.ts-k-btn--full { width: 100%; }
+.ts-k-iconbtn { padding: 8px; width: 36px; height: 36px; }
+.ts-k-iconbtn--sm { padding: 6px; width: 30px; height: 30px; }
+.ts-k-iconbtn--ghost { background: none; box-shadow: none; border-color: transparent; color: var(--muted); }
+.ts-k-iconbtn--ghost:hover { background: var(--bg-input); border-color: var(--border); color: var(--fg); }
+.ts-k-iconbtn--danger { color: var(--danger); }
+.ts-k-iconbtn--danger:hover { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+
+/* --- Segmented control ---------------------------------------------------- */
+.ts-k-seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 3px;
+  border-radius: calc(var(--radius) + 2px);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+}
+.ts-k-seg__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 7px 13px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.ts-k-seg__item:hover { color: var(--fg); background: color-mix(in srgb, var(--bg-soft) 70%, transparent); }
+.ts-k-seg__item.is-on {
+  background: var(--bg-elevated);
+  border-color: var(--border-strong);
+  color: var(--fg);
+  box-shadow: var(--shadow-sm);
+}
+.ts-k-seg__label { font-size: 13px; font-weight: 500; }
+.ts-k-seg__hint { font-family: var(--mono); font-size: 10.5px; color: var(--faint); }
+.ts-k-seg__item.is-on .ts-k-seg__hint { color: var(--muted); }
+
+/* --- Dropzone ------------------------------------------------------------- */
+.ts-k-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 26px 20px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg-input);
+  text-align: center;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.ts-k-drop.is-dragging { border-color: var(--accent); background: var(--accent-soft); }
+.ts-k-drop__icon { color: var(--muted); display: inline-flex; }
+.ts-k-drop.is-dragging .ts-k-drop__icon { color: var(--accent); }
+.ts-k-drop__label { font-size: 14px; font-weight: 500; }
+.ts-k-drop__hint { font-size: 12px; color: var(--faint); }
+.ts-k-drop__input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+/* --- Output --------------------------------------------------------------- */
+.ts-k-out {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-input);
+  overflow: hidden;
+}
+.ts-k-out__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px 7px 13px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-elevated) 45%, transparent);
+}
+.ts-k-out__label {
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+}
+.ts-k-out__label.is-ok { color: var(--ok); }
+.ts-k-out__label.is-warn { color: var(--warn); }
+.ts-k-out__label.is-danger { color: var(--danger); }
+.ts-k-out__label.is-accent { color: var(--accent); }
+.ts-k-out__meta { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--faint); }
+.ts-k-out__head .ts-k-btn { margin-left: auto; }
+.ts-k-out__head .ts-k-out__meta + .ts-k-btn { margin-left: 0; }
+.ts-k-out__body {
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  max-height: 360px;
+  overflow: auto;
+}
+
+/* --- Key/value rows ------------------------------------------------------- */
+.ts-k-kv {
+  display: grid;
+  grid-template-columns: minmax(84px, 140px) 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+.ts-k-kv:last-child { border-bottom: none; }
+.ts-k-kv__label { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--faint); }
+.ts-k-kv__value { font-size: 13px; overflow-wrap: anywhere; }
+
+/* --- Stats ---------------------------------------------------------------- */
+.ts-k-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.ts-k-stat { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; background: var(--bg-soft); }
+.ts-k-stat__value { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.ts-k-stat__label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--faint); }
+.ts-k-stat__hint { font-size: 11px; color: var(--muted); }
+
+/* --- Badge / note --------------------------------------------------------- */
+.ts-k-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.ts-k-badge--ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
+.ts-k-badge--warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
+.ts-k-badge--danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+.ts-k-badge--accent { color: var(--accent); border-color: var(--accent-line); }
+
+.ts-k-note {
+  margin: 0;
+  padding: 11px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-elevated) 45%, transparent);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.ts-k-note--ok { border-color: color-mix(in srgb, var(--ok) 35%, transparent); color: var(--ok); }
+.ts-k-note--warn { border-color: color-mix(in srgb, var(--warn) 40%, transparent); color: var(--warn); }
+.ts-k-note--danger { border-color: color-mix(in srgb, var(--danger) 40%, transparent); color: var(--danger); }
+
+/* --- Media frame ---------------------------------------------------------- */
+.ts-k-media {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-input);
+  overflow: hidden;
+}
+.ts-k-media--checker {
+  background-color: #fff;
+  background-image:
+    linear-gradient(45deg, #d8d8d8 25%, transparent 25%),
+    linear-gradient(-45deg, #d8d8d8 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #d8d8d8 75%),
+    linear-gradient(-45deg, transparent 75%, #d8d8d8 75%);
+  background-size: 18px 18px;
+  background-position: 0 0, 0 9px, 9px -9px, -9px 0;
+}
+.ts-k-media__img {
+  display: block;
+  max-width: 100%;
+  max-height: var(--ts-k-media-h, 420px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+}
+
+/* --- Table ---------------------------------------------------------------- */
+.ts-k-tablewrap { overflow: auto; max-height: 440px; border: 1px solid var(--border); border-radius: var(--radius); }
+.ts-k-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.ts-k-table th,
+.ts-k-table td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.ts-k-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-soft);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.ts-k-table tbody tr:hover { background: color-mix(in srgb, var(--bg-elevated) 40%, transparent); }
+.ts-k-table tbody tr:last-child td { border-bottom: none; }
+
+@media (max-width: 560px) {
+  .ts-k-kv { grid-template-columns: 1fr auto; }
+  .ts-k-kv__label { grid-column: 1 / -1; }
+  .ts-k-panel__body { padding: 14px; }
+  .ts-k-seg { width: 100%; }
+  .ts-k-seg__item { flex: 1; align-items: center; }
 }
