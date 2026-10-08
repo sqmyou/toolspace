@@ -553,9 +553,10 @@ export interface Chip {
 
 /**
  * A wrapping row of small selectable tokens — examples, presets, filters.
- * Pass `selected` to have the row manage the active chip itself.
+ * Pass `selected` to have the row manage a single active chip, or `multi` to
+ * let each chip toggle independently.
  */
-export function chips(items: Chip[], options: { selected?: string } = {}): HTMLElement {
+export function chips(items: Chip[], options: { selected?: string; multi?: boolean } = {}): HTMLElement {
   const row = el('div', { class: 'ts-k-chips' })
   const nodes = items.map((item) => {
     const value = item.value ?? item.label
@@ -567,6 +568,8 @@ export function chips(items: Chip[], options: { selected?: string } = {}): HTMLE
         if (options.selected !== undefined) {
           for (const other of nodes) other.classList.remove('ts-chip-active')
           node.classList.add('ts-chip-active')
+        } else if (options.multi) {
+          node.classList.toggle('ts-chip-active')
         }
         item.onClick(value)
       },
