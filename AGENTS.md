@@ -62,3 +62,13 @@ npm run build
   canvas read (and thus a real download) works.
 - Adding a third-party image host means updating the CSP in `public/_headers`
   **and** the honesty copy in `src/ui/app.ts` and `README.md`.
+- **A bare `python3 -m http.server` does not apply `_headers`,** so it cannot
+  reproduce a CSP bug. To exercise the real policy, read the
+  `Content-Security-Policy` line out of `public/_headers` and send it from a
+  small custom handler; that is how the `blob:` gap in `img-src` was found.
+  `frame-ancestors 'none'` also blocks iframe test harnesses on purpose - relax
+  that one directive in the local server, not in the repo.
+- **Image uploads need `blob:` in `img-src`.** Image tools hand the chosen file
+  to an `<img>` as an object URL. Without `blob:` the load is refused and the
+  file looks corrupt. `createImageBitmap(blob)` is not governed by `img-src`, so
+  a canvas path can work while the preview stays blank.
