@@ -308,3 +308,9 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 .ts-unicode-cell { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-soft); }
 .ts-unicode-glyph { font-size: 24px; line-height: 1.2; }
 .ts-mono { font-family: var(--mono); }
+
+/* URL editor */
+.ts-param-list { display: flex; flex-direction: column; gap: 8px; }
+.ts-param-row { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(160px, 2fr) auto; gap: 8px; align-items: center; }
+.ts-icon-button { padding: 10px 12px; }
+@media (max-width: 560px) { .ts-param-row { grid-template-columns: 1fr auto; } .ts-param-row > .ts-input:first-child { grid-column: 1 / -1; } }
