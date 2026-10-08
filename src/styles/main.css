@@ -1129,6 +1129,8 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
   display: flex;
   align-items: center;
   gap: 9px;
+  /* The meta is allowed to wrap to a second line when the title is long. */
+  flex-wrap: wrap;
   padding: 11px 16px;
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg-elevated) 55%, transparent);

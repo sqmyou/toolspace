@@ -1,16 +1,34 @@
 import { el } from '../../core/dom'
-import { copyChip } from '../../core/ui'
+import {
+  copyButton,
+  field,
+  grid,
+  note,
+  panel,
+  stat,
+  stats,
+  textarea,
+  textField,
+  toolLayout,
+} from '../../core/components'
 import type { Tool } from '../../core/types'
 import { applyDiscount, marginAndMarkup, percentBreakdown, percentChange, percentOf, percentOfTotal, reversePercent, round } from './percentage'
 
 function numberField(label: string, value: string) {
-  const input = el('input', { class: 'ts-input ts-mono', type: 'number', value, 'aria-label': label }) as HTMLInputElement
-  return { input, node: el('div', { class: 'ts-field' }, el('label', {}, label), input) }
+  const input = textField({ value, type: 'number', mono: true, onInput: () => {} })
+  input.setAttribute('aria-label', label)
+  return { input, node: field(input, { label }) }
 }
 
 function resultRow(label = 'Result') {
-  const value = el('code', { class: 'ts-percent-value' })
-  const node = el('div', { class: 'ts-copy-row' }, el('span', { class: 'ts-muted ts-percent-name' }, label), value, copyChip(() => value.textContent ?? '', 'Copy'))
+  const value = el('span', { class: 'ts-percent-value' })
+  const node = el(
+    'div',
+    { class: 'ts-percent-result' },
+    el('span', { class: 'ts-percent-result__label' }, label),
+    value,
+    copyButton(() => value.textContent ?? '', { size: 'sm' }),
+  )
   return { value, node }
 }
 
@@ -41,8 +59,8 @@ const tool: Tool = {
     const discountResult = resultRow()
     const marginResult = resultRow()
 
-    const breakdownInput = el('textarea', { class: 'ts-textarea ts-mono', rows: 3, spellcheck: false }, '1, 1, 2') as HTMLTextAreaElement
-    const breakdownOut = el('div', { class: 'ts-copy-list' })
+    const breakdownInput = textarea({ rows: 3, value: '1, 1, 2', placeholder: '1, 1, 2', onInput: () => compute() })
+    const breakdownOut = stats()
 
     function safe(target: HTMLElement, compute: () => string) {
       try {
@@ -61,39 +79,66 @@ const tool: Tool = {
       safe(discountResult.value, () => `${round(applyDiscount(number(price), number(discount)))}`)
       safe(marginResult.value, () => {
         const result = marginAndMarkup(number(cost), number(sellPrice))
-        return `${round(result.margin)}% margin · ${round(result.markup)}% markup`
+        return `${round(result.margin)}% · ${round(result.markup)}%`
       })
 
-      breakdownOut.replaceChildren()
       try {
         const values = breakdownInput.value.split(/[\s,;]+/).filter(Boolean).map(Number)
-        for (const share of percentBreakdown(values)) breakdownOut.append(el('div', { class: 'ts-copy-row' }, el('code', { class: 'ts-percent-value' }, `${round(share)}%`)))
+        breakdownOut.replaceChildren(...percentBreakdown(values).map((share) => stat({ label: 'Share', value: `${round(share)}%` })))
       } catch (err) {
-        breakdownOut.append(el('p', { class: 'ts-error' }, err instanceof Error ? err.message : 'Could not read those values.'))
+        breakdownOut.replaceChildren(stat({ label: 'Error', value: err instanceof Error ? err.message : 'Could not read those values.' }))
       }
     }
 
     for (const { input } of [ofPercent, ofValue, partValue, totalValue, changeFrom, changeTo, reverseResult, reversePercentValue, price, discount, cost, sellPrice]) input.addEventListener('input', compute)
-    breakdownInput.addEventListener('input', compute)
 
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el(
-          'div',
-          { class: 'ts-percent-grid' },
-          el('div', { class: 'ts-percent-card' }, el('h3', { class: 'ts-subhead' }, 'Share of a value'), ofPercent.node, ofValue.node, shareResult.node),
-          el('div', { class: 'ts-percent-card' }, el('h3', { class: 'ts-subhead' }, 'Part as a share'), partValue.node, totalValue.node, totalResult.node),
-          el('div', { class: 'ts-percent-card' }, el('h3', { class: 'ts-subhead' }, 'Change between two values'), changeFrom.node, changeTo.node, changeResult.node),
-          el('div', { class: 'ts-percent-card' }, el('h3', { class: 'ts-subhead' }, 'Reverse a change'), reverseResult.node, reversePercentValue.node, reverseOut.node),
-          el('div', { class: 'ts-percent-card' }, el('h3', { class: 'ts-subhead' }, 'Discount'), price.node, discount.node, discountResult.node),
-          el('div', { class: 'ts-percent-card' }, el('h3', { class: 'ts-subhead' }, 'Margin and markup'), cost.node, sellPrice.node, marginResult.node),
+      toolLayout(
+        { wide: true },
+        grid(300,
+          panel(
+          { title: 'Share of a value', icon: 'hash', meta: 'a% of b' },
+          ofPercent.node,
+          ofValue.node,
+          shareResult.node,
         ),
-        el('h3', { class: 'ts-subhead' }, 'Split values into shares'),
-        breakdownInput,
-        breakdownOut,
-        el('p', { class: 'ts-note' }, 'Dividing by zero shows a dash rather than Infinity. Margin is profit over price, markup is profit over cost.'),
+        panel(
+          { title: 'Part as a share', icon: 'ruler', meta: 'part ÷ total' },
+          partValue.node,
+          totalValue.node,
+          totalResult.node,
+        ),
+        panel(
+          { title: 'Change between two values', icon: 'arrowUp', meta: 'from → to' },
+          changeFrom.node,
+          changeTo.node,
+          changeResult.node,
+        ),
+        panel(
+          { title: 'Reverse a change', icon: 'arrowDown', meta: 'undo a %' },
+          reverseResult.node,
+          reversePercentValue.node,
+          reverseOut.node,
+        ),
+        panel(
+          { title: 'Discount', icon: 'eraser', meta: 'price − %' },
+          price.node,
+          discount.node,
+          discountResult.node,
+        ),
+        panel(
+          { title: 'Margin and markup', icon: 'sliders', meta: 'cost vs price' },
+          cost.node,
+          sellPrice.node,
+          marginResult.node,
+        ),
+        panel(
+          { title: 'Split values into shares', icon: 'layers' },
+          breakdownInput,
+          breakdownOut,
+        ),
+        ),
+        note('Dividing by zero shows a dash rather than Infinity. Margin is profit over price, markup is profit over cost.'),
       ),
     )
 
