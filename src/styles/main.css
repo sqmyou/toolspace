@@ -1125,6 +1125,10 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
   box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
+/* Panels default to content height. `--fill` is for the side-by-side case
+   where both panels should reach the same bottom edge. */
+.ts-k-panel--fill { display: flex; flex-direction: column; }
+.ts-k-panel--fill > .ts-k-panel__body { flex: 1; }
 .ts-k-panel__head {
   display: flex;
   align-items: center;

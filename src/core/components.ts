@@ -41,6 +41,12 @@ export interface PanelOptions {
   icon?: IconName | string
   /** Let the body sit flush against the panel edges (tables, dropzones). */
   flush?: boolean
+  /**
+   * Stretch the panel to fill its flex/grid track. Without this a panel in a
+   * `split()` or `grid()` only grows as far as its own content, so two
+   * side-by-side panels end up ragged.
+   */
+  fill?: boolean
 }
 
 export type Panel = HTMLElement & { body: HTMLElement }
@@ -56,7 +62,7 @@ export type Panel = HTMLElement & { body: HTMLElement }
 export function panel(options: PanelOptions = {}, ...children: (Node | string)[]): Panel {
   const body = el('div', { class: `ts-k-panel__body${options.flush ? ' ts-k-panel__body--flush' : ''}` })
   body.append(...children)
-  const root = el('section', { class: 'ts-k-panel' }) as Panel
+  const root = el('section', { class: `ts-k-panel${options.fill ? ' ts-k-panel--fill' : ''}` }) as Panel
   if (options.title) {
     const head = el('header', { class: 'ts-k-panel__head' })
     if (options.icon) head.append(iconEl(options.icon, 15))
