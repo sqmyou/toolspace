@@ -1,0 +1,20 @@
+.ts-spec-list { display: flex; flex-direction: column; gap: 4px; }
+
+.ts-spec-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-left-color: var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-input);
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+.ts-spec-top { border-left-color: var(--accent-strong); }
+.ts-spec-selector { flex: 1; overflow-wrap: anywhere; }
+.ts-spec-score { color: var(--accent-strong); flex: none; }
+.ts-spec-important { flex: none; color: var(--danger); font-size: 12px; }
