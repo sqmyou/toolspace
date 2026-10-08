@@ -288,3 +288,6 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
   .ts-sidebar { position: static; height: auto; }
   .ts-main { padding: 24px 18px; }
 }
+
+/* Text statistics */
+.ts-stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin: 0 0 4px; }
