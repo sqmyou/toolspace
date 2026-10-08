@@ -1,5 +1,4 @@
-.ts-wf-term { font-family: var(--mono); overflow-wrap: anywhere; }
-.ts-wf-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ts-wf-summary { display: flex; flex-wrap: wrap; gap: 6px; }
 
 .ts-wf-bar-cell { width: 40%; }
 

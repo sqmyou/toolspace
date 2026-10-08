@@ -1,5 +1,19 @@
+import {
+  actions,
+  badge,
+  button,
+  checkbox,
+  copyButton,
+  field,
+  note,
+  panel,
+  select,
+  table,
+  textarea,
+  textField,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
-import { copyChip } from '../../core/ui'
 import type { Tool } from '../../core/types'
 import { frequency } from './wordfreq'
 
@@ -14,15 +28,30 @@ const tool: Tool = {
   category: 'Text',
   keywords: ['word', 'frequency', 'count', 'ngram', 'bigram', 'occurrences', 'analysis', 'keywords'],
   render(root) {
-    const input = el('textarea', { class: 'ts-textarea ts-mono', rows: 10, spellcheck: false }) as HTMLTextAreaElement
-    input.value = SAMPLE
-    const ngramSelect = el('select', { class: 'ts-select' }, el('option', { value: '1' }, 'Single words'), el('option', { value: '2' }, 'Two-word phrases'), el('option', { value: '3' }, 'Three-word phrases')) as HTMLSelectElement
-    const minLength = el('input', { class: 'ts-input ts-mono', type: 'number', min: '1', value: '1' }) as HTMLInputElement
-    const top = el('input', { class: 'ts-input ts-mono', type: 'number', min: '0', value: '25' }) as HTMLInputElement
-    const caseSensitive = el('input', { type: 'checkbox' }) as HTMLInputElement
-    const stopWords = el('input', { type: 'checkbox' }) as HTMLInputElement
-    const summary = el('p', { class: 'ts-muted' })
-    const table = el('tbody')
+    const input = textarea({
+      rows: 10,
+      mono: false,
+      value: SAMPLE,
+      onInput: () => run(),
+    })
+
+    const ngramSelect = select({
+      options: [
+        { value: '1', label: 'Single words' },
+        { value: '2', label: 'Two-word phrases' },
+        { value: '3', label: 'Three-word phrases' },
+      ],
+      value: '1',
+      onChange: () => run(),
+    })
+
+    const minLength = textField({ type: 'number', value: '1', mono: true, onInput: () => run() })
+    const top = textField({ type: 'number', value: '25', mono: true, onInput: () => run() })
+    let caseSensitive = false
+    let ignoreStopWords = false
+
+    const summary = el('div', { class: 'ts-wf-summary' })
+    const results = el('div', { class: 'ts-wf-results' })
     let exportText = ''
 
     function run() {
@@ -30,54 +59,76 @@ const tool: Tool = {
         ngramSize: Number(ngramSelect.value),
         minLength: Number(minLength.value) || 1,
         top: Number(top.value) || 0,
-        caseSensitive: caseSensitive.checked,
-        ignoreStopWords: stopWords.checked,
+        caseSensitive,
+        ignoreStopWords,
       })
-      summary.textContent = `${report.totalWords} words · ${report.uniqueWords} unique`
-      table.replaceChildren()
-      for (const entry of report.entries) {
-        table.append(
-          el(
-            'tr',
-            {},
-            el('td', { class: 'ts-wf-term' }, entry.term),
-            el('td', { class: 'ts-wf-num' }, String(entry.count)),
-            el(
-              'td',
-              { class: 'ts-wf-bar-cell' },
-              el('div', { class: 'ts-wf-bar' }, el('div', { class: 'ts-wf-bar-fill', style: `width:${entry.percent.toFixed(1)}%` })),
+
+      summary.replaceChildren(
+        badge(`${report.totalWords} words`, 'accent'),
+        badge(`${report.uniqueWords} unique`),
+        badge(`${report.entries.length} shown`),
+      )
+
+      results.replaceChildren(
+        table(
+          [
+            { key: 'term', label: 'Term', mono: true },
+            { key: 'count', label: 'Count' },
+            { key: 'share', label: 'Share' },
+            { key: 'percent', label: '%' },
+          ],
+          report.entries.map((entry) => ({
+            term: entry.term,
+            count: String(entry.count),
+            share: el(
+              'div',
+              { class: 'ts-wf-bar' },
+              el('div', { class: 'ts-wf-bar-fill', style: `width:${entry.percent.toFixed(1)}%` }),
             ),
-            el('td', { class: 'ts-wf-num' }, `${entry.percent.toFixed(1)}%`),
-          ),
-        )
-      }
+            percent: `${entry.percent.toFixed(1)}%`,
+          })),
+        ),
+      )
+
       exportText = report.entries.map((entry) => `${entry.term}\t${entry.count}\t${entry.percent.toFixed(2)}%`).join('\n')
     }
 
-    for (const control of [ngramSelect, minLength, top, caseSensitive, stopWords]) control.addEventListener('change', run)
-    for (const control of [minLength, top]) control.addEventListener('input', run)
-    input.addEventListener('input', run)
-
-    const field = (label: string, control: HTMLElement) => el('div', { class: 'ts-inline-field' }, el('label', {}, label), control)
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'Text'), input),
-        el(
-          'div',
-          { class: 'ts-row ts-wrap' },
-          field('Phrase length', ngramSelect),
-          field('Min length', minLength),
-          field('Show top', top),
-          el('label', { class: 'ts-inline-field' }, caseSensitive, 'Case sensitive'),
-          el('label', { class: 'ts-inline-field' }, stopWords, 'Ignore stop words'),
-          copyChip(() => exportText, 'Copy TSV'),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Text', icon: 'text' },
+          input,
+          actions(
+            button('Load sample', {
+              icon: 'refresh',
+              onClick: () => {
+                input.value = SAMPLE
+                run()
+              },
+            }),
+            button('Clear', {
+              icon: 'x',
+              onClick: () => {
+                input.value = ''
+                run()
+              },
+            }),
+          ),
         ),
-        summary,
-        el('div', { class: 'ts-table-wrap' }, el('table', { class: 'ts-table' }, el('thead', {}, el('tr', {}, el('th', {}, 'Term'), el('th', {}, 'Count'), el('th', {}, 'Share'), el('th', {}, '%'))), table)),
-        el('p', { class: 'ts-note' }, 'Words keep internal apostrophes and hyphens. Everything is counted in your browser.'),
+        panel(
+          { title: 'Counting', icon: 'sliders' },
+          actions(
+            field(ngramSelect, { label: 'Phrase length' }),
+            field(minLength, { label: 'Min length', grow: true }),
+            field(top, { label: 'Show top', grow: true }),
+            checkbox({ label: 'Case sensitive', onChange: (checked) => { caseSensitive = checked; run() } }),
+            checkbox({ label: 'Ignore stop words', onChange: (checked) => { ignoreStopWords = checked; run() } }),
+          ),
+        ),
+        actions(summary, copyButton(() => exportText, { label: 'Copy TSV', size: 'sm' })),
+        results,
+        note('Words keep internal apostrophes and hyphens. Everything is counted in your browser.'),
       ),
     )
 

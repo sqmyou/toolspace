@@ -1170,7 +1170,9 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 
 /* --- Fields --------------------------------------------------------------- */
 .ts-k-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.ts-k-field--grow { flex: 1; }
+/* `flex: 1` alone lets a field shrink to zero next to a wide sibling; give it
+   a sensible basis so it wraps to the next line instead of collapsing. */
+.ts-k-field--grow { flex: 1 1 150px; }
 .ts-k-label { font-size: 12px; font-weight: 500; letter-spacing: 0.02em; color: var(--muted); }
 .ts-k-hint { margin: 0; font-size: 12px; line-height: 1.5; color: var(--faint); }
 
