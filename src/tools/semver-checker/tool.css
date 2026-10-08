@@ -1,0 +1,3 @@
+.ts-semver-info { display: flex; flex-direction: column; gap: 4px; }
+.ts-ok { color: var(--accent-strong); }
+.ts-bad { color: var(--danger); }
