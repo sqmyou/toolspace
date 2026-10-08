@@ -7,6 +7,42 @@ function iconEl(tool: Tool, className: string): HTMLElement | null {
   return tool.icon ? el('span', { class: className, 'aria-hidden': 'true' }, tool.icon) : null
 }
 
+/* --------------------------------------------------------------------------
+   Theme. A stored choice wins; otherwise the OS preference decides. The
+   toggle only ever writes an explicit `data-theme`, so "system" is simply
+   the absence of a stored value.
+   -------------------------------------------------------------------------- */
+type Theme = 'dark' | 'light'
+const THEME_KEY = 'toolspace:theme'
+
+function storedTheme(): Theme | null {
+  try {
+    const value = localStorage.getItem(THEME_KEY)
+    return value === 'dark' || value === 'light' ? value : null
+  } catch {
+    return null
+  }
+}
+
+function effectiveTheme(): Theme {
+  return (
+    storedTheme() ??
+    (window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+  )
+}
+
+function applyTheme(theme: Theme): void {
+  document.documentElement.dataset.theme = theme
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute('content', theme === 'light' ? '#f4f1ea' : '#0b0e12')
+}
+
+/** Set the theme before first paint so there is no flash of the wrong one. */
+export function initTheme(): void {
+  applyTheme(effectiveTheme())
+}
+
 interface Palette {
   open(): void
 }
@@ -36,11 +72,7 @@ function commandPalette(onSelect: (slug: string) => void): Palette {
     },
     input,
     results,
-    el(
-      'div',
-      { class: 'ts-palette-foot' },
-      '↑↓ to move · Enter to open · Esc to close',
-    ),
+    el('div', { class: 'ts-palette-foot' }, '↑↓ to move · Enter to open · Esc to close'),
   )
   const backdrop = el(
     'div',
@@ -144,17 +176,12 @@ function toolCard(tool: Tool): HTMLElement {
   return el(
     'a',
     { class: 'ts-card', href: `#/${tool.slug}` },
-    el(
-      'span',
-      { class: 'ts-card-top' },
-      iconEl(tool, 'ts-card-icon'),
-      el('h3', {}, tool.name),
-    ),
+    el('span', { class: 'ts-card-top' }, iconEl(tool, 'ts-card-icon'), el('h3', {}, tool.name)),
     el('p', {}, tool.description),
   )
 }
 
-function home(palette: Palette): HTMLElement {
+function home(): HTMLElement {
   const section = el('section', { class: 'ts-section' })
 
   const search = el('input', {
@@ -256,20 +283,27 @@ function home(palette: Palette): HTMLElement {
     el(
       'div',
       { class: 'ts-home-hero' },
-      el('h1', {}, 'A junk drawer of tools that never upload your stuff.'),
+      el(
+        'h1',
+        {},
+        'The ',
+        el('span', { class: 'ts-accent' }, 'junk drawer'),
+        ' of developer tools.',
+      ),
       el(
         'p',
         { class: 'ts-lede' },
-        'Everything runs in your browser — no ads, no sign-up, no server. ',
-        'Your data never leaves this tab.',
+        'Everything runs in your browser — no ads, no sign-up, no server. Your data never leaves this tab.',
+      ),
+      el(
+        'ul',
+        { class: 'ts-promise' },
+        el('li', {}, `${tools.length} tools`),
+        el('li', {}, 'Works offline'),
+        el('li', {}, 'Nothing uploaded'),
       ),
     ),
-    el(
-      'div',
-      { class: 'ts-tool-actions', style: 'justify-content:center;margin-bottom:18px' },
-      el('button', { type: 'button', class: 'ts-button ts-primary', onclick: () => palette.open() }, 'Browse all tools'),
-    ),
-    el('div', { style: 'max-width:560px;margin:0 auto' }, search),
+    el('div', { style: 'max-width:560px;margin:0 auto 18px' }, search),
     catBar,
     section,
   )
@@ -295,20 +329,10 @@ function toolPage(tool: Tool, palette: Palette): HTMLElement {
     'nav',
     { class: 'ts-tool-nav', 'aria-label': 'Tool navigation' },
     previous
-      ? el(
-          'a',
-          { href: `#/${previous.slug}` },
-          el('small', {}, '← Previous'),
-          el('span', {}, previous.name),
-        )
+      ? el('a', { href: `#/${previous.slug}` }, el('small', {}, '← Previous'), el('span', {}, previous.name))
       : el('span', {}),
     next
-      ? el(
-          'a',
-          { class: 'ts-next', href: `#/${next.slug}` },
-          el('small', {}, 'Next →'),
-          el('span', {}, next.name),
-        )
+      ? el('a', { class: 'ts-next', href: `#/${next.slug}` }, el('small', {}, 'Next →'), el('span', {}, next.name))
       : el('span', {}),
   )
 
@@ -325,25 +349,12 @@ function toolPage(tool: Tool, palette: Palette): HTMLElement {
         el('span', { 'aria-hidden': 'true' }, '/'),
         el('span', {}, tool.category),
       ),
-      el(
-        'h1',
-        {},
-        iconEl(tool, 'ts-title-icon'),
-        tool.name,
-      ),
+      el('h1', {}, iconEl(tool, 'ts-title-icon'), tool.name),
       el('p', { class: 'ts-tool-desc' }, tool.description),
       el(
         'div',
         { class: 'ts-tool-actions' },
-        el(
-          'button',
-          {
-            type: 'button',
-            class: 'ts-button',
-            onclick: () => palette.open(),
-          },
-          'Find another tool',
-        ),
+        el('button', { type: 'button', class: 'ts-button', onclick: () => palette.open() }, 'Find another tool'),
       ),
     ),
     body,
@@ -358,6 +369,14 @@ function toolPage(tool: Tool, palette: Palette): HTMLElement {
 
   return section
 }
+
+const SUN =
+  '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.2 5.2l1.6 1.6M17.2 17.2l1.6 1.6M18.8 5.2l-1.6 1.6M6.8 17.2l-1.6 1.6"/></svg>'
+const MOON =
+  '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.2 8.2 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></svg>'
+
+const BRAND_MARK =
+  '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"><path d="M12 2.6 20.4 7.4v9.2L12 21.4 3.6 16.6V7.4z"/><circle cx="12" cy="12" r="3.1" fill="currentColor" stroke="none"/></svg>'
 
 export function mountApp(app: HTMLElement): void {
   const main = el('main', { class: 'ts-main', id: 'main' })
@@ -378,17 +397,46 @@ export function mountApp(app: HTMLElement): void {
     el('kbd', {}, 'Ctrl K'),
   )
 
+  const themeBtn = el('button', {
+    type: 'button',
+    class: 'ts-icon-btn',
+    'aria-label': 'Toggle colour theme',
+    title: 'Toggle colour theme',
+  }) as HTMLButtonElement
+
+  function paintThemeButton() {
+    const dark = effectiveTheme() === 'dark'
+    themeBtn.innerHTML = dark ? SUN : MOON
+    themeBtn.title = dark ? 'Switch to light theme' : 'Switch to dark theme'
+  }
+
+  themeBtn.addEventListener('click', () => {
+    const next: Theme = effectiveTheme() === 'dark' ? 'light' : 'dark'
+    try {
+      localStorage.setItem(THEME_KEY, next)
+    } catch {
+      /* private mode: the theme still applies for this session */
+    }
+    applyTheme(next)
+    paintThemeButton()
+  })
+  paintThemeButton()
+
+  const brandMark = el('span', { class: 'ts-brand-mark', 'aria-hidden': 'true' })
+  brandMark.innerHTML = BRAND_MARK
+
   const header = el(
     'header',
     { class: 'ts-header' },
     el(
       'a',
       { class: 'ts-brand', href: '#/' },
-      el('span', { class: 'ts-brand-mark', 'aria-hidden': 'true' }, '⬡'),
-      ' toolspace',
+      brandMark,
+      el('span', { class: 'ts-brand-word' }, 'toolspace', el('span', { class: 'ts-brand-tld' }, '.dev')),
     ),
     el('span', { class: 'ts-header-spacer' }),
     searchTrigger,
+    themeBtn,
   )
 
   const toTop = el(
@@ -410,7 +458,7 @@ export function mountApp(app: HTMLElement): void {
     clear(main)
     window.scrollTo({ top: 0 })
     if (!slug) {
-      main.append(home(palette))
+      main.append(home())
       return
     }
     const tool = findTool(slug)

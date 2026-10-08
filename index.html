@@ -9,9 +9,35 @@
       content="A junk drawer of fast, privacy-first developer tools that run entirely in your browser. No ads, no accounts, no servers."
     />
     <meta name="color-scheme" content="dark light" />
-    <meta name="theme-color" content="#0e1116" />
+    <meta name="theme-color" content="#0b0e12" />
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
     <link rel="manifest" href="./manifest.webmanifest" />
+
+    <!-- Self-hosted type; preload the two faces used above the fold. -->
+    <link
+      rel="preload"
+      href="./fonts/ibm-plex-sans-latin-400-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="./fonts/ibm-plex-sans-latin-600-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="./fonts/ibm-plex-mono-latin-500-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
+    <!-- Theme before first paint, so there is no flash of the wrong palette. -->
+    <script src="./theme-init.js"></script>
 
     <meta property="og:type" content="website" />
     <meta property="og:title" content="toolspace — dev tools that never upload your stuff" />

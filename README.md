@@ -25,7 +25,7 @@ because there is no backend to host.
 - **Actually fast.** No framework at runtime, no analytics, no third-party
   scripts. The whole app is a few kilobytes.
 - **Built to be extended.** Drop a folder in `src/tools/` and it appears in the
-  sidebar. No central list to edit, so contributors don't collide.
+  catalogue. No central list to edit, so contributors don't collide.
 
 ## Quickstart
 
@@ -57,7 +57,7 @@ src/
     registry.ts   # auto-discovers tools via import.meta.glob
     dom.ts        # tiny `el()` helper, so tools need no framework
   ui/
-    app.ts        # sidebar, search, hash routing
+    app.ts        # shell, search, theme, hash routing
   tools/
     password-generator/
       index.ts    # UI: render(root)
