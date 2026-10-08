@@ -314,3 +314,9 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 .ts-param-row { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(160px, 2fr) auto; gap: 8px; align-items: center; }
 .ts-icon-button { padding: 10px 12px; }
 @media (max-width: 560px) { .ts-param-row { grid-template-columns: 1fr auto; } .ts-param-row > .ts-input:first-child { grid-column: 1 / -1; } }
+
+/* Regex tester */
+.ts-regex-preview { padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-soft); font-family: var(--mono); font-size: 13px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; margin-bottom: 12px; }
+.ts-regex-hit { background: rgba(110, 231, 183, 0.28); border-radius: 3px; }
+.ts-explain-list { display: flex; flex-direction: column; gap: 4px; }
+.ts-explain-row { display: grid; grid-template-columns: minmax(80px, auto) 1fr; gap: 12px; align-items: baseline; padding: 4px 0; }
