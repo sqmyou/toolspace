@@ -1,0 +1,40 @@
+.ts-exif-groups { display: flex; flex-direction: column; gap: 18px; }
+
+.ts-exif-section { display: flex; flex-direction: column; gap: 6px; }
+
+.ts-exif-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.ts-exif-table th {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-strong);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.ts-exif-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.ts-exif-key { font-family: var(--mono); color: var(--accent-strong); white-space: nowrap; }
+
+.ts-dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.ts-dropzone-active { border-color: var(--accent); color: var(--accent-strong); background: var(--bg-input); }
