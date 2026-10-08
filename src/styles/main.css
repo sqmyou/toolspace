@@ -379,3 +379,10 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 /* Image converter */
 .ts-image-preview { max-width: 100%; max-height: 260px; border-radius: 10px; border: 1px solid var(--border); background: repeating-conic-gradient(#2a2a2a 0% 25%, #222 0% 50%) 0 0 / 20px 20px; }
 .ts-image-figure { display: flex; flex-direction: column; gap: 6px; margin: 0; align-items: flex-start; }
+
+/* Timezone planner */
+.ts-grid-wrap { margin-top: 4px; }
+.ts-tz-work { color: #34d399; }
+.ts-tz-weekend { color: #fbbf24; }
+.ts-tz-night { color: var(--muted); opacity: 0.55; }
+.ts-tz-best { background: rgba(52, 211, 153, 0.08); }
