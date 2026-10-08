@@ -1,5 +1,24 @@
-.ts-hex-dump { max-height: 320px; overflow: auto; font-family: var(--mono); font-size: 12px; line-height: 1.5; white-space: pre; }
+/* Inside the shared output block the padding is already provided, so the
+   dumps only carry their own scroll limit. */
+.ts-hex-dump {
+  max-height: 320px;
+  overflow: auto;
+  padding: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre;
+}
 
 .ts-hex-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
 
-.ts-hex-value { max-height: 160px; overflow: auto; font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.ts-hex-value {
+  margin: 0;
+  padding: 0;
+  max-height: 160px;
+  overflow: auto;
+  font-family: var(--mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
