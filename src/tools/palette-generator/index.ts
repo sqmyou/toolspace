@@ -1,7 +1,7 @@
 import { el } from '../../core/dom'
 import { copyChip } from '../../core/ui'
 import type { Tool } from '../../core/types'
-import { ColorError, contrastRatio, generateShades, harmonies, parseHex, readableInk, rgbToHsl, toCssVariables, toHex, type Rgb } from './palette'
+import { ColorError, contrastRatio, generateShades, harmonies, parseHex, rgbToHsl, toCssVariables, toHex, type Rgb } from './palette'
 
 function round(value: number): number {
   return Math.round(value)
@@ -81,7 +81,6 @@ const tool: Tool = {
           el('div', { class: 'ts-inline-field' }, el('label', {}, 'Base colour'), picker),
           el('div', { class: 'ts-inline-field' }, el('label', {}, 'Hex'), hexInput),
           el('div', { class: 'ts-inline-field' }, el('label', {}, 'CSS prefix'), nameInput),
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Readable ink'), el('span', { class: 'ts-ink-preview' })),
         ),
         error,
         info,
@@ -100,10 +99,6 @@ const tool: Tool = {
     )
 
     update('#3b82f6', false)
-
-    // Prefer the platform picker when the browser supports it.
-    const ink = root.querySelector('.ts-ink-preview') as HTMLElement | null
-    if (ink) ink.style.color = readableInk(parseHex('#3b82f6'))
   },
 }
 
