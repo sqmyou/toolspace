@@ -302,3 +302,9 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 .ts-diff-add { background: rgba(52, 211, 153, 0.14); }
 .ts-diff-remove { background: rgba(255, 138, 128, 0.14); }
 .ts-diff-equal { color: var(--muted); }
+
+/* Unicode inspector */
+.ts-unicode-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.ts-unicode-cell { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-soft); }
+.ts-unicode-glyph { font-size: 24px; line-height: 1.2; }
+.ts-mono { font-family: var(--mono); }
