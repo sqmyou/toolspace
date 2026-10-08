@@ -197,7 +197,8 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 .ts-grow { flex: 1; }
 .ts-copy-list { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
 .ts-copy-row { display: flex; align-items: center; gap: 12px; }
-.ts-copy-row > .ts-muted { width: 48px; flex: none; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+.ts-copy-row > .ts-muted { min-width: 72px; flex: none; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+.ts-wrap-value { word-break: break-all; white-space: normal; line-height: 1.45; }
 .ts-copy-chip {
   flex: 1;
   text-align: left;
