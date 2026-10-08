@@ -1,0 +1,13 @@
+.ts-wf-term { font-family: var(--mono); overflow-wrap: anywhere; }
+.ts-wf-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.ts-wf-bar-cell { width: 40%; }
+
+.ts-wf-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-input);
+  overflow: hidden;
+}
+
+.ts-wf-bar-fill { height: 100%; background: var(--accent-strong); }

@@ -1,0 +1,15 @@
+.ts-ws-issues { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
+.ts-ws-issue {
+  padding: 2px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-input);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ts-ws-issue-on { border-color: var(--accent); color: var(--accent); }
+
+
+.ts-ws-hint { display: block; color: var(--muted); font-size: 12px; }
