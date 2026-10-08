@@ -2,6 +2,7 @@
 
 .ts-id-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   padding: 5px 10px;
@@ -10,6 +11,6 @@
   background: var(--bg-input);
 }
 
-.ts-id-row code { flex: 1; font-family: var(--mono); font-size: 13px; overflow-wrap: anywhere; }
+.ts-id-row code { flex: 1 1 12ch; min-width: 0; font-family: var(--mono); font-size: 13px; overflow-wrap: anywhere; }
 
-.ts-id-decode { display: flex; flex-direction: column; gap: 4px; }
+

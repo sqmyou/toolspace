@@ -1,7 +1,27 @@
-import { el } from '../../core/dom'
-import { copyChip } from '../../core/ui'
+import {
+  actions,
+  checkbox,
+  copyRow,
+  field,
+  kvList,
+  note,
+  outputBlock,
+  panel,
+  select,
+  textField,
+  toolLayout,
+} from '../../core/components'
 import type { Tool } from '../../core/types'
 import { convert, formatInBase, groupDigits, parseInBase } from './number'
+
+const BASE_LABEL: Record<number, string> = { 2: 'binary', 8: 'octal', 10: 'decimal', 16: 'hex' }
+
+function baseOptions() {
+  return Array.from({ length: 35 }, (_, index) => index + 2).map((base) => ({
+    value: String(base),
+    label: `Base ${base}${BASE_LABEL[base] ? ` (${BASE_LABEL[base]})` : ''}`,
+  }))
+}
 
 const tool: Tool = {
   slug: 'number-base',
@@ -16,103 +36,97 @@ const tool: Tool = {
     let grouping = 0
     let uppercase = false
 
-    const input = el('input', { class: 'ts-input ts-mono', value: '255', 'aria-label': 'Value' }) as HTMLInputElement
-    const error = el('p', { class: 'ts-error', hidden: true })
-    const outValue = el('code', { class: 'ts-mono ts-big-value' })
-    const table = el('div', { class: 'ts-copy-list' })
+    const input = textField({ value: '255', mono: true, onInput: () => run() })
+    const error = note('', 'danger')
+    error.hidden = true
+    const result = outputBlock('', { label: 'Result', copy: () => result.body.textContent ?? '' })
+    const rows = kvList()
 
-    function baseSelect(current: number, onChange: (value: number) => void): HTMLSelectElement {
-      const select = el('select', { class: 'ts-select' }) as HTMLSelectElement
-      for (let base = 2; base <= 36; base++) {
-        select.append(el('option', { value: String(base) }, `Base ${base}${base === 10 ? ' (decimal)' : base === 16 ? ' (hex)' : base === 8 ? ' (octal)' : base === 2 ? ' (binary)' : ''}`))
-      }
-      select.value = String(current)
-      select.addEventListener('change', () => onChange(Number(select.value)))
-      return select
-    }
-
-    const padSelect = el('select', { class: 'ts-select' }) as HTMLSelectElement
-    for (const bits of [0, 8, 16, 32, 64, 128]) padSelect.append(el('option', { value: String(bits) }, bits ? `Pad to ${bits} bits` : 'No padding'))
-    padSelect.addEventListener('change', () => {
-      padBits = Number(padSelect.value)
-      run()
+    const from = select({
+      options: baseOptions(),
+      value: String(inputBase),
+      onChange: (value) => {
+        inputBase = Number(value)
+        run()
+      },
     })
-
-    const groupSelect = el('select', { class: 'ts-select' }) as HTMLSelectElement
-    for (const size of [0, 4, 8]) groupSelect.append(el('option', { value: String(size) }, size ? `Group by ${size}` : 'No grouping'))
-    groupSelect.addEventListener('change', () => {
-      grouping = Number(groupSelect.value)
-      run()
+    const to = select({
+      options: baseOptions(),
+      value: String(outputBase),
+      onChange: (value) => {
+        outputBase = Number(value)
+        run()
+      },
     })
-
-    const upperBox = el('input', { type: 'checkbox' }) as HTMLInputElement
-    upperBox.addEventListener('change', () => {
-      uppercase = upperBox.checked
-      run()
+    const padding = select({
+      options: [0, 8, 16, 32, 64, 128].map((bits) => ({
+        value: String(bits),
+        label: bits ? `Pad to ${bits} bits` : 'No padding',
+      })),
+      value: '0',
+      onChange: (value) => {
+        padBits = Number(value)
+        run()
+      },
+    })
+    const groupBy = select({
+      options: [0, 4, 8].map((size) => ({ value: String(size), label: size ? `Group by ${size}` : 'No grouping' })),
+      value: '0',
+      onChange: (value) => {
+        grouping = Number(value)
+        run()
+      },
     })
 
     function run() {
       try {
         const value = parseInBase(input.value, inputBase)
-        const result = convert(input.value, inputBase, padBits, uppercase)
+        const converted = convert(input.value, inputBase, padBits, uppercase)
         error.hidden = true
-        outValue.textContent = formatInBase(value, outputBase, padBits)
-        const rows: [string, string][] = [
-          ['Decimal', result.decimal],
-          ['Hexadecimal', result.hex],
-          ['Octal', result.octal],
-          ['Binary', result.binary],
+        result.body.replaceChildren(formatInBase(value, outputBase, padBits))
+        result.setMeta(`base ${outputBase}`)
+        result.setLabel('Result')
+        const entries: [string, string][] = [
+          ['Decimal', converted.decimal],
+          ['Hexadecimal', converted.hex],
+          ['Octal', converted.octal],
+          ['Binary', converted.binary],
         ]
-        table.replaceChildren(
-          ...rows.map(([label, text]) => {
-            const display = grouping > 0 && (label === 'Binary' || label === 'Hexadecimal') ? groupDigits(text, grouping) : text
-            return el(
-              'div',
-              { class: 'ts-copy-row' },
-              el('span', { class: 'ts-muted' }, label),
-              el('code', { class: 'ts-mono ts-value' }, display),
-              copyChip(() => text),
-            )
+        rows.replaceChildren(
+          ...entries.map(([label, text]) => {
+            const display = grouping > 0 && (label === 'Binary' || label === 'Hexadecimal')
+              ? groupDigits(text, grouping)
+              : text
+            return copyRow(label, display)
           }),
         )
       } catch (err) {
         error.textContent = err instanceof Error ? err.message : 'Could not convert this value.'
         error.hidden = false
-        outValue.textContent = ''
-        table.replaceChildren()
+        result.body.replaceChildren('')
+        result.setMeta('')
+        rows.replaceChildren()
       }
     }
 
-    input.addEventListener('input', run)
-
-    const inputBaseSelect = baseSelect(inputBase, (value) => {
-      inputBase = value
-      run()
-    })
-    const outputBaseSelect = baseSelect(outputBase, (value) => {
-      outputBase = value
-      run()
-    })
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'Value'), input),
-        el(
-          'div',
-          { class: 'ts-row ts-wrap' },
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'From'), inputBaseSelect),
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'To'), outputBaseSelect),
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Padding'), padSelect),
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Grouping'), groupSelect),
-          el('label', { class: 'ts-inline-field' }, upperBox, 'Uppercase hex'),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Value', icon: 'hash' },
+          field(input, { label: 'Value' }),
+          actions(
+            field(from, { label: 'From', grow: true }),
+            field(to, { label: 'To', grow: true }),
+            field(padding, { label: 'Padding', grow: true }),
+            field(groupBy, { label: 'Grouping', grow: true }),
+          ),
+          checkbox({ label: 'Uppercase hex', onChange: (checked) => { uppercase = checked; run() } }),
+          error,
         ),
-        error,
-        el('div', { class: 'ts-field' }, el('label', {}, 'Result'), outValue),
-        el('h3', { class: 'ts-subhead' }, 'All bases'),
-        table,
-        el('p', { class: 'ts-note' }, 'Conversion uses arbitrary-precision integers, so large values stay exact.'),
+        result,
+        panel({ title: 'All bases', icon: 'layers' }, rows),
+        note('Conversion uses arbitrary-precision integers, so large values stay exact.'),
       ),
     )
 

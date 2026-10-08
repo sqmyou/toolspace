@@ -1,7 +1,16 @@
-import { el } from '../../core/dom'
-import { copyChip } from '../../core/ui'
+import {
+  chips,
+  copyRow,
+  kvList,
+  note,
+  panel,
+  textField,
+  toolLayout,
+} from '../../core/components'
 import type { Tool } from '../../core/types'
 import { computeSubnet, type SubnetInfo } from './cidr'
+
+const PREFIXES = [8, 16, 24, 25, 30, 32]
 
 const tool: Tool = {
   slug: 'cidr',
@@ -10,75 +19,59 @@ const tool: Tool = {
   category: 'Network',
   keywords: ['cidr', 'subnet', 'netmask', 'ipv4', 'ipv6', 'broadcast', 'network', 'networking'],
   render(root) {
-    const input = el('input', { class: 'ts-input ts-mono', value: '192.168.1.10/24', 'aria-label': 'CIDR block' }) as HTMLInputElement
-    const error = el('p', { class: 'ts-error', hidden: true })
-    const list = el('div', { class: 'ts-copy-list' })
-    const quick = el('div', { class: 'ts-row ts-wrap' })
-
-    function renderInfo(info: SubnetInfo) {
-      const entries: [string, string][] = [
-        ['Address', info.address],
-        ['Version', `IPv${info.version}`],
-        ['Prefix', `/${info.prefix}`],
-        ['Network', info.network],
-        ['Broadcast', info.broadcast],
-        ['First host', info.first],
-        ['Last host', info.last],
-        ['Netmask', info.netmask],
-        ['Wildcard', info.wildcard],
-        ['Addresses', BigInt(info.hostCount).toLocaleString()],
-        ['Scope', info.isPrivate ? 'Private / local' : 'Public'],
-      ]
-      list.replaceChildren(
-        ...entries.map(([label, value]) =>
-          el(
-            'div',
-            { class: 'ts-copy-row' },
-            el('span', { class: 'ts-muted' }, label),
-            el('code', { class: 'ts-mono ts-value' }, value),
-            copyChip(() => value),
-          ),
-        ),
-      )
-    }
+    const input = textField({
+      value: '192.168.1.10/24',
+      mono: true,
+      placeholder: '192.168.1.10/24',
+      onInput: () => run(),
+    })
+    const error = note('', 'danger')
+    error.hidden = true
+    const rows = kvList()
 
     function run() {
       try {
-        const info = computeSubnet(input.value)
+        const info: SubnetInfo = computeSubnet(input.value)
         error.hidden = true
-        renderInfo(info)
+        const entries: [string, string][] = [
+          ['Address', info.address],
+          ['Version', `IPv${info.version}`],
+          ['Prefix', `/${info.prefix}`],
+          ['Network', info.network],
+          ['Broadcast', info.broadcast],
+          ['First host', info.first],
+          ['Last host', info.last],
+          ['Netmask', info.netmask],
+          ['Wildcard', info.wildcard],
+          ['Addresses', BigInt(info.hostCount).toLocaleString()],
+          ['Scope', info.isPrivate ? 'Private / local' : 'Public'],
+        ]
+        rows.replaceChildren(...entries.map(([label, value]) => copyRow(label, value)))
       } catch (err) {
         error.textContent = err instanceof Error ? err.message : 'Could not parse this block.'
         error.hidden = false
-        list.replaceChildren()
+        rows.replaceChildren()
       }
     }
 
-    input.addEventListener('input', run)
-
-    for (const prefix of [8, 16, 24, 25, 30, 32]) {
-      quick.append(
-        el('button', {
-          class: 'ts-button',
-          type: 'button',
-          onclick: () => {
-            const address = input.value.split('/')[0] || '192.168.1.10'
-            input.value = `${address}/${prefix}`
-            run()
-          },
-        }, `/${prefix}`),
-      )
-    }
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'CIDR block'), input),
-        el('div', { class: 'ts-row ts-wrap' }, el('span', { class: 'ts-muted' }, 'IPv4 presets'), quick),
-        error,
-        list,
-        el('p', { class: 'ts-note' }, 'All subnet maths runs locally with arbitrary-precision arithmetic.'),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Block', icon: 'globe' },
+          input,
+          chips(PREFIXES.map((prefix) => ({
+            label: `/${prefix}`,
+            onClick: (value) => {
+              const address = input.value.split('/')[0] || '192.168.1.10'
+              input.value = `${address}${value}`
+              run()
+            },
+          }))),
+          error,
+        ),
+        panel({ title: 'Breakdown', icon: 'layers' }, rows),
+        note('All subnet maths runs locally with arbitrary-precision arithmetic.'),
       ),
     )
 
