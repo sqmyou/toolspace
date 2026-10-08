@@ -1,0 +1,4 @@
+.ts-format-main { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--accent); }
+
+.ts-format-name { width: 150px; flex: none; }
+.ts-format-value { flex: 1; font-family: var(--mono); font-size: 13px; overflow-wrap: anywhere; }

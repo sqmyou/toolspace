@@ -1,0 +1,13 @@
+.ts-contrast-ratio { font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--accent); }
+
+.ts-contrast-preview { padding: 18px; border: 1px solid var(--border); border-radius: var(--radius); margin: 12px 0; }
+.ts-contrast-preview p { margin: 0 0 8px; }
+.ts-contrast-preview p:last-child { margin-bottom: 0; }
+.ts-contrast-large { font-size: 24px; font-weight: 700; }
+.ts-contrast-small { font-size: 12px; }
+
+.ts-contrast-name { width: 170px; flex: none; }
+.ts-contrast-value { flex: 1; font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+
+.ts-swatch-row { display: flex; align-items: center; gap: 8px; }
+.ts-swatch { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); }
