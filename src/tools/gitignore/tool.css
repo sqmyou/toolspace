@@ -1,0 +1,7 @@
+.ts-git-decision { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+
+.ts-git-verdict { font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 999px; }
+.ts-git-ignored { background: #dc2626; color: #fff; }
+.ts-git-kept { background: #16a34a; color: #fff; }
+
+.ts-git-path { font-family: var(--mono); font-size: 13px; }
