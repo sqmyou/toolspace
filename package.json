@@ -1,0 +1,26 @@
+{
+  "name": "toolspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Fast, privacy-first developer tools that run entirely in your browser. No ads, no accounts, no servers.",
+  "license": "MIT",
+  "homepage": "https://toolspace.io",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sqmyou/toolspace.git"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "vitest": "^2.1.4"
+  }
+}
