@@ -360,3 +360,7 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 .ts-table { border-collapse: collapse; width: 100%; font-size: 13px; }
 .ts-table th, .ts-table td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
 .ts-table th { position: sticky; top: 0; background: var(--bg-soft); }
+
+/* Two-column layouts */
+.ts-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 720px) { .ts-two-col { grid-template-columns: 1fr; } }
