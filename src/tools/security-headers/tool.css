@@ -1,0 +1,23 @@
+.ts-headers-score { display: flex; align-items: center; gap: 12px; margin: 12px 0; }
+
+.ts-headers-grade { font-size: 26px; font-weight: 700; padding: 2px 12px; border-radius: var(--radius); }
+.ts-headers-good { background: #16a34a; color: #fff; }
+.ts-headers-weak { background: #ca8a04; color: #fff; }
+.ts-headers-bad { background: #dc2626; color: #fff; }
+
+.ts-headers-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.ts-headers-row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border: 1px solid var(--border); border-left-width: 3px; border-radius: var(--radius); background: var(--bg-input); }
+.ts-headers-good.ts-headers-row { border-left-color: #16a34a; }
+.ts-headers-weak.ts-headers-row { border-left-color: #ca8a04; }
+.ts-headers-missing.ts-headers-row { border-left-color: #6b7280; }
+.ts-headers-leaking.ts-headers-row { border-left-color: #9333ea; }
+
+.ts-headers-status { flex: none; width: 64px; font-size: 11px; font-weight: 700; text-transform: uppercase; padding-top: 2px; }
+.ts-headers-status-good { color: #16a34a; }
+.ts-headers-status-weak { color: #ca8a04; }
+.ts-headers-status-missing { color: var(--muted); }
+.ts-headers-status-leaking { color: #9333ea; }
+
+.ts-headers-body { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.ts-headers-name { font-family: var(--mono); font-size: 12px; font-weight: 600; }
+.ts-headers-message { font-size: 13px; color: var(--muted); }

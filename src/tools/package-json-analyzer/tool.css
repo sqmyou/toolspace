@@ -1,0 +1,26 @@
+.ts-pkg-overview { margin: 12px 0; display: flex; flex-direction: column; gap: 8px; }
+.ts-pkg-head { display: flex; align-items: baseline; gap: 10px; font-size: 18px; }
+.ts-pkg-version { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+
+.ts-pkg-badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; }
+.ts-pkg-present { background: rgba(22, 163, 74, 0.15); color: #16a34a; }
+.ts-pkg-absent { background: rgba(107, 114, 128, 0.15); color: var(--muted); }
+
+.ts-pkg-risks, .ts-pkg-advice { display: flex; flex-direction: column; gap: 6px; }
+.ts-pkg-risk { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; }
+.ts-pkg-warn { flex: none; color: #ca8a04; font-weight: 700; }
+.ts-pkg-tip { padding: 8px 10px; border: 1px solid var(--border); border-left-width: 3px; border-radius: var(--radius); background: var(--bg-input); font-size: 13px; }
+.ts-pkg-tip-warning { border-left-color: #ca8a04; }
+.ts-pkg-tip-info { border-left-color: var(--muted); }
+
+.ts-pkg-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
+.ts-pkg-group { padding: 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-input); }
+.ts-pkg-names { display: block; margin-top: 4px; font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+
+.ts-pkg-scripts { display: flex; flex-direction: column; gap: 6px; }
+.ts-pkg-script { display: flex; flex-direction: column; gap: 3px; padding: 8px 10px; border: 1px solid var(--border); border-left-width: 3px; border-radius: var(--radius); background: var(--bg-input); }
+.ts-pkg-script-risky { border-left-color: #ca8a04; }
+.ts-pkg-script-name { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+.ts-pkg-command { font-family: var(--mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.ts-pkg-script-risk { font-size: 12px; color: #ca8a04; }
+.ts-pkg-tag { font-size: 11px; text-transform: uppercase; color: var(--muted); }
