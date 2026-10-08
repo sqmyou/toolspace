@@ -1,6 +1,15 @@
 import { el } from './dom'
 
+/** Chips show a short preview; the full value is what actually gets copied. */
+const CHIP_PREVIEW = 64
+
+function ellipsize(value: string): string {
+  const flat = value.replace(/\s+/g, ' ').trim()
+  return flat.length > CHIP_PREVIEW ? `${flat.slice(0, CHIP_PREVIEW - 1)}…` : flat
+}
+
 /** Copy that reflects success on the button itself, then restores its label. */
+
 export function copyChip(value: string | (() => string), label?: string): HTMLButtonElement {
   const text = typeof value === 'function' ? value : () => value
   const button = el('button', {
@@ -8,7 +17,8 @@ export function copyChip(value: string | (() => string), label?: string): HTMLBu
     type: 'button',
     title: 'Copy',
   }) as HTMLButtonElement
-  const restore = label ?? text()
+  const preview = label ?? (typeof value === 'function' ? '' : value)
+  const restore = preview.trim() ? ellipsize(preview) : 'Copy'
   button.textContent = restore
   button.addEventListener('click', async () => {
     const payload = text()

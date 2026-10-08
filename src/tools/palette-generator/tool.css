@@ -7,6 +7,9 @@
 .ts-swatch { display: flex; flex-direction: column; gap: 4px; }
 
 .ts-swatch-chip {
+  /* The column is a stretched grid item, so without flex: none the swatch is
+     shrunk below its height to make the caption fit. */
+  flex: none;
   height: 64px;
   border: 1px solid var(--border);
   border-radius: var(--radius);

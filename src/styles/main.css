@@ -742,6 +742,33 @@ a { color: inherit; }
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 .ts-primary:hover { filter: brightness(1.05); border-color: transparent; }
+/* Alias kept for tools written before the kit settled on `ts-primary`. */
+.ts-button-primary {
+  background: linear-gradient(180deg, var(--accent-strong), var(--accent));
+  color: var(--accent-ink);
+  border-color: transparent;
+  font-weight: 600;
+}
+
+/* A small selectable token: presets, examples, filters. */
+.ts-chip {
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  line-height: 1.35;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.ts-chip:hover { border-color: var(--border-strong); color: var(--fg); }
+.ts-chip-active {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--fg);
+}
 
 .ts-select {
   padding: 9px 32px 9px 11px;
@@ -952,6 +979,9 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
    ============================================================================ */
 .ts-tool-body textarea:not([class]),
 .ts-tool-body select:not([class]),
+/* `ts-output` only set the typeface, so an output field kept the native
+   chrome. Give it the same frame as every other field. */
+.ts-tool-body input.ts-output,
 .ts-tool-body input:not([class]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]) {
   width: 100%;
   padding: 10px 12px;
@@ -982,16 +1012,57 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 }
 .ts-tool-body textarea:not([class]):hover:not(:focus),
 .ts-tool-body select:not([class]):hover:not(:focus),
+.ts-tool-body input.ts-output:hover:not(:focus),
 .ts-tool-body input:not([class]):hover:not(:focus) { border-color: var(--border-strong); }
 .ts-tool-body textarea:not([class]):focus,
 .ts-tool-body select:not([class]):focus,
+.ts-tool-body input.ts-output:focus,
 .ts-tool-body input:not([class]):focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 .ts-tool-body input[type="checkbox"],
-.ts-tool-body input[type="radio"] { accent-color: var(--accent-strong); }
+.ts-tool-body input[type="radio"] { accent-color: var(--accent-strong); width: 16px; height: 16px; }
+/* A bare range used to keep the platform track, which looked nothing like the
+   kit's slider. Give it the same track and thumb unless a tool opts out. */
+.ts-tool-body input[type="range"] {
+  width: 100%;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+.ts-tool-body input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--accent-strong);
+  border: 2px solid var(--bg);
+  box-shadow: var(--shadow-sm);
+  cursor: grab;
+}
+.ts-tool-body input[type="range"]::-moz-range-thumb {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--accent-strong);
+  border: 2px solid var(--bg);
+  cursor: grab;
+}
+.ts-tool-body input[type="range"]:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 3px; }
+/* Native colour wells need a frame to look deliberate next to a text field. */
+.ts-tool-body input[type="color"] {
+  padding: 3px;
+  height: 38px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  cursor: pointer;
+}
 .ts-tool-body ::file-selector-button {
   margin-right: 10px;
   padding: 8px 14px;
