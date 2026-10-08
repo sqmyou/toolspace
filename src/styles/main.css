@@ -242,6 +242,9 @@ a { color: inherit; }
   align-items: center;
   gap: 8px;
   flex: none;
+  /* Grow the tap target past the text box without moving the header. */
+  padding: 7px 0;
+  margin: -7px 0;
 }
 .ts-brand-mark { color: var(--accent); display: inline-flex; }
 .ts-brand-word { font-family: var(--mono); font-weight: 600; letter-spacing: -0.02em; }
@@ -752,7 +755,10 @@ a { color: inherit; }
 
 /* A small selectable token: presets, examples, filters. */
 .ts-chip {
-  padding: 6px 11px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 6px 12px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--bg-soft);
@@ -1025,35 +1031,57 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 .ts-tool-body input[type="checkbox"],
 .ts-tool-body input[type="radio"] { accent-color: var(--accent-strong); width: 16px; height: 16px; }
 /* A bare range used to keep the platform track, which looked nothing like the
-   kit's slider. Give it the same track and thumb unless a tool opts out. */
-.ts-tool-body input[type="range"] {
+   kit's slider. Give it the same track and thumb unless a tool opts out. The
+   element stays 24px tall so the touch target is a finger wide, while the
+   visible track is only 6px. */
+.ts-tool-body input[type="range"],
+.ts-tool-body input.ts-slider {
   width: 100%;
   appearance: none;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.ts-tool-body input[type="range"]::-webkit-slider-runnable-track,
+.ts-tool-body input.ts-slider::-webkit-slider-runnable-track {
   height: 6px;
   border-radius: 999px;
   background: var(--bg-input);
-  border: 1px solid var(--border);
-  cursor: pointer;
+  box-shadow: inset 0 0 0 1px var(--border);
 }
-.ts-tool-body input[type="range"]::-webkit-slider-thumb {
+.ts-tool-body input[type="range"]::-moz-range-track,
+.ts-tool-body input.ts-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-input);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.ts-tool-body input[type="range"]::-webkit-slider-thumb,
+.ts-tool-body input.ts-slider::-webkit-slider-thumb {
   appearance: none;
-  width: 17px;
-  height: 17px;
+  width: 14px;
+  height: 14px;
+  /* Half the track height minus half the thumb, so it sits dead centre. */
+  margin-top: -4px;
   border-radius: 50%;
   background: var(--accent-strong);
   border: 2px solid var(--bg);
   box-shadow: var(--shadow-sm);
   cursor: grab;
 }
-.ts-tool-body input[type="range"]::-moz-range-thumb {
-  width: 15px;
-  height: 15px;
+.ts-tool-body input[type="range"]::-moz-range-thumb,
+.ts-tool-body input.ts-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: var(--accent-strong);
   border: 2px solid var(--bg);
   cursor: grab;
 }
-.ts-tool-body input[type="range"]:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 3px; }
+.ts-tool-body input[type="range"]:focus-visible,
+.ts-tool-body input.ts-slider:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 3px; }
 /* Native colour wells need a frame to look deliberate next to a text field. */
 .ts-tool-body input[type="color"] {
   padding: 3px;
@@ -1189,16 +1217,29 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 .ts-k-range {
   width: 100%;
   appearance: none;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.ts-k-range::-webkit-slider-runnable-track {
   height: 6px;
   border-radius: 999px;
   background: var(--bg-input);
-  border: 1px solid var(--border);
-  cursor: pointer;
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.ts-k-range::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-input);
+  box-shadow: inset 0 0 0 1px var(--border);
 }
 .ts-k-range::-webkit-slider-thumb {
   appearance: none;
-  width: 17px;
-  height: 17px;
+  width: 14px;
+  height: 14px;
+  margin-top: -4px;
   border-radius: 50%;
   background: var(--accent-strong);
   border: 2px solid var(--bg);
@@ -1206,8 +1247,8 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
   cursor: grab;
 }
 .ts-k-range::-moz-range-thumb {
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: var(--accent-strong);
   border: 2px solid var(--bg);
