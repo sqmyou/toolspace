@@ -26,6 +26,7 @@
     "wrangler": "^4.42.0"
   },
   "dependencies": {
+    "qrcode-generator": "^2.0.4",
     "sql-formatter": "^15.9.0"
   }
 }
