@@ -1,0 +1,19 @@
+.ts-x509 { display: flex; flex-direction: column; gap: 20px; }
+
+.ts-x509-section { display: flex; flex-direction: column; gap: 4px; }
+
+.ts-x509-row {
+  display: flex;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.ts-x509-row .ts-muted { flex: 0 0 180px; }
+.ts-x509-row .ts-copy-chip { text-align: left; overflow-wrap: anywhere; }
+
+.ts-x509-value { font-family: var(--mono); overflow-wrap: anywhere; white-space: pre-wrap; }
+
+.ts-x509-valid { color: var(--accent-strong); font-size: 13px; }
+.ts-x509-expired { color: var(--danger); font-size: 13px; }
