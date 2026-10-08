@@ -1,0 +1,3 @@
+.ts-ini-warnings { margin: 0; padding-left: 20px; color: var(--warn, #d29922); font-size: 13px; }
+.ts-ini-warnings li { overflow-wrap: anywhere; }
+.ts-ini-warnings:empty::before { content: 'No warnings.'; color: var(--muted); }
