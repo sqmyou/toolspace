@@ -777,7 +777,7 @@ a { color: inherit; }
 }
 
 .ts-muted { color: var(--muted); font-size: 13px; }
-.ts-value { color: var(--fg); font-family: var(--mono); }
+.ts-value { color: var(--fg); font-family: var(--mono); overflow-wrap: anywhere; }
 .ts-hint, .ts-note { color: var(--muted); font-size: 13px; margin: 0; }
 .ts-note { margin-top: 4px; }
 .ts-error { color: var(--danger); }
@@ -796,6 +796,8 @@ a { color: inherit; }
 
 .ts-copy-chip {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
   text-align: left;
   font-family: var(--mono);
   font-size: 14px;
@@ -1394,6 +1396,41 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 }
 .ts-k-color__swatch { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--border); flex: none; }
 .ts-k-color__value { font-family: var(--mono); font-size: 12px; }
+
+/* --- Preset catalogue ----------------------------------------------------- */
+.ts-k-presets { display: flex; flex-direction: column; gap: 8px; }
+.ts-k-presets__group {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--faint);
+}
+.ts-k-presets__row { display: flex; flex-wrap: wrap; gap: 6px; }
+.ts-k-preset {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  align-items: flex-start;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  color: var(--fg);
+  cursor: pointer;
+  font-family: var(--sans);
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.ts-k-preset:hover { border-color: var(--accent-line); }
+.ts-k-preset.is-on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+}
+.ts-k-preset__label { font-size: 13px; font-weight: 500; }
+.ts-k-preset__dim { font-family: var(--mono); font-size: 10.5px; color: var(--faint); }
+.ts-k-preset.is-on .ts-k-preset__dim { color: var(--muted); }
 
 /* --- Table ---------------------------------------------------------------- */
 .ts-k-tablewrap { overflow: auto; max-height: 440px; border: 1px solid var(--border); border-radius: var(--radius); }
