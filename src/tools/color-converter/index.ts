@@ -47,6 +47,53 @@ const tool: Tool = {
     const sample = el('div', { class: 'ts-contrast-sample' }, 'Sample text at 16px')
     const checks = el('div', { class: 'ts-checks' })
 
+    const channels: { key: keyof Rgb; range: HTMLInputElement; readout: HTMLElement }[] = []
+
+    function slider(key: keyof Rgb, label: string) {
+      const range = el('input', {
+        class: 'ts-slider',
+        type: 'range',
+        min: '0',
+        max: '255',
+        value: '0',
+        'aria-label': `${label} channel`,
+      }) as HTMLInputElement
+      const readout = el('span', { class: 'ts-slider-value' }, '0')
+      range.addEventListener('input', () => {
+        const rgb: Rgb = {
+          r: Number(channels[0].range.value),
+          g: Number(channels[1].range.value),
+          b: Number(channels[2].range.value),
+        }
+        input.value = toHex(rgb)
+        update()
+      })
+      channels.push({ key, range, readout })
+      return el(
+        'div',
+        { class: 'ts-slider-row' },
+        el('span', { class: 'ts-slider-label' }, label),
+        range,
+        readout,
+      )
+    }
+
+    const sliders = el(
+      'div',
+      { class: 'ts-sliders' },
+      slider('r', 'R'),
+      slider('g', 'G'),
+      slider('b', 'B'),
+    )
+
+    function syncSliders(rgb: Rgb) {
+      for (const channel of channels) {
+        const value = rgb[channel.key]
+        channel.range.value = String(value)
+        channel.readout.textContent = String(value)
+      }
+    }
+
     function row({ label, value }: RowSpec) {
       const copy = el('button', {
         class: 'ts-copy-chip',
@@ -102,6 +149,7 @@ const tool: Tool = {
 
       const hsl = rgbToHsl(rgb)
       swatch.style.background = toHex(rgb)
+      syncSliders(rgb)
       output.replaceChildren(
         row({ label: 'HEX', value: toHex(rgb) }),
         row({ label: 'RGB', value: formatRgb(rgb) }),
@@ -123,6 +171,7 @@ const tool: Tool = {
           swatch,
           el('div', { class: 'ts-field ts-grow' }, el('label', {}, 'Color'), input),
         ),
+        el('div', { class: 'ts-field' }, el('label', {}, 'RGB channels'), sliders),
         output,
         el('h3', { class: 'ts-subhead' }, 'Contrast check'),
         el(

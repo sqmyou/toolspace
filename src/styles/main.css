@@ -195,6 +195,11 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 /* Colour tool */
 .ts-color-top { display: flex; gap: 16px; align-items: flex-start; }
 .ts-swatch { width: 88px; height: 88px; border-radius: var(--radius); border: 1px solid var(--border); flex: none; }
+.ts-sliders { display: flex; flex-direction: column; gap: 8px; }
+.ts-slider-row { display: grid; grid-template-columns: 20px 1fr 40px; align-items: center; gap: 12px; }
+.ts-slider-label { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.ts-slider { width: 100%; accent-color: var(--accent-strong); }
+.ts-slider-value { font-family: var(--mono); font-size: 13px; text-align: right; }
 .ts-grow { flex: 1; }
 .ts-copy-list { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
 .ts-copy-row { display: flex; align-items: center; gap: 12px; }
