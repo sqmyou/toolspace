@@ -199,6 +199,19 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 .ts-copy-row { display: flex; align-items: center; gap: 12px; }
 .ts-copy-row > .ts-muted { min-width: 72px; flex: none; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
 .ts-wrap-value { word-break: break-all; white-space: normal; line-height: 1.45; }
+.ts-claims { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 16px; }
+.ts-claim { display: flex; align-items: baseline; gap: 9px; font-size: 13px; }
+.ts-claim-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; transform: translateY(-1px); background: var(--muted); }
+.ts-claim-ok .ts-claim-dot { background: #34c759; }
+.ts-claim-warning .ts-claim-dot { background: #f5a623; }
+.ts-claim-error .ts-claim-dot { background: #ff453a; }
+.ts-claim-error { color: #ff8a80; }
+.ts-claim-warning { color: #f5c26b; }
+.ts-json-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin: 8px 0 16px; }
+.ts-json-block { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.ts-json-head { display: flex; justify-content: space-between; padding: 8px 12px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--border); }
+.ts-pre { margin: 0; padding: 12px; font-family: var(--mono); font-size: 12.5px; line-height: 1.5; overflow-x: auto; white-space: pre; }
+.ts-verify-out { margin: 4px 0 8px; }
 .ts-copy-chip {
   flex: 1;
   text-align: left;
