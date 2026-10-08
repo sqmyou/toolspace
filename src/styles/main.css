@@ -336,3 +336,9 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 .ts-pill { display: inline-block; padding: 3px 10px; border-radius: 999px; background: var(--bg-soft); border: 1px solid var(--border); font-family: var(--mono); font-size: 12px; }
 .ts-mime-list { display: flex; flex-direction: column; gap: 4px; max-height: 340px; overflow: auto; }
 .ts-mime-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+
+/* Cron explainer */
+.ts-cron-summary { font-size: 14px; color: var(--text); margin: 4px 0 12px; }
+.ts-cron-fields { display: flex; flex-direction: column; gap: 6px; }
+.ts-cron-field { display: grid; grid-template-columns: 110px 100px 1fr; gap: 12px; align-items: baseline; font-size: 13px; }
+@media (max-width: 560px) { .ts-cron-field { grid-template-columns: 1fr; gap: 2px; } }
