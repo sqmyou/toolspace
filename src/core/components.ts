@@ -28,8 +28,10 @@ export interface ToolLayoutOptions {
 }
 
 /** The outer column every tool body should sit in. */
-export function toolLayout(options: ToolLayoutOptions = {}): HTMLElement {
-  return el('div', { class: `ts-k-tool${options.wide ? ' ts-k-tool--wide' : ''}` })
+export function toolLayout(options: ToolLayoutOptions = {}, ...children: (Node | string)[]): HTMLElement {
+  const root = el('div', { class: `ts-k-tool${options.wide ? ' ts-k-tool--wide' : ''}` })
+  root.append(...children)
+  return root
 }
 
 export interface PanelOptions {
@@ -41,20 +43,20 @@ export interface PanelOptions {
   flush?: boolean
 }
 
-export interface Panel {
-  root: HTMLElement
-  body: HTMLElement
-}
+export type Panel = HTMLElement & { body: HTMLElement }
 
 /**
  * A titled surface. Panels are the main way a tool page gets structure:
  * instead of one long column of loose controls, related things live in a
  * bounded card with a header.
+ *
+ * The returned element is the panel itself, so it can be passed straight to
+ * `toolLayout`; its `body` is exposed for tools that need to fill it later.
  */
 export function panel(options: PanelOptions = {}, ...children: (Node | string)[]): Panel {
   const body = el('div', { class: `ts-k-panel__body${options.flush ? ' ts-k-panel__body--flush' : ''}` })
   body.append(...children)
-  const root = el('section', { class: 'ts-k-panel' })
+  const root = el('section', { class: 'ts-k-panel' }) as Panel
   if (options.title) {
     const head = el('header', { class: 'ts-k-panel__head' })
     if (options.icon) head.append(iconEl(options.icon, 15))
@@ -63,7 +65,8 @@ export function panel(options: PanelOptions = {}, ...children: (Node | string)[]
     root.append(head)
   }
   root.append(body)
-  return { root, body }
+  root.body = body
+  return root
 }
 
 /** A labelled group with a heading rule, for long pages. */
