@@ -342,3 +342,14 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 .ts-cron-fields { display: flex; flex-direction: column; gap: 6px; }
 .ts-cron-field { display: grid; grid-template-columns: 110px 100px 1fr; gap: 12px; align-items: baseline; font-size: 13px; }
 @media (max-width: 560px) { .ts-cron-field { grid-template-columns: 1fr; gap: 2px; } }
+
+/* CSP builder */
+.ts-csp-grid { display: flex; flex-direction: column; gap: 10px; }
+.ts-csp-row { display: grid; grid-template-columns: 220px 1fr; gap: 12px; align-items: center; }
+.ts-csp-hint { grid-column: 2; }
+@media (max-width: 620px) { .ts-csp-row { grid-template-columns: 1fr; } .ts-csp-hint { grid-column: 1; } }
+.ts-audit-list { display: flex; flex-direction: column; gap: 6px; }
+.ts-audit { font-size: 13px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); }
+.ts-audit-error { border-color: rgba(255, 138, 128, 0.5); color: #ff8a80; }
+.ts-audit-warning { border-color: rgba(251, 191, 36, 0.45); color: #fbbf24; }
+.ts-audit-info { color: var(--muted); }
