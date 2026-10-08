@@ -1,0 +1,3 @@
+.ts-pill { display: inline-block; padding: 3px 10px; border-radius: 999px; background: var(--bg-soft); border: 1px solid var(--border); font-family: var(--mono); font-size: 12px; }
+.ts-mime-list { display: flex; flex-direction: column; gap: 4px; max-height: 340px; overflow: auto; }
+.ts-mime-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 13px; }

@@ -1,0 +1,3 @@
+.ts-strength-label { font-size: 14px; font-weight: 600; text-transform: capitalize; margin-bottom: 14px; }
+.ts-strength-stats { display: flex; flex-wrap: wrap; gap: 24px; margin-bottom: 16px; }
+.ts-claim-list { display: flex; flex-direction: column; gap: 8px; padding: 12px; }

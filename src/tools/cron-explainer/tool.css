@@ -1,0 +1,7 @@
+.ts-cron-summary { font-size: 14px; color: var(--muted); margin: 4px 0 12px; }
+.ts-cron-fields { display: flex; flex-direction: column; gap: 6px; }
+.ts-cron-field { display: grid; grid-template-columns: 110px 100px 1fr; gap: 12px; align-items: baseline; font-size: 13px; }
+
+@media (max-width: 560px) {
+  .ts-cron-field { grid-template-columns: 1fr; gap: 2px; }
+}

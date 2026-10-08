@@ -18,6 +18,8 @@ export interface Tool {
   category: string
   /** Extra words the search should match, beyond name/description. */
   keywords?: string[]
+  /** Short emoji or symbol shown on cards and headings. */
+  icon?: string
   /** Draw the tool into `root`. Called once per mount. */
   render(root: HTMLElement): void
 }

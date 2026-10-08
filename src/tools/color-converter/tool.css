@@ -1,0 +1,12 @@
+.ts-color-top { display: flex; gap: 16px; align-items: flex-start; }
+.ts-swatch { width: 88px; height: 88px; border-radius: var(--radius); border: 1px solid var(--border); flex: none; }
+.ts-sliders { display: flex; flex-direction: column; gap: 8px; }
+.ts-slider-row { display: grid; grid-template-columns: 20px 1fr 40px; align-items: center; gap: 12px; }
+.ts-slider-label { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.ts-slider { width: 100%; accent-color: var(--accent-strong); }
+.ts-slider-value { font-family: var(--mono); font-size: 13px; text-align: right; }
+.ts-contrast-sample { padding: 16px; border-radius: var(--radius); font-size: 16px; margin-bottom: 12px; border: 1px solid var(--border); }
+.ts-checks { display: flex; flex-direction: column; gap: 6px; }
+.ts-check-line { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.ts-pass-dot { color: var(--ok, #3fb950); font-weight: 700; }
+.ts-fail-dot { color: var(--danger); font-weight: 700; }

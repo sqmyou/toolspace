@@ -1,0 +1,5 @@
+.ts-hash-list { display: flex; flex-direction: column; gap: 6px; }
+.ts-hash-row { display: grid; grid-template-columns: 72px 1fr auto; gap: 12px; align-items: center; font-size: 13px; }
+.ts-verdict { font-size: 13px; }
+.ts-verdict-ok { color: #34d399; }
+.ts-verdict-bad { color: #ff8a80; }

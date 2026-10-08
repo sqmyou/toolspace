@@ -152,7 +152,7 @@ const tool: Tool = {
         ),
         el(
           'div',
-          { class: 'ts-grid' },
+          { class: 'ts-checkbox-grid' },
           checkbox('lowercase', 'Lowercase', 'a–z'),
           checkbox('uppercase', 'Uppercase', 'A–Z'),
           checkbox('digits', 'Digits', '0–9'),

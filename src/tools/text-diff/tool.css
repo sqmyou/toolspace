@@ -1,0 +1,12 @@
+.ts-diff-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.ts-diff { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-top: 16px; }
+.ts-diff-part { display: flex; gap: 10px; padding: 4px 12px; font-family: var(--mono); font-size: 12.5px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+.ts-diff-marker { flex: none; opacity: 0.7; user-select: none; }
+.ts-diff-text { flex: 1; }
+.ts-diff-add { background: rgba(52, 211, 153, 0.14); }
+.ts-diff-remove { background: rgba(255, 138, 128, 0.14); }
+.ts-diff-equal { color: var(--muted); }
+
+@media (max-width: 720px) {
+  .ts-diff-columns { grid-template-columns: 1fr; }
+}

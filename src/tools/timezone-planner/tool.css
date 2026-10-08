@@ -1,0 +1,5 @@
+.ts-grid-wrap { margin-top: 4px; }
+.ts-tz-work { color: #34d399; }
+.ts-tz-weekend { color: #fbbf24; }
+.ts-tz-night { color: var(--muted); opacity: 0.55; }
+.ts-tz-best { background: rgba(52, 211, 153, 0.08); }

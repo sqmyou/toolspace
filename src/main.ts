@@ -1,5 +1,8 @@
 import './styles/main.css'
+import { loadToolStyles } from './core/tool-styles'
 import { mountApp } from './ui/app'
+
+loadToolStyles()
 
 const app = document.getElementById('app')
 if (app) mountApp(app)
