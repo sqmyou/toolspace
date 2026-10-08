@@ -1,10 +1,14 @@
 import { clear, el } from '../core/dom'
+import { categoryHue, sigilTile } from '../core/identity'
 import { categories, findTool, searchTools, tools } from '../core/registry'
 import type { Tool } from '../core/types'
 
-/** Optional glyph for a tool, shown only when the tool declares one. */
-function iconEl(tool: Tool, className: string): HTMLElement | null {
-  return tool.icon ? el('span', { class: className, 'aria-hidden': 'true' }, tool.icon) : null
+/**
+ * The tool's generated identity badge, tinted by its category. A handful of
+ * tools declare an emoji; where they do it rides along beside the sigil.
+ */
+function tileEl(tool: Tool, size = 34): HTMLElement {
+  return sigilTile(tool.slug, tool.category, size)
 }
 
 /* --------------------------------------------------------------------------
@@ -100,6 +104,7 @@ function commandPalette(onSelect: (slug: string) => void): Palette {
         {
           type: 'button',
           class: `ts-palette-item${index === active ? ' is-active' : ''}`,
+          style: `--h:${categoryHue(tool.category)}`,
           role: 'option',
           'aria-selected': String(index === active),
           onclick: () => choose(tool),
@@ -109,7 +114,7 @@ function commandPalette(onSelect: (slug: string) => void): Palette {
             paint()
           },
         },
-        iconEl(tool, 'ts-palette-icon'),
+        tileEl(tool, 26),
         el(
           'span',
           { class: 'ts-palette-text' },
@@ -175,9 +180,40 @@ function commandPalette(onSelect: (slug: string) => void): Palette {
 function toolCard(tool: Tool): HTMLElement {
   return el(
     'a',
-    { class: 'ts-card', href: `#/${tool.slug}` },
-    el('span', { class: 'ts-card-top' }, iconEl(tool, 'ts-card-icon'), el('h3', {}, tool.name)),
+    { class: 'ts-card', href: `#/${tool.slug}`, style: `--h:${categoryHue(tool.category)}` },
+    el(
+      'span',
+      { class: 'ts-card-top' },
+      tileEl(tool),
+      el('span', { class: 'ts-card-head' }, el('h3', {}, tool.name), el('span', { class: 'ts-card-cat' }, tool.category)),
+    ),
     el('p', {}, tool.description),
+  )
+}
+
+/** A single "row" used by the dense index sections. */
+function toolRow(tool: Tool): HTMLElement {
+  return el(
+    'a',
+    { class: 'ts-row-item', href: `#/${tool.slug}` },
+    tileEl(tool, 26),
+    el(
+      'span',
+      { class: 'ts-row-text' },
+      el('span', { class: 'ts-row-name' }, tool.name),
+      el('span', { class: 'ts-row-desc' }, tool.description),
+    ),
+  )
+}
+
+/** Section heading shared by every group on the home page. */
+function sectionHead(title: string, meta: string, tint?: number): HTMLElement {
+  return el(
+    'div',
+    { class: 'ts-section-head', ...(tint == null ? {} : { style: `--h:${tint}` }) },
+    el('span', { class: 'ts-section-mark', 'aria-hidden': 'true' }),
+    el('h2', {}, title),
+    el('span', { class: 'ts-section-meta' }, meta),
   )
 }
 
@@ -203,33 +239,28 @@ function home(): HTMLElement {
       return
     }
     if (search.value.trim() || category) {
+      const hue = category ? categoryHue(category) : undefined
       section.append(
-        el(
-          'div',
-          { class: 'ts-section-head' },
-          el('h2', {}, category || 'Results'),
-          el('span', {}, `${items.length} ${items.length === 1 ? 'tool' : 'tools'}`),
-        ),
+        sectionHead(category || 'Results', `${items.length} ${items.length === 1 ? 'tool' : 'tools'}`, hue),
       )
       const list = el('div', { class: 'ts-grid' })
       list.append(...items.map(toolCard))
       section.append(list)
       return
     }
-    // No query: group by category so the page reads like a small index.
+    // No query: group by category. Big families get the dense index (a card
+    // each would bury them below the fold); small ones get cards.
     for (const name of categories()) {
       const group = items.filter((tool) => tool.category === name)
+      const dense = group.length >= 5
       section.append(
         el(
           'div',
           { class: 'ts-section' },
-          el(
-            'div',
-            { class: 'ts-section-head' },
-            el('h2', {}, name),
-            el('span', {}, `${group.length}`),
-          ),
-          el('div', { class: 'ts-grid' }, ...group.map(toolCard)),
+          sectionHead(name, `${group.length}`, categoryHue(name)),
+          dense
+            ? el('div', { class: 'ts-row-grid' }, ...group.map(toolRow))
+            : el('div', { class: 'ts-grid' }, ...group.map(toolCard)),
         ),
       )
     }
@@ -241,7 +272,7 @@ function home(): HTMLElement {
       'button',
       {
         type: 'button',
-        class: `ts-cat-chip${category === '' ? ' is-active' : ''}`,
+        class: `ts-cat-chip ts-cat-chip-all${category === '' ? ' is-active' : ''}`,
         onclick: () => {
           category = ''
           renderChips()
@@ -260,6 +291,7 @@ function home(): HTMLElement {
           {
             type: 'button',
             class: `ts-cat-chip${category === name ? ' is-active' : ''}`,
+            style: `--h:${categoryHue(name)}`,
             onclick: () => {
               category = category === name ? '' : name
               renderChips()
@@ -277,34 +309,36 @@ function home(): HTMLElement {
   renderChips()
   renderGrid()
 
+  const catCount = categories().length
+
   return el(
     'section',
     { class: 'ts-home' },
     el(
       'div',
-      { class: 'ts-home-hero' },
+      { class: 'ts-masthead' },
+      el('p', { class: 'ts-eyebrow' }, 'Privacy-first developer tools'),
       el(
         'h1',
         {},
-        'The ',
-        el('span', { class: 'ts-accent' }, 'junk drawer'),
-        ' of developer tools.',
+        el('span', { class: 'ts-accent' }, `${tools.length} tools`),
+        ' that never leave your browser.',
       ),
       el(
         'p',
         { class: 'ts-lede' },
-        'Everything runs in your browser — no ads, no sign-up, no server. Your data never leaves this tab.',
+        'No ads, no sign-up, no server. Every tool runs locally — nothing you paste is ever uploaded. The one exception is the YouTube thumbnail grabber, which asks i.ytimg.com for the public image you linked.',
       ),
+      el('div', { class: 'ts-masthead-search' }, search),
       el(
-        'ul',
-        { class: 'ts-promise' },
-        el('li', {}, `${tools.length} tools`),
-        el('li', {}, 'Works offline'),
-        el('li', {}, 'Nothing uploaded'),
+        'div',
+        { class: 'ts-masthead-stats' },
+        el('div', { class: 'ts-mstat' }, el('span', { class: 'ts-mstat-value' }, String(tools.length)), el('span', { class: 'ts-mstat-label' }, 'tools')),
+        el('div', { class: 'ts-mstat' }, el('span', { class: 'ts-mstat-value' }, String(catCount)), el('span', { class: 'ts-mstat-label' }, 'categories')),
+        el('div', { class: 'ts-mstat' }, el('span', { class: 'ts-mstat-value' }, '1'), el('span', { class: 'ts-mstat-label' }, 'external host')),
       ),
     ),
-    el('div', { style: 'max-width:560px;margin:0 auto 18px' }, search),
-    catBar,
+    el('div', { class: 'ts-browse' }, el('span', { class: 'ts-browse-label' }, 'Browse'), catBar),
     section,
   )
 }
@@ -349,7 +383,7 @@ function toolPage(tool: Tool, palette: Palette): HTMLElement {
         el('span', { 'aria-hidden': 'true' }, '/'),
         el('span', {}, tool.category),
       ),
-      el('h1', {}, iconEl(tool, 'ts-title-icon'), tool.name),
+      el('h1', {}, tileEl(tool, 40), tool.name),
       el('p', { class: 'ts-tool-desc' }, tool.description),
       el(
         'div',

@@ -1,0 +1,85 @@
+.ts-yt-input-row { display: flex; gap: 8px; align-items: center; }
+.ts-yt-input-row .ts-input { flex: 1; min-width: 0; }
+
+.ts-yt-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 14px 0 18px;
+  font-size: 13px;
+}
+
+.ts-yt-id {
+  font-family: var(--mono);
+  font-size: 13px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+}
+
+.ts-yt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.ts-yt-card {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  border-radius: var(--radius);
+  padding: 11px;
+}
+
+.ts-yt-frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg-input);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ts-yt-image { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* A size the video does not have: dim the stand-in and say so. */
+.ts-yt-card.is-missing .ts-yt-image { opacity: 0.25; filter: grayscale(1); }
+.ts-yt-card.is-missing .ts-yt-actions { opacity: 0.55; }
+
+.ts-yt-status {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 5px 8px;
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-align: center;
+}
+.ts-yt-status:empty { display: none; }
+
+.ts-yt-meta { display: flex; flex-direction: column; gap: 2px; }
+.ts-yt-label { font-size: 13.5px; font-weight: 500; }
+.ts-yt-dim { font-family: var(--mono); font-size: 11px; color: var(--faint); }
+
+.ts-yt-actions { display: flex; gap: 7px; flex-wrap: wrap; }
+.ts-yt-actions .ts-button { padding: 5px 10px; font-size: 12.5px; }
+
+.ts-yt-note {
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+  border-left: 2px solid var(--border-strong);
+  padding-left: 12px;
+  margin: 20px 0 0;
+  max-width: 78ch;
+}

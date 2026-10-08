@@ -83,8 +83,15 @@ A tool is one folder with a default export. Roughly ten minutes:
 
 The `slug` must match the folder name. The folder is picked up automatically.
 
-The one hard rule: **no network calls.** If a tool needs a server or a live API,
-it doesn't belong here — that's the promise the project is built on.
+The hard rule: **nothing you paste is ever uploaded.** A tool runs entirely in
+the browser, and there is no backend to send anything to.
+
+There is exactly one documented exception: the **YouTube thumbnail grabber**
+loads the public thumbnail image from `i.ytimg.com`, because that is where
+YouTube stores it. That is a direct browser-to-YouTube request for the image
+the user asked for — it sets no cookies, needs no key, and carries no user
+data beyond the video id already in the URL. It is the only third-party origin
+allowed by the CSP, and any tool needing more than that does not belong here.
 
 ## Contributing
 

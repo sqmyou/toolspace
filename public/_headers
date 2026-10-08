@@ -1,8 +1,15 @@
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://i.ytimg.com; font-src 'self'; connect-src 'self' https://i.ytimg.com; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
   Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=(), usb=()
+
+# i.ytimg.com is the single third-party origin toolspace is allowed to talk to,
+# and only for the YouTube thumbnail grabber. The app is a hash-routed SPA, so
+# there is no per-page path for _headers to scope to — this exception is global
+# by necessity, and documented in the README. It is a narrow, anonymous image
+# fetch: i.ytimg.com sets no cookies, needs no API key, and receives only the
+# video id the user pasted. No other page or tool issues a cross-origin request.
 
 # Hashed assets are immutable; cache them hard. HTML is revalidated.
 /assets/*

@@ -1,0 +1,81 @@
+.ts-cut-stage {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.ts-cut-stage.is-dragging { border-color: var(--accent); background: var(--bg-input); }
+
+.ts-cut-pane { margin: 0; display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.ts-cut-pane figcaption {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--faint);
+}
+
+.ts-cut-canvas {
+  max-width: 100%;
+  max-height: 52vh;
+  display: block;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background-color: #fff;
+}
+
+.ts-cut-canvas.is-picking { cursor: crosshair; box-shadow: 0 0 0 2px var(--accent); }
+
+/* The cut-out sits on a checkerboard so transparency is visible. */
+.ts-cut-result {
+  background-color: #fff;
+  background-image:
+    linear-gradient(45deg, #d8d8d8 25%, transparent 25%),
+    linear-gradient(-45deg, #d8d8d8 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #d8d8d8 75%),
+    linear-gradient(-45deg, transparent 75%, #d8d8d8 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
+
+.ts-backdrop-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 13px; }
+.ts-backdrop-chip {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  flex: none;
+}
+
+.ts-cut-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.ts-cut-control { display: flex; flex-direction: column; gap: 6px; }
+.ts-cut-control-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.ts-cut-control-head label { font-size: 13px; }
+.ts-cut-hint { color: var(--faint); font-size: 11.5px; line-height: 1.45; }
+
+.ts-cut-note {
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+  border-left: 2px solid var(--border-strong);
+  padding-left: 12px;
+  margin: 18px 0 0;
+  max-width: 78ch;
+}
+
+.ts-button.is-active { border-color: var(--accent); color: var(--accent); }
+
+@media (max-width: 620px) {
+  .ts-cut-stage { grid-template-columns: 1fr; }
+}

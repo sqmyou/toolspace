@@ -361,59 +361,98 @@ a { color: inherit; }
 }
 .ts-palette-item:hover,
 .ts-palette-item.is-active { background: var(--bg-input); }
-.ts-palette-item.is-active { box-shadow: inset 2px 0 0 var(--accent); }
+.ts-palette-item.is-active { box-shadow: inset 2px 0 0 hsl(var(--h, 205) 72% 58%); }
 .ts-palette-icon { font-size: 18px; flex: none; width: 22px; text-align: center; }
 .ts-palette-text { display: flex; flex-direction: column; min-width: 0; }
 .ts-palette-name { font-size: 14px; font-weight: 500; }
 .ts-palette-desc { color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ts-palette-cat { margin-left: auto; flex: none; color: var(--faint); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--mono); }
+.ts-palette-cat { margin-left: auto; flex: none; color: hsl(var(--h, 205) 55% 64%); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--mono); }
 .ts-palette-foot { border-top: 1px solid var(--border); padding: 8px 14px; color: var(--muted); font-size: 12px; }
 
+/* --- Per-tool sigil -------------------------------------------------------
+   Every tool gets a generated mark, tinted with its category hue. Colours are
+   derived from the single --h number each element carries, so one variable
+   drives the whole identity. */
+.ts-sigil {
+  flex: none;
+  display: block;
+  color: hsl(var(--h) 78% 62%);
+  border-radius: 9px;
+  background: hsl(var(--h) 70% 55% / 0.12);
+  border: 1px solid hsl(var(--h) 65% 55% / 0.28);
+}
+.ts-sigil svg { display: block; }
+.ts-sigil-frame { stroke: currentColor; stroke-width: 1; opacity: 0.35; }
+.ts-sigil-dot { fill: currentColor; }
+
 /* --- Home ----------------------------------------------------------------- */
-.ts-home-hero { text-align: center; margin: 14px auto 30px; max-width: 760px; }
 .ts-home h1 {
-  font-size: clamp(28px, 5.4vw, 46px);
-  line-height: 1.08;
-  letter-spacing: -0.03em;
+  font-size: clamp(30px, 5.6vw, 52px);
+  line-height: 1.03;
+  letter-spacing: -0.035em;
   font-weight: 700;
-  margin: 0 0 14px;
+  margin: 0 0 16px;
   text-wrap: balance;
 }
 .ts-home h1 .ts-accent { color: var(--accent); }
-.ts-lede { color: var(--muted); max-width: 62ch; margin: 0 auto; font-size: 16px; }
+.ts-lede { color: var(--muted); max-width: 56ch; margin: 0 0 22px; font-size: 16.5px; }
 
-.ts-promise {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 18px;
-  justify-content: center;
-  margin: 20px auto 0;
-  padding: 0;
-  list-style: none;
-  color: var(--muted);
-  font-size: 13px;
+.ts-masthead {
+  position: relative;
+  margin: 6px auto 34px;
+  padding-bottom: 30px;
+  border-bottom: 1px solid var(--border);
 }
-.ts-promise li { display: inline-flex; align-items: center; gap: 7px; }
-.ts-promise li::before {
+/* A hairline amber rule that fades out — the one piece of chrome the page
+   gets, echoing the instrument-panel direction without adding noise. */
+.ts-masthead::after {
   content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-  flex: none;
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 132px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--accent), transparent);
 }
+.ts-eyebrow {
+  margin: 0 0 12px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.ts-masthead-search { max-width: 560px; }
+.ts-masthead-stats { display: flex; flex-wrap: wrap; gap: 26px; margin-top: 22px; }
+.ts-mstat { display: flex; flex-direction: column; gap: 1px; }
+.ts-mstat-value { font-family: var(--mono); font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+.ts-mstat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--faint); font-family: var(--mono); }
 
+.ts-browse { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+.ts-browse-label {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+}
 .ts-cat-bar {
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding: 4px 0 14px;
+  padding: 2px 0 2px;
   margin: 0;
   scrollbar-width: thin;
+  -webkit-mask-image: linear-gradient(90deg, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, #000 92%, transparent);
 }
 .ts-cat-chip {
   flex: none;
-  padding: 7px 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 13px 6px 10px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--bg-soft);
@@ -424,62 +463,111 @@ a { color: inherit; }
   white-space: nowrap;
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
+/* A dot of the category's own hue, so the filter row previews the palette
+   used down the page. */
+.ts-cat-chip::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: hsl(var(--h, 205) 72% 58%);
+  flex: none;
+}
 .ts-cat-chip:hover { border-color: var(--border-strong); color: var(--fg); }
 .ts-cat-chip.is-active { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--accent-ink); font-weight: 600; }
-.ts-cat-chip small { opacity: 0.7; margin-left: 5px; }
+.ts-cat-chip.is-active::before { background: var(--accent-ink); }
+.ts-cat-chip-all::before { background: var(--muted); }
+.ts-cat-chip small { opacity: 0.65; margin-left: 1px; }
 
-.ts-section { margin-bottom: 30px; }
+.ts-section { margin-bottom: 32px; }
 .ts-section-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 0 0 12px;
+  gap: 9px;
+  margin: 0 0 13px;
+}
+.ts-section-mark {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  flex: none;
+  background: hsl(var(--h, 205) 72% 58%);
+  box-shadow: 0 0 0 3px hsl(var(--h, 205) 72% 58% / 0.16);
 }
 .ts-section-head h2 {
-  font-size: 12px;
+  font-size: 12.5px;
   margin: 0;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.11em;
   font-family: var(--mono);
   font-weight: 600;
-  color: var(--muted);
+  color: var(--fg);
 }
-.ts-section-head span { color: var(--faint); font-size: 12px; font-family: var(--mono); }
+.ts-section-meta { color: var(--faint); font-size: 11.5px; font-family: var(--mono); }
 
-.ts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(216px, 1fr)); gap: 10px; }
+/* Cards: for small, focused families. */
+.ts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
 
 .ts-card {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   text-decoration: none;
   border: 1px solid var(--border);
   background: var(--bg-soft);
   border-radius: var(--radius);
   padding: 14px 15px;
   transition: border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
-  position: relative;
 }
 .ts-card:hover {
-  border-color: var(--accent-line);
+  border-color: hsl(var(--h) 65% 55% / 0.5);
   transform: translateY(-2px);
   box-shadow: var(--shadow-sm);
 }
-.ts-card:hover .ts-card-icon { color: var(--accent); }
-.ts-card-top { display: flex; align-items: center; gap: 8px; }
-.ts-card-icon { font-size: 17px; flex: none; transition: color 0.16s ease; }
+.ts-card-top { display: flex; align-items: center; gap: 11px; }
+.ts-card-head { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .ts-title-icon { font-size: 0.85em; margin-right: 6px; }
 .ts-card h3 { margin: 0; font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em; }
 .ts-card p { margin: 0; color: var(--muted); font-size: 12.8px; line-height: 1.5; }
-.ts-card-cat { margin-top: 4px; color: var(--faint); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--mono); }
+.ts-card-cat {
+  color: hsl(var(--h) 60% 66%);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-family: var(--mono);
+}
 .ts-empty { color: var(--muted); font-size: 14px; }
+
+/* Dense index: for the big families, where a card each would bury the list. */
+.ts-row-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 2px; }
+.ts-row-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: background 0.14s ease, border-color 0.14s ease;
+}
+.ts-row-item:hover { background: var(--bg-soft); border-color: var(--border); }
+.ts-row-text { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+.ts-row-name { font-size: 13.5px; font-weight: 500; }
+.ts-row-desc {
+  color: var(--faint);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* --- Tool page ------------------------------------------------------------ */
 .ts-tool-header { margin-bottom: 24px; }
 .ts-breadcrumb { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12.5px; margin-bottom: 10px; font-family: var(--mono); }
 .ts-breadcrumb a { text-decoration: none; }
 .ts-breadcrumb a:hover { color: var(--accent); }
-.ts-tool-header h1 { margin: 0 0 6px; font-size: clamp(22px, 4vw, 28px); letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px; }
+.ts-tool-header h1 { margin: 0 0 6px; font-size: clamp(22px, 4vw, 28px); letter-spacing: -0.02em; display: flex; align-items: center; gap: 12px; }
+.ts-tool-header h1 .ts-sigil { transform: translateY(-1px); }
 .ts-tool-desc { color: var(--muted); margin: 0; max-width: 70ch; }
 
 .ts-tool-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
