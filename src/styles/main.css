@@ -1106,6 +1106,35 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 }
 .ts-tool-body ::file-selector-button:hover { border-color: var(--border-strong); }
 
+/* --- Base buttons ---------------------------------------------------------
+   A `<button>` a tool did not classify is still a button: give it the kit
+   frame instead of the platform chrome, so a bare "Download" no longer reads
+   as a system control next to a styled field. Tools that want a variant add
+   `ts-primary`, `ts-button--ghost`, `ts-k-btn`, and so on. */
+.ts-tool-body button:not([class]) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 9px 15px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 88%, var(--fg) 2%), var(--bg-soft));
+  color: var(--fg);
+  font-family: var(--sans);
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--fg) 6%, transparent);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.08s ease;
+}
+.ts-tool-body button:not([class]):hover { border-color: var(--border-strong); transform: translateY(-1px); }
+.ts-tool-body button:not([class]):active { transform: translateY(0); }
+.ts-tool-body button:not([class]):disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.ts-tool-body button:not([class]):focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
+
 /* ============================================================================
    Component kit (`ts-k-*`)
    ----------------------------------------------------------------------------
