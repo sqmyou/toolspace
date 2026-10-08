@@ -1,13 +1,12 @@
 import { clear, el } from '../core/dom'
 import { favourites, isFavourite, onFavouritesChange, toggleFavourite } from '../core/favourites'
+import { icon, iconEl } from '../core/icons'
 import { categoryHue, sigilTile } from '../core/identity'
 import { categories, findTool, searchTools, tools } from '../core/registry'
 import type { Tool } from '../core/types'
 
-const STAR_ON =
-  '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="m12 3.6 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.8l5.9-.9z"/></svg>'
-const STAR_OFF =
-  '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="m12 3.6 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.8l5.9-.9z"/></svg>'
+const STAR_OFF = icon('star', 15)
+const STAR_ON = STAR_OFF.replace('fill="none"', 'fill="currentColor"')
 
 /**
  * The star toggle shown on cards, rows and tool pages. Stopping propagation
@@ -412,7 +411,22 @@ function notFound(slug: string, palette: Palette): HTMLElement {
     { class: 'ts-home' },
     el('h1', {}, 'Not found'),
     el('p', { class: 'ts-lede' }, `No tool called “${slug}”.`),
-    el('button', { type: 'button', class: 'ts-button ts-primary', onclick: () => palette.open() }, 'Search tools'),
+    el(
+      'button',
+      { type: 'button', class: 'ts-k-btn ts-k-btn--primary', onclick: () => palette.open() },
+      iconEl('search', 16),
+      el('span', {}, 'Search tools'),
+    ),
+  )
+}
+
+/** A previous/next card in the tool footer. */
+function navCard(direction: 'prev' | 'next', tool: Tool): HTMLElement {
+  return el(
+    'a',
+    { class: `ts-tool-nav__link is-${direction}`, href: `#/${tool.slug}` },
+    el('small', {}, direction === 'prev' ? 'Previous' : 'Next'),
+    el('span', { class: 'ts-tool-nav__name' }, tool.name),
   )
 }
 
@@ -425,17 +439,29 @@ function toolPage(tool: Tool, palette: Palette): HTMLElement {
   const nav = el(
     'nav',
     { class: 'ts-tool-nav', 'aria-label': 'Tool navigation' },
-    previous
-      ? el('a', { href: `#/${previous.slug}` }, el('small', {}, '← Previous'), el('span', {}, previous.name))
-      : el('span', {}),
-    next
-      ? el('a', { class: 'ts-next', href: `#/${next.slug}` }, el('small', {}, 'Next →'), el('span', {}, next.name))
-      : el('span', {}),
+    previous ? navCard('prev', previous) : el('span', {}),
+    next ? navCard('next', next) : el('span', {}),
+  )
+
+  // The hue travels down from the header so a tool's panels, focus rings and
+  // accents all read as the same family as its catalogue card.
+  const hue = categoryHue(tool.category)
+
+  const findButton = el(
+    'button',
+    {
+      type: 'button',
+      class: 'ts-k-btn ts-k-btn--sm',
+      onclick: () => palette.open(),
+      title: 'Search every tool (Ctrl K)',
+    },
+    iconEl('search', 14),
+    el('span', {}, 'Find a tool'),
   )
 
   const section = el(
     'section',
-    {},
+    { class: 'ts-toolpage', style: `--h:${hue}` },
     el(
       'header',
       { class: 'ts-tool-header' },
@@ -443,17 +469,16 @@ function toolPage(tool: Tool, palette: Palette): HTMLElement {
         'div',
         { class: 'ts-breadcrumb' },
         el('a', { href: '#/' }, 'All tools'),
-        el('span', { 'aria-hidden': 'true' }, '/'),
+        el('span', { class: 'ts-breadcrumb__sep', 'aria-hidden': 'true' }, '/'),
         el('span', {}, tool.category),
       ),
-      el('h1', {}, tileEl(tool, 40), tool.name),
-      el('p', { class: 'ts-tool-desc' }, tool.description),
       el(
         'div',
-        { class: 'ts-tool-actions' },
-        el('button', { type: 'button', class: 'ts-button', onclick: () => palette.open() }, 'Find another tool'),
-        starButton(tool.slug, tool.name),
+        { class: 'ts-tool-header__main' },
+        el('div', { class: 'ts-tool-header__title' }, tileEl(tool, 44), el('h1', {}, tool.name)),
+        el('p', { class: 'ts-tool-desc' }, tool.description),
       ),
+      el('div', { class: 'ts-tool-actions' }, findButton, starButton(tool.slug, tool.name)),
     ),
     body,
     nav,
@@ -490,7 +515,7 @@ export function mountApp(app: HTMLElement): void {
       'aria-haspopup': 'dialog',
       onclick: () => palette.open(),
     },
-    el('span', { 'aria-hidden': 'true' }, '⌕'),
+    iconEl('search', 15),
     el('span', { class: 'ts-search-trigger-label' }, 'Search tools…'),
     el('kbd', {}, 'Ctrl K'),
   )
@@ -545,7 +570,7 @@ export function mountApp(app: HTMLElement): void {
       'aria-label': 'Back to top',
       onclick: () => window.scrollTo({ top: 0, behavior: 'smooth' }),
     },
-    '↑',
+    iconEl('arrowUp', 16),
   )
 
   function updateToTop() {

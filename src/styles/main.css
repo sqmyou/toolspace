@@ -585,40 +585,81 @@ a { color: inherit; }
   white-space: nowrap;
 }
 
-/* --- Tool page ------------------------------------------------------------ */
-.ts-tool-header { margin-bottom: 24px; }
-.ts-breadcrumb { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12.5px; margin-bottom: 10px; font-family: var(--mono); }
-.ts-breadcrumb a { text-decoration: none; }
-.ts-breadcrumb a:hover { color: var(--accent); }
-.ts-tool-header h1 { margin: 0 0 6px; font-size: clamp(22px, 4vw, 28px); letter-spacing: -0.02em; display: flex; align-items: center; gap: 12px; }
+/* --- Tool page ------------------------------------------------------------
+   The header is a bounded band tinted with the tool's own category hue, so
+   opening a tool feels like arriving somewhere rather than scrolling into
+   more form. The hue arrives as `--h` from the page wrapper. */
+.ts-toolpage { display: block; }
+.ts-tool-header {
+  position: relative;
+  margin: 0 0 26px;
+  padding: 22px 22px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(120% 150% at 100% 0%, hsl(var(--h, 205) 70% 55% / 0.1), transparent 58%),
+    var(--bg-soft);
+  overflow: hidden;
+}
+/* A short rule in the category hue, echoing the catalogue section marks. */
+.ts-tool-header::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(180deg, hsl(var(--h, 205) 72% 58%), hsl(var(--h, 205) 72% 58% / 0));
+}
+.ts-tool-header__main { display: flex; flex-direction: column; gap: 9px; }
+.ts-tool-header__title { display: flex; align-items: center; gap: 13px; min-width: 0; }
+.ts-tool-header h1 {
+  margin: 0;
+  font-size: clamp(21px, 3.6vw, 27px);
+  letter-spacing: -0.022em;
+  line-height: 1.15;
+}
 .ts-tool-header h1 .ts-sigil { transform: translateY(-1px); }
-.ts-tool-desc { color: var(--muted); margin: 0; max-width: 70ch; }
 
-.ts-tool-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.ts-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0 0 13px;
+  font-family: var(--mono);
+}
+.ts-breadcrumb a { text-decoration: none; }
+.ts-breadcrumb a:hover { color: hsl(var(--h, 205) 65% 68%); }
+.ts-breadcrumb__sep { color: var(--faint); }
+.ts-tool-desc { color: var(--muted); margin: 0; max-width: 68ch; font-size: 14.5px; line-height: 1.55; }
+
+.ts-tool-actions { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; align-items: center; }
+
+.ts-tool-body { display: block; }
 
 .ts-tool-nav {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
-  margin-top: 44px;
-  padding-top: 20px;
+  margin-top: 46px;
+  padding-top: 22px;
   border-top: 1px solid var(--border);
 }
-.ts-tool-nav a {
+.ts-tool-nav__link {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   text-decoration: none;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 10px 14px;
-  max-width: 48%;
+  padding: 12px 15px;
   background: var(--bg-soft);
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, transform 0.12s ease, background 0.15s ease;
 }
-.ts-tool-nav a:hover { border-color: var(--accent-line); }
-.ts-tool-nav small { color: var(--faint); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; font-family: var(--mono); }
-.ts-tool-nav .ts-next { margin-left: auto; text-align: right; align-items: flex-end; }
+.ts-tool-nav__link:hover { border-color: var(--border-strong); background: var(--bg-elevated); transform: translateY(-1px); }
+.ts-tool-nav__link small { color: var(--faint); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.09em; font-family: var(--mono); }
+.ts-tool-nav__name { font-size: 14px; font-weight: 500; }
+.ts-tool-nav__link.is-next { text-align: right; align-items: flex-end; grid-column: 2; }
 
 /* Back to top for long tools on mobile. */
 .ts-to-top {
@@ -811,9 +852,9 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
   .ts-search-trigger { min-width: 0; flex: 1; justify-content: flex-start; }
   .ts-search-trigger span.ts-search-trigger-label { display: none; }
   .ts-search-trigger kbd { display: none; }
-  .ts-tool-nav a { max-width: 100%; }
-  .ts-tool-nav { flex-direction: column; }
-  .ts-tool-nav .ts-next { margin-left: 0; }
+  .ts-tool-nav { grid-template-columns: 1fr; }
+  .ts-tool-nav__link.is-next { grid-column: 1; text-align: left; align-items: flex-start; }
+  .ts-tool-header { padding: 18px 16px 16px; }
   .ts-copy-row { flex-wrap: wrap; }
   .ts-copy-row > .ts-muted { min-width: 0; width: 100%; }
 }
