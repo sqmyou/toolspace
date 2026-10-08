@@ -328,3 +328,6 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 .ts-verdict-ok { color: #34d399; }
 .ts-verdict-bad { color: #ff8a80; }
 .ts-warn { color: #fbbf24; font-size: 13px; }
+
+/* Number base */
+.ts-big-value { display: block; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-soft); font-size: 14px; word-break: break-all; }
