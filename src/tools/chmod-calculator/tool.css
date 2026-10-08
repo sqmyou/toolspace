@@ -1,0 +1,30 @@
+.ts-chmod-grid { display: flex; flex-direction: column; gap: 6px; }
+
+.ts-chmod-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-input);
+}
+
+.ts-chmod-who { width: 64px; color: var(--muted); font-size: 13px; }
+
+.ts-chmod-result {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-input);
+}
+
+.ts-chmod-big { font-family: var(--mono); font-size: 18px; color: var(--accent-strong); }
+
+.ts-chmod-explained { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.ts-chmod-explained p { margin: 0; }
+.ts-warn-text { color: var(--danger); }
