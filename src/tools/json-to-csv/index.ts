@@ -1,5 +1,17 @@
-import { el } from '../../core/dom'
-import { copyChip, download } from '../../core/ui'
+import {
+  actions,
+  button,
+  checkbox,
+  field,
+  note,
+  outputBlock,
+  panel,
+  segmented,
+  textarea,
+  textField,
+  toolLayout,
+} from '../../core/components'
+import { download } from '../../core/ui'
 import type { Tool } from '../../core/types'
 import { csvToJson, jsonToCsv, type JsonValue } from './csv'
 
@@ -21,75 +33,97 @@ const tool: Tool = {
   category: 'Data',
   keywords: ['json', 'csv', 'convert', 'export', 'spreadsheet', 'excel', 'table', 'flatten'],
   render(root) {
-    const direction = el(
-      'select',
-      { class: 'ts-select' },
-      el('option', { value: 'json2csv' }, 'JSON → CSV'),
-      el('option', { value: 'csv2json' }, 'CSV → JSON'),
-    ) as HTMLSelectElement
-    const delimiter = el('input', { class: 'ts-input ts-mono', value: ',', maxlength: 3, 'aria-label': 'Delimiter' }) as HTMLInputElement
-    const quoteAll = el('input', { type: 'checkbox' }) as HTMLInputElement
+    let direction = 'json2csv'
 
-    const input = el('textarea', { class: 'ts-textarea ts-mono', rows: 14, spellcheck: false }) as HTMLTextAreaElement
-    const output = el('textarea', { class: 'ts-textarea ts-mono', rows: 14, spellcheck: false, readonly: true }) as HTMLTextAreaElement
-    const error = el('p', { class: 'ts-error', hidden: true })
-    const summary = el('p', { class: 'ts-muted' })
+    const directionControl = segmented({
+      label: 'Direction',
+      items: [
+        { value: 'json2csv', label: 'JSON → CSV' },
+        { value: 'csv2json', label: 'CSV → JSON' },
+      ],
+      value: direction,
+      onChange: (value) => {
+        direction = value
+        sample()
+        run()
+      },
+    })
+
+    const delimiter = textField({ value: ',', mono: true, onInput: () => run() })
+    delimiter.maxLength = 3
+    delimiter.setAttribute('aria-label', 'Delimiter')
+
+    let quoteAll = false
+    const quoteAllBox = checkbox({
+      label: 'Quote every field',
+      onChange: (checked) => {
+        quoteAll = checked
+        run()
+      },
+    })
+
+    const input = textarea({ rows: 14, onInput: () => run() })
+    const outputArea = textarea({ rows: 14, readonly: true })
+    const output = outputBlock('', { label: 'Output', copy: () => outputArea.value })
+    output.body.replaceChildren(outputArea)
+    const meta = output.querySelector('.ts-k-out__meta') as HTMLElement
+
+    const error = note('', 'danger')
+    error.hidden = true
+
     let result = ''
 
     function sample() {
-      input.value = direction.value === 'json2csv' ? JSON_SAMPLE : CSV_SAMPLE
+      input.value = direction === 'json2csv' ? JSON_SAMPLE : CSV_SAMPLE
     }
 
     function run() {
-      const sep = delimiter.value || ','
+      const separator = delimiter.value || ','
       try {
-        if (direction.value === 'json2csv') {
+        if (direction === 'json2csv') {
           const parsed = JSON.parse(input.value) as JsonValue
-          const converted = jsonToCsv(parsed, { delimiter: sep, quoteAll: quoteAll.checked })
+          const converted = jsonToCsv(parsed, { delimiter: separator, quoteAll })
           result = converted.csv
-          summary.textContent = `${converted.rowCount} rows · ${converted.columns.length} columns`
+          output.setLabel('CSV')
+          meta.textContent = `${converted.rowCount} row${converted.rowCount === 1 ? '' : 's'} · ${converted.columns.length} column${converted.columns.length === 1 ? '' : 's'}`
         } else {
-          const rows = csvToJson(input.value, sep)
+          const rows = csvToJson(input.value, separator)
           result = JSON.stringify(rows, null, 2)
-          summary.textContent = `${rows.length} rows`
+          output.setLabel('JSON')
+          meta.textContent = `${rows.length} row${rows.length === 1 ? '' : 's'}`
         }
-        output.value = result
+        outputArea.value = result
         error.hidden = true
       } catch (err) {
         result = ''
-        output.value = ''
-        summary.textContent = ''
+        outputArea.value = ''
+        meta.textContent = ''
         error.textContent = err instanceof Error ? err.message : 'Could not convert that input.'
         error.hidden = false
       }
     }
 
-    direction.addEventListener('change', () => {
-      sample()
-      run()
-    })
-    delimiter.addEventListener('input', run)
-    quoteAll.addEventListener('change', run)
-    input.addEventListener('input', run)
-
-    const extension = () => (direction.value === 'json2csv' ? 'csv' : 'json')
+    const extension = () => (direction === 'json2csv' ? 'csv' : 'json')
 
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el(
-          'div',
-          { class: 'ts-row ts-wrap' },
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Direction'), direction),
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Delimiter'), delimiter),
-          el('label', { class: 'ts-inline-field' }, quoteAll, 'Quote every field'),
-          el('button', { class: 'ts-button', type: 'button', onclick: sample }, 'Load sample'),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Options', icon: 'sliders' },
+          directionControl,
+          actions(field(delimiter, { label: 'Delimiter' }), quoteAllBox),
         ),
-        el('div', { class: 'ts-two-col' }, el('div', { class: 'ts-field' }, el('label', {}, 'Input'), input), el('div', { class: 'ts-field' }, el('label', {}, 'Output'), output)),
+        panel(
+          { title: 'Input', icon: 'braces' },
+          input,
+          actions(button('Load sample', { icon: 'refresh', onClick: () => { sample(); run() } })),
+        ),
         error,
-        el('div', { class: 'ts-row ts-between' }, summary, el('div', { class: 'ts-tool-actions' }, copyChip(() => result, 'Copy'), el('button', { class: 'ts-button', type: 'button', onclick: () => download(`data.${extension()}`, result, 'text/plain') }, 'Download'))),
-        el('p', { class: 'ts-note' }, 'Nested objects become dotted column names and arrays are joined with "; ". Numeric-looking CSV cells come back as numbers.'),
+        output,
+        actions(
+          button('Download', { icon: 'download', onClick: () => download(`data.${extension()}`, result, 'text/plain') }),
+        ),
+        note('Nested objects become dotted column names and arrays are joined with "; ". Numeric-looking CSV cells come back as numbers.'),
       ),
     )
 
