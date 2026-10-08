@@ -53,16 +53,18 @@ const tool: Tool = {
         return
       }
       try {
-        const looksLikeRequest = !/;|set-cookie/i.test(text.split('\n')[0]) && !text.includes('=') === false && !/\b(secure|httponly|samesite|domain|path|max-age|expires|partitioned)\b/i.test(text)
-        let cookies: ParsedCookie[]
-        if (looksLikeRequest) {
-          const pairs = parseCookieHeader(text)
-          cookies = []
-          const lines = pairs.map((pair) => `${pair.name}=${pair.value}`)
-          cookies = parseSetCookieBlock(lines.join('\n'))
-          summary.textContent = `${pairs.length} request cookie${pairs.length === 1 ? '' : 's'} (names and values only — request headers carry no flags)`
-        } else {
-          cookies = parseSetCookieBlock(text)
+        const firstLine = text.split('\n')[0]
+        const hasAttribute = /\b(secure|httponly|samesite|domain|path|max-age|expires|partitioned)\b/i.test(firstLine)
+        const cookies = hasAttribute || text.includes('\n')
+          ? parseSetCookieBlock(text)
+          : (() => {
+              // A single line with no flags is a Cookie request header, which
+              // carries names and values only.
+              const pairs = parseCookieHeader(text)
+              summary.textContent = `${pairs.length} request cookie${pairs.length === 1 ? '' : 's'} (names and values only — request headers carry no flags)`
+              return parseSetCookieBlock(pairs.map((pair) => `${pair.name}=${pair.value}`).join('\n'))
+            })()
+        if (hasAttribute || text.includes('\n')) {
           summary.textContent = `${cookies.length} Set-Cookie line${cookies.length === 1 ? '' : 's'}`
         }
         for (const cookie of cookies) output.append(renderCookie(cookie))
