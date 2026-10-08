@@ -212,6 +212,17 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 .ts-json-head { display: flex; justify-content: space-between; padding: 8px 12px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--border); }
 .ts-pre { margin: 0; padding: 12px; font-family: var(--mono); font-size: 12.5px; line-height: 1.5; overflow-x: auto; white-space: pre; }
 .ts-verify-out { margin: 4px 0 8px; }
+.ts-meter { height: 8px; border-radius: 999px; background: var(--bg-input); border: 1px solid var(--border); overflow: hidden; margin: 14px 0 10px; }
+.ts-meter-fill { height: 100%; width: 0; border-radius: 999px; background: #ff453a; transition: width 0.25s ease, background 0.25s ease; }
+.ts-meter-fill[data-score="1"] { background: #ff9f0a; }
+.ts-meter-fill[data-score="2"] { background: #f5c26b; }
+.ts-meter-fill[data-score="3"] { background: #34c759; }
+.ts-meter-fill[data-score="4"] { background: #30d158; }
+.ts-strength-label { font-size: 14px; font-weight: 600; text-transform: capitalize; margin-bottom: 14px; }
+.ts-strength-stats { display: flex; flex-wrap: wrap; gap: 24px; margin-bottom: 16px; }
+.ts-stat { display: flex; flex-direction: column; gap: 3px; }
+.ts-stat-value { font-family: var(--mono); font-size: 16px; }
+.ts-claim-list { display: flex; flex-direction: column; gap: 8px; padding: 12px; }
 .ts-copy-chip {
   flex: 1;
   text-align: left;
