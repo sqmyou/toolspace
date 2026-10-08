@@ -1445,9 +1445,17 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
   overflow: auto;
 }
 
+/* --- Chips ---------------------------------------------------------------- */
+/* A wrapping row of small selectable tokens: examples, presets, filters. */
+.ts-k-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
 /* --- Key/value rows ------------------------------------------------------- */
 /* A vertical list of key/value rows, e.g. one row per digest. */
 .ts-k-kvlist { display: flex; flex-direction: column; }
+/* Inside a panel the list already has its own padding, so drop the first
+   row's leading space and let the last row sit flush with the frame. */
+.ts-k-panel__body .ts-k-kvlist .ts-k-kv:first-child { padding-top: 0; }
+.ts-k-panel__body .ts-k-kvlist .ts-k-kv:last-child { border-bottom: 0; padding-bottom: 0; }
 .ts-k-kv {
   display: grid;
   grid-template-columns: minmax(84px, 140px) 1fr auto;

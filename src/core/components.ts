@@ -538,6 +538,45 @@ export function copyButton(value: string | (() => string), options: CopyButtonOp
   return node
 }
 
+/** A vertical list of key/value rows; each row carries its own copy button. */
+export function kvList(...children: (Node | string)[]): HTMLElement {
+  return el('div', { class: 'ts-k-kvlist' }, ...children)
+}
+
+export interface Chip {
+  label: string
+  value?: string
+  active?: boolean
+  title?: string
+  onClick: (value: string) => void
+}
+
+/**
+ * A wrapping row of small selectable tokens — examples, presets, filters.
+ * Pass `selected` to have the row manage the active chip itself.
+ */
+export function chips(items: Chip[], options: { selected?: string } = {}): HTMLElement {
+  const row = el('div', { class: 'ts-k-chips' })
+  const nodes = items.map((item) => {
+    const value = item.value ?? item.label
+    const node = el('button', {
+      class: `ts-chip${item.active || options.selected === value ? ' ts-chip-active' : ''}`,
+      type: 'button',
+      title: item.title ?? '',
+      onclick: () => {
+        if (options.selected !== undefined) {
+          for (const other of nodes) other.classList.remove('ts-chip-active')
+          node.classList.add('ts-chip-active')
+        }
+        item.onClick(value)
+      },
+    }, item.label)
+    return node
+  })
+  row.append(...nodes)
+  return row
+}
+
 /** A label + value row with a copy button, for key/value result lists. */
 export function copyRow(label: string, value: string | (() => string)): HTMLElement {
   return el(
