@@ -93,6 +93,21 @@ export function thumbnailsFor(id: string): Thumbnail[] {
   return QUALITIES.map((quality) => ({ ...quality, url: thumbnailUrl(id, quality.name) }))
 }
 
+/** Look up a size by its filename stem. */
+export function qualityByName(name: string): ThumbnailQuality | undefined {
+  return QUALITIES.find((quality) => quality.name === name)
+}
+
+/**
+ * The best size that actually exists. QUALITIES is ordered best-first, so this
+ * is the first one marked available. Used to move the user off a size the video
+ * does not have, rather than leaving them looking at a placeholder.
+ */
+export function bestAvailable(available: Record<string, boolean>): string {
+  const hit = QUALITIES.find((quality) => available[quality.name])
+  return (hit ?? QUALITIES[0]).name
+}
+
 /**
  * YouTube answers a request for a missing size with HTTP 404 *and* a real
  * 120x90 JPEG of its own placeholder, so `img.onerror` never fires. The only

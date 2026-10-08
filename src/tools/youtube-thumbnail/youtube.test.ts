@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  bestAvailable,
   isPlaceholder,
   parseVideoId,
   QUALITIES,
+  qualityByName,
   shortUrl,
   thumbnailFilename,
   thumbnailUrl,
@@ -91,5 +93,37 @@ describe('isPlaceholder', () => {
     expect(isPlaceholder(120, 90)).toBe(true)
     expect(isPlaceholder(1280, 720)).toBe(false)
     expect(isPlaceholder(480, 360)).toBe(false)
+  })
+})
+
+describe('qualityByName', () => {
+  it('finds a size by its filename stem', () => {
+    expect(qualityByName('maxresdefault')?.width).toBe(1280)
+    expect(qualityByName('hqdefault')?.height).toBe(360)
+  })
+
+  it('returns undefined for a size that is not offered', () => {
+    expect(qualityByName('default')).toBeUndefined()
+    expect(qualityByName('nope')).toBeUndefined()
+  })
+})
+
+describe('bestAvailable', () => {
+  it('prefers the highest quality that exists', () => {
+    expect(bestAvailable({ maxresdefault: true, hq720: true, hqdefault: true })).toBe('maxresdefault')
+  })
+
+  it('skips sizes the video does not have', () => {
+    expect(bestAvailable({ maxresdefault: false, hq720: false, sddefault: true, hqdefault: true })).toBe('sddefault')
+  })
+
+  it('falls back to the first size when nothing is known yet', () => {
+    expect(bestAvailable({})).toBe(QUALITIES[0].name)
+  })
+
+  it('falls back to the first size when every size is missing', () => {
+    const all: Record<string, boolean> = {}
+    for (const quality of QUALITIES) all[quality.name] = false
+    expect(bestAvailable(all)).toBe(QUALITIES[0].name)
   })
 })

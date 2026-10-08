@@ -19,27 +19,56 @@
   padding: 3px 8px;
 }
 
-.ts-yt-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 14px;
+/* --- Size picker: a segmented control, one segment per published size ------ */
+.ts-yt-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 16px;
 }
 
-.ts-yt-card {
-  margin: 0;
+.ts-yt-option {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 1px;
+  align-items: flex-start;
+  padding: 8px 13px;
   border: 1px solid var(--border);
-  background: var(--bg-soft);
   border-radius: var(--radius);
-  padding: 11px;
+  background: var(--bg-soft);
+  color: var(--fg);
+  cursor: pointer;
+  font-family: var(--sans);
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
+.ts-yt-option:hover:not(:disabled) { border-color: var(--accent-line); }
+.ts-yt-option.is-on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+}
+.ts-yt-option-label { font-size: 13.5px; font-weight: 500; }
+.ts-yt-option-dim { font-family: var(--mono); font-size: 11px; color: var(--faint); }
+.ts-yt-option.is-on .ts-yt-option-dim { color: var(--muted); }
+
+/* A size this video does not have: still visible, so the set reads as complete. */
+.ts-yt-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  text-decoration: line-through;
+  text-decoration-color: var(--faint);
+}
+
+.ts-yt-panel { display: flex; flex-direction: column; gap: 12px; }
 
 .ts-yt-frame {
   position: relative;
   aspect-ratio: 16 / 9;
-  border-radius: var(--radius-sm);
+  max-width: 720px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   overflow: hidden;
   background: var(--bg-input);
   display: flex;
@@ -47,11 +76,12 @@
   justify-content: center;
 }
 
-.ts-yt-image { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ts-yt-image { width: 100%; height: 100%; object-fit: contain; display: block; }
 
-/* A size the video does not have: dim the stand-in and say so. */
-.ts-yt-card.is-missing .ts-yt-image { opacity: 0.25; filter: grayscale(1); }
-.ts-yt-card.is-missing .ts-yt-actions { opacity: 0.55; }
+/* The placeholder for a size the video lacks: dim it and let the label explain. */
+.ts-yt-panel.is-missing .ts-yt-image { opacity: 0.2; filter: grayscale(1); }
+
+.ts-yt-detail { display: flex; flex-direction: column; gap: 10px; max-width: 720px; }
 
 .ts-yt-status {
   position: absolute;
