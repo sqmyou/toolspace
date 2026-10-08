@@ -1,0 +1,33 @@
+.ts-diff-list { display: flex; flex-direction: column; gap: 4px; }
+
+.ts-diff-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: var(--radius);
+  background: var(--bg-input);
+  font-family: var(--mono);
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.ts-diff-kind {
+  flex: none;
+  width: 62px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.ts-diff-path { color: var(--fg); }
+.ts-diff-before { color: var(--danger); }
+.ts-diff-after { color: var(--accent-strong); }
+
+.ts-diff-added { border-left-color: var(--accent-strong); }
+.ts-diff-removed { border-left-color: var(--danger); }
+.ts-diff-changed { border-left-color: #fbbf24; }
+.ts-diff-type { border-left-color: #a78bfa; }
