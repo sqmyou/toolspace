@@ -353,3 +353,10 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 .ts-audit-error { border-color: rgba(255, 138, 128, 0.5); color: #ff8a80; }
 .ts-audit-warning { border-color: rgba(251, 191, 36, 0.45); color: #fbbf24; }
 .ts-audit-info { color: var(--muted); }
+
+/* Fake data */
+.ts-checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.ts-table-wrap { overflow: auto; max-height: 420px; border: 1px solid var(--border); border-radius: 10px; }
+.ts-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.ts-table th, .ts-table td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.ts-table th { position: sticky; top: 0; background: var(--bg-soft); }
