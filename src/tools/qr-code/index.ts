@@ -61,7 +61,7 @@ const tool: Tool = {
       try {
         const built = await buildMatrix(input.value, level)
         matrix = built
-        preview.replaceChildren(el('div', { class: 'ts-qr-frame', html: toSvg(built, { margin: 2 }) }))
+        preview.replaceChildren(el('div', { class: 'ts-qr-frame', innerHTML: toSvg(built, { margin: 2 }) }))
         meta.textContent = `${built.size}×${built.size} modules · error correction ${level}`
         error.hidden = true
         svgButton.disabled = false
