@@ -1,0 +1,4 @@
+.ts-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: start; }
+
+.ts-stats-name { width: 170px; flex: none; }
+.ts-stats-value { flex: 1; font-family: var(--mono); font-size: 13px; }
