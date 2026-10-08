@@ -1311,6 +1311,8 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
   overflow: hidden;
 }
 .ts-k-stat { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; background: var(--bg-soft); }
+/* A stat used as a standalone card rather than a cell in a strip. */
+.ts-k-stat--box { border: 1px solid var(--border); border-radius: var(--radius); }
 .ts-k-stat__value { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
 .ts-k-stat__label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--faint); }
 .ts-k-stat__hint { font-size: 11px; color: var(--muted); }
@@ -1378,6 +1380,20 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
   object-fit: contain;
   border-radius: var(--radius-sm);
 }
+
+/* --- Colour chips --------------------------------------------------------- */
+.ts-k-colors { display: flex; flex-wrap: wrap; gap: 8px; }
+.ts-k-color {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px 5px 5px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-soft);
+}
+.ts-k-color__swatch { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--border); flex: none; }
+.ts-k-color__value { font-family: var(--mono); font-size: 12px; }
 
 /* --- Table ---------------------------------------------------------------- */
 .ts-k-tablewrap { overflow: auto; max-height: 440px; border: 1px solid var(--border); border-radius: var(--radius); }

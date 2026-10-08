@@ -1,5 +1,16 @@
-import { el } from '../../core/dom'
-import { copyChip, download, readFileAsText } from '../../core/ui'
+import {
+  actions,
+  button,
+  copyRow,
+  mediaFrame,
+  note,
+  panel,
+  stat,
+  stats,
+  textarea,
+  toolLayout,
+} from '../../core/components'
+import { download, readFileAsText } from '../../core/ui'
 import type { Tool } from '../../core/types'
 import { formatBytes, inspectSvg, looksLikeSvg, sanitizeSvg, svgCssUrl, svgDataUri } from './svg'
 
@@ -25,29 +36,27 @@ const tool: Tool = {
   render(root) {
     let raw = SAMPLE
 
-    const previewFrame = el('div', { class: 'ts-svg-frame' })
-    const preview = el('img', { class: 'ts-svg-preview', alt: 'SVG preview' }) as HTMLImageElement
-    previewFrame.append(preview)
+    const frame = mediaFrame({ alt: 'SVG preview', checker: true, maxHeight: 300 })
+    const warning = note('', 'warn')
+    warning.hidden = true
+    const status = document.createElement('p')
+    status.className = 'ts-k-hint'
 
-    const warning = el('p', { class: 'ts-error', hidden: true })
-    const status = el('p', { class: 'ts-muted' })
-    const stats = el('div', { class: 'ts-svg-stats' })
-    const tagList = el('div', { class: 'ts-svg-tags' })
-    const colorRow = el('div', { class: 'ts-svg-colors' })
-    const uriRow = el('div', { class: 'ts-svg-out' })
+    const statsStrip = stats()
+    const tagLine = document.createElement('p')
+    tagLine.className = 'ts-k-hint'
+    const colors = document.createElement('div')
+    colors.className = 'ts-k-colors'
+    const useRows = document.createElement('div')
+    useRows.className = 'ts-k-kvlist'
 
-    const editor = el('textarea', {
-      class: 'ts-textarea',
-      spellcheck: false,
-      rows: 10,
-      'aria-label': 'SVG markup',
-    }) as HTMLTextAreaElement
+    const editor = textarea({ rows: 10, value: raw })
 
     function renderOutputs() {
       const clean = sanitizeSvg(raw)
       const info = inspectSvg(raw)
 
-      preview.src = svgDataUri(clean.markup)
+      frame.image.src = svgDataUri(clean.markup)
       status.textContent = `${info.width ?? '—'} × ${info.height ?? '—'}${info.width ? info.units : ''} · ${
         info.viewBox ? `viewBox ${info.viewBox.width}×${info.viewBox.height}` : 'no viewBox'
       } · ${info.elementCount} elements · ${formatBytes(info.sizeBytes)}`
@@ -64,53 +73,43 @@ const tool: Tool = {
         warning.hidden = true
       }
 
-      stats.replaceChildren(
-        ...info.tags.slice(0, 6).map((entry) =>
-          el(
-            'div',
-            { class: 'ts-svg-stat' },
-            el('span', { class: 'ts-svg-stat-count' }, String(entry.count)),
-            el('span', { class: 'ts-muted' }, entry.tag),
-          ),
-        ),
-      )
-      tagList.replaceChildren(
-        el(
-          'p',
-          { class: 'ts-note' },
-          info.tags.length
-            ? info.tags.map((entry) => `${entry.tag} ×${entry.count}`).join(', ')
-            : 'No elements found.',
-        ),
+      statsStrip.replaceChildren(
+        stat({ label: 'Elements', value: String(info.elementCount) }),
+        stat({ label: 'Size', value: formatBytes(info.sizeBytes) }),
+        stat({ label: 'Colours', value: String(info.colors.length) }),
+        stat({ label: 'Removed', value: String(clean.removed.length) }),
       )
 
-      colorRow.replaceChildren(
+      tagLine.textContent = info.tags.length
+        ? info.tags.map((entry) => `${entry.tag} ×${entry.count}`).join(', ')
+        : 'No elements found.'
+
+      colors.replaceChildren(
         ...(info.colors.length
           ? info.colors.map((color) =>
-              el(
-                'span',
-                { class: 'ts-svg-color', title: color },
-                el('span', { class: 'ts-svg-swatch', style: `background:${color}` }),
-                el('span', { class: 'ts-svg-color-value' }, color),
-              ),
+              colorChip(color),
             )
-          : [el('span', { class: 'ts-muted' }, 'No explicit colours — the SVG may use currentColor or CSS.')]),
+          : [Object.assign(document.createElement('span'), { className: 'ts-k-hint', textContent: 'No explicit colours — the SVG may use currentColor or CSS.' })]),
       )
 
-      uriRow.replaceChildren(
-        el(
-          'div',
-          { class: 'ts-copy-row' },
-          el('span', { class: 'ts-muted' }, 'Data URI'),
-          copyChip(() => svgDataUri(clean.markup), 'data:image/svg+xml,…'),
-        ),
-        el(
-          'div',
-          { class: 'ts-copy-row' },
-          el('span', { class: 'ts-muted' }, 'CSS'),
-          copyChip(() => svgCssUrl(clean.markup), 'url("data:image/svg+xml,…")'),
-        ),
+      useRows.replaceChildren(
+        copyRow('Data URI', svgDataUri(clean.markup)),
+        copyRow('CSS', svgCssUrl(clean.markup)),
       )
+    }
+
+    function colorChip(color: string): HTMLElement {
+      const chip = document.createElement('span')
+      chip.className = 'ts-k-color'
+      chip.title = color
+      const swatch = document.createElement('span')
+      swatch.className = 'ts-k-color__swatch'
+      swatch.style.background = color
+      const value = document.createElement('span')
+      value.className = 'ts-k-color__value'
+      value.textContent = color
+      chip.append(swatch, value)
+      return chip
     }
 
     editor.addEventListener('input', () => {
@@ -118,13 +117,15 @@ const tool: Tool = {
       if (!looksLikeSvg(raw)) {
         warning.textContent = 'That does not look like SVG markup yet.'
         warning.hidden = false
-        preview.removeAttribute('src')
+        frame.image.removeAttribute('src')
         return
       }
       renderOutputs()
     })
 
-    const fileInput = el('input', { type: 'file', accept: '.svg,image/svg+xml' }) as HTMLInputElement
+    const fileInput = document.createElement('input')
+    fileInput.type = 'file'
+    fileInput.accept = '.svg,image/svg+xml'
     fileInput.addEventListener('change', async () => {
       const file = fileInput.files?.[0]
       if (!file) return
@@ -133,51 +134,45 @@ const tool: Tool = {
       renderOutputs()
     })
 
-    root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el(
-          'div',
-          { class: 'ts-row ts-wrap' },
-          el('div', { class: 'ts-field ts-grow' }, el('label', {}, 'Load an SVG file'), fileInput),
-          el('button', { class: 'ts-button', type: 'button', onclick: () => loadSample() }, 'Load sample'),
-        ),
-        el('div', { class: 'ts-svg-columns' },
-          el('div', { class: 'ts-field' }, el('label', {}, 'Markup'), editor),
-          el(
-            'div',
-            { class: 'ts-field' },
-            el('label', {}, 'Preview'),
-            previewFrame,
-            el('div', { class: 'ts-svg-actions' },
-              el('button', { class: 'ts-button', type: 'button', onclick: () => download('cleaned.svg', sanitizeSvg(raw).markup, 'image/svg+xml') }, 'Download cleaned SVG'),
-              el('button', { class: 'ts-button', type: 'button', onclick: () => download('svg-data-uri.txt', svgDataUri(sanitizeSvg(raw).markup), 'text/plain') }, 'Download data URI'),
-            ),
-          ),
-        ),
-        status,
-        warning,
-        el('h3', { class: 'ts-subhead' }, 'What is inside'),
-        stats,
-        tagList,
-        el('h3', { class: 'ts-subhead' }, 'Colours'),
-        colorRow,
-        el('h3', { class: 'ts-subhead' }, 'Use it'),
-        uriRow,
-        el(
-          'p',
-          { class: 'ts-note' },
-          'The preview is rendered as an image, so scripts never run. Scripts, event handlers and javascript: links are removed from the copyable output. Nothing is uploaded.',
-        ),
-      ),
-    )
-
     function loadSample() {
       raw = SAMPLE
       editor.value = SAMPLE
       renderOutputs()
     }
+
+    root.append(
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Markup', icon: 'code' },
+          editor,
+          actions(
+            button('Load an SVG file', { icon: 'upload', onClick: () => fileInput.click() }),
+            button('Load sample', { icon: 'refresh', onClick: loadSample }),
+          ),
+        ),
+        panel(
+          { title: 'Preview', icon: 'eye' },
+          frame.root,
+          status,
+          actions(
+            button('Download cleaned SVG', {
+              icon: 'download',
+              onClick: () => download('cleaned.svg', sanitizeSvg(raw).markup, 'image/svg+xml'),
+            }),
+            button('Download data URI', {
+              icon: 'download',
+              onClick: () => download('svg-data-uri.txt', svgDataUri(sanitizeSvg(raw).markup), 'text/plain'),
+            }),
+          ),
+        ),
+        warning,
+        panel({ title: 'What is inside', icon: 'layers' }, statsStrip, tagLine),
+        panel({ title: 'Colours', icon: 'palette' }, colors),
+        panel({ title: 'Use it', icon: 'copy' }, useRows),
+        note('The preview is rendered as an image, so scripts never run. Scripts, event handlers and javascript: links are removed from the copyable output. Nothing is uploaded.'),
+      ),
+    )
 
     loadSample()
   },
