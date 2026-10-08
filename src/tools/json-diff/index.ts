@@ -1,6 +1,30 @@
+import {
+  badge,
+  field,
+  grid,
+  note,
+  panel,
+  textarea,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
 import type { Tool } from '../../core/types'
 import { diffJson, renderValue, summarize } from './diff'
+
+const BEFORE = `{
+  "name": "toolspace",
+  "private": true,
+  "tools": 91,
+  "tags": ["privacy", "browser"]
+}`
+
+const AFTER = `{
+  "name": "toolspace",
+  "private": true,
+  "tools": 92,
+  "tags": ["privacy", "offline"],
+  "stars": 12
+}`
 
 const tool: Tool = {
   slug: 'json-diff',
@@ -9,10 +33,9 @@ const tool: Tool = {
   category: 'Data',
   keywords: ['json', 'diff', 'compare', 'changes', 'patch', 'structural'],
   render(root) {
-    const left = el('textarea', { class: 'ts-textarea ts-mono', rows: 10, spellcheck: false, placeholder: 'First JSON…' }) as HTMLTextAreaElement
-    const right = el('textarea', { class: 'ts-textarea ts-mono', rows: 10, spellcheck: false, placeholder: 'Second JSON…' }) as HTMLTextAreaElement
-    const error = el('p', { class: 'ts-error', hidden: true })
-    const summary = el('p', { class: 'ts-muted' })
+    const left = textarea({ rows: 12, mono: true, value: BEFORE, onInput: () => run() })
+    const right = textarea({ rows: 12, mono: true, value: AFTER, onInput: () => run() })
+    const summary = el('div', { class: 'ts-json-diff-summary' })
     const list = el('div', { class: 'ts-diff-list' })
 
     function run() {
@@ -20,8 +43,7 @@ const tool: Tool = {
       const a = left.value.trim()
       const b = right.value.trim()
       if (!a && !b) {
-        error.hidden = true
-        summary.textContent = ''
+        summary.replaceChildren()
         return
       }
       let parsedA: unknown
@@ -30,18 +52,21 @@ const tool: Tool = {
         parsedA = JSON.parse(a || 'null')
         parsedB = JSON.parse(b || 'null')
       } catch (err) {
-        error.textContent = `Invalid JSON — ${err instanceof Error ? err.message : 'could not parse input.'}`
-        error.hidden = false
-        summary.textContent = ''
+        summary.replaceChildren(badge(`Invalid JSON — ${err instanceof Error ? err.message : 'could not parse input.'}`, 'danger'))
         return
       }
-      error.hidden = true
       const changes = diffJson(parsedA, parsedB)
       const counts = summarize(changes)
-      summary.textContent = `${changes.length} change${changes.length === 1 ? '' : 's'} · +${counts.added} −${counts.removed} ~${counts.changed} type ${counts.type}`
+      summary.replaceChildren(
+        badge(`${changes.length} change${changes.length === 1 ? '' : 's'}`, changes.length ? 'accent' : 'ok'),
+        badge(`+${counts.added}`, 'ok'),
+        badge(`−${counts.removed}`, 'danger'),
+        badge(`~${counts.changed}`, 'warn'),
+        badge(`${counts.type} type`, 'warn'),
+      )
 
       if (changes.length === 0) {
-        list.append(el('p', { class: 'ts-empty' }, 'The two documents are structurally identical.'))
+        list.append(el('p', { class: 'ts-k-note ts-k-note--ok' }, 'The two documents are structurally identical.'))
         return
       }
       for (const change of changes) {
@@ -54,23 +79,19 @@ const tool: Tool = {
       }
     }
 
-    left.addEventListener('input', run)
-    right.addEventListener('input', run)
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el(
-          'div',
-          { class: 'ts-row ts-wrap' },
-          el('div', { class: 'ts-field ts-grow' }, el('label', {}, 'Before'), left),
-          el('div', { class: 'ts-field ts-grow' }, el('label', {}, 'After'), right),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Documents', icon: 'braces' },
+          grid(
+            280,
+            field(left, { label: 'Before' }),
+            field(right, { label: 'After' }),
+          ),
         ),
-        error,
-        summary,
-        list,
-        el('p', { class: 'ts-note' }, 'Key order is ignored. Arrays are compared by position. Nothing is uploaded.'),
+        panel({ title: 'Changes', icon: 'braces' }, summary, list),
+        note('Key order is ignored. Arrays are compared by position. Nothing is uploaded.'),
       ),
     )
 

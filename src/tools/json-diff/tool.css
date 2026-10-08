@@ -1,3 +1,5 @@
+.ts-json-diff-summary { display: flex; flex-wrap: wrap; gap: 6px; }
+
 .ts-diff-list { display: flex; flex-direction: column; gap: 4px; }
 
 .ts-diff-row {

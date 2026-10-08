@@ -1,6 +1,24 @@
+import {
+  badge,
+  field,
+  grid,
+  note,
+  panel,
+  segmented,
+  textarea,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
 import type { Tool } from '../../core/types'
 import { diffLines, diffStats, diffWords, type DiffPart } from './diff'
+
+const BEFORE = `the quick brown fox
+jumps over the lazy dog
+the end`
+
+const AFTER = `the quick red fox
+jumps over the lazy dog
+the very end`
 
 const tool: Tool = {
   slug: 'text-diff',
@@ -9,41 +27,35 @@ const tool: Tool = {
   category: 'Text',
   keywords: ['diff', 'compare', 'changes', 'patch', 'side by side'],
   render(root) {
-    const before = el('textarea', {
-      class: 'ts-textarea',
-      rows: 8,
-      placeholder: 'Original text…',
-      'aria-label': 'Original text',
-    }) as HTMLTextAreaElement
-    const after = el('textarea', {
-      class: 'ts-textarea',
-      rows: 8,
-      placeholder: 'Changed text…',
-      'aria-label': 'Changed text',
-    }) as HTMLTextAreaElement
-
     let mode: 'line' | 'word' = 'line'
 
-    const modeSelect = el('select', { class: 'ts-select' }) as HTMLSelectElement
-    modeSelect.append(el('option', { value: 'line' }, 'Lines'), el('option', { value: 'word' }, 'Words'))
-    modeSelect.value = mode
-    modeSelect.addEventListener('change', () => {
-      mode = modeSelect.value as 'line' | 'word'
-      render()
+    const before = textarea({ rows: 10, mono: true, value: BEFORE, onInput: () => render() })
+    const after = textarea({ rows: 10, mono: true, value: AFTER, onInput: () => render() })
+
+    const modeControl = segmented({
+      label: 'Compare',
+      items: [
+        { value: 'line', label: 'Lines' },
+        { value: 'word', label: 'Words' },
+      ],
+      value: mode,
+      onChange: (value) => {
+        mode = value as 'line' | 'word'
+        render()
+      },
     })
 
-    const summary = el('div', { class: 'ts-row ts-wrap' })
+    const summary = el('div', { class: 'ts-diff-summary' })
     const output = el('div', { class: 'ts-diff' })
 
     function span(part: DiffPart) {
       const cls = part.type === 'add' ? 'ts-diff-add' : part.type === 'remove' ? 'ts-diff-remove' : 'ts-diff-equal'
       const marker = part.type === 'add' ? '+ ' : part.type === 'remove' ? '− ' : '  '
-      const lines = part.value.split('\n')
       return el(
         'div',
         { class: `ts-diff-part ${cls}` },
         el('span', { class: 'ts-diff-marker' }, marker),
-        el('span', { class: 'ts-diff-text' }, lines.join('\n')),
+        el('span', { class: 'ts-diff-text' }, part.value),
       )
     }
 
@@ -51,34 +63,27 @@ const tool: Tool = {
       const parts = mode === 'line' ? diffLines(before.value, after.value) : diffWords(before.value, after.value)
       const stats = diffStats(parts)
       summary.replaceChildren(
-        el('span', { class: 'ts-badge ts-pass' }, `+${stats.added}`),
-        el('span', { class: 'ts-badge ts-fail' }, `−${stats.removed}`),
-        el('span', { class: 'ts-muted' }, `${stats.unchanged} unchanged`),
+        badge(`+${stats.added}`, 'ok'),
+        badge(`−${stats.removed}`, 'danger'),
+        badge(`${stats.unchanged} unchanged`),
       )
       output.replaceChildren(...parts.map(span))
     }
 
-    before.addEventListener('input', render)
-    after.addEventListener('input', render)
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el(
-          'div',
-          { class: 'ts-diff-columns' },
-          el('div', { class: 'ts-field' }, el('label', {}, 'Before'), before),
-          el('div', { class: 'ts-field' }, el('label', {}, 'After'), after),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Compare', icon: 'sliders' },
+          modeControl,
+          grid(
+            240,
+            field(before, { label: 'Before' }),
+            field(after, { label: 'After' }),
+          ),
         ),
-        el(
-          'div',
-          { class: 'ts-row ts-between' },
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Mode'), modeSelect),
-          summary,
-        ),
-        output,
-        el('p', { class: 'ts-note' }, 'Diffing happens in your browser; nothing is uploaded.'),
+        panel({ title: 'Changes', icon: 'diff' }, summary, output),
+        note('Diffing happens in your browser; nothing is uploaded.'),
       ),
     )
 
