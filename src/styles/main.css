@@ -320,3 +320,11 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 .ts-regex-hit { background: rgba(110, 231, 183, 0.28); border-radius: 3px; }
 .ts-explain-list { display: flex; flex-direction: column; gap: 4px; }
 .ts-explain-row { display: grid; grid-template-columns: minmax(80px, auto) 1fr; gap: 12px; align-items: baseline; padding: 4px 0; }
+
+/* Checksum */
+.ts-hash-list { display: flex; flex-direction: column; gap: 6px; }
+.ts-hash-row { display: grid; grid-template-columns: 72px 1fr auto; gap: 12px; align-items: center; font-size: 13px; }
+.ts-verdict { font-size: 13px; }
+.ts-verdict-ok { color: #34d399; }
+.ts-verdict-bad { color: #ff8a80; }
+.ts-warn { color: #fbbf24; font-size: 13px; }

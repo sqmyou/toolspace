@@ -22,20 +22,19 @@ const tool: Tool = {
 
     function update() {
       const infos = inspect(input.value)
-      grid.replaceChildren(
-        ...infos.map((info) =>
-          el(
-            'div',
-            { class: 'ts-unicode-cell' },
-            el('span', { class: 'ts-unicode-glyph' }, info.char),
-            el('span', { class: 'ts-mono ts-value' }, info.unicode),
-            el('span', { class: 'ts-muted' }, `dec ${info.decimal}`),
-            el('span', { class: 'ts-muted' }, `js ${info.js}`),
-            el('span', { class: 'ts-muted' }, `html ${info.html}`),
-            info.name ? el('span', { class: 'ts-hint' }, info.name) : null,
-          ),
+      const cells = infos.map((info) =>
+        el(
+          'div',
+          { class: 'ts-unicode-cell' },
+          el('span', { class: 'ts-unicode-glyph' }, info.char),
+          el('span', { class: 'ts-mono ts-value' }, info.unicode),
+          el('span', { class: 'ts-muted' }, `dec ${info.decimal}`),
+          el('span', { class: 'ts-muted' }, `js ${info.js}`),
+          el('span', { class: 'ts-muted' }, `html ${info.html}`),
+          info.name ? el('span', { class: 'ts-hint' }, info.name) : null,
         ),
       )
+      grid.replaceChildren(...cells)
       entities.replaceChildren(
         el(
           'div',
