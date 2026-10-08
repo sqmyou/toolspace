@@ -93,6 +93,7 @@ a { color: inherit; }
 
 .ts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin: 16px 0; }
 .ts-grid-wide { margin-top: 8px; }
+.ts-search-hero { max-width: 420px; margin: 0 0 4px; }
 
 .ts-card {
   display: block;

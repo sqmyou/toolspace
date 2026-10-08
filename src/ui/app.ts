@@ -54,6 +54,15 @@ function sidebar(onSelect: (slug: string) => void): HTMLElement {
   )
 }
 
+function toolCard(tool: Tool): HTMLElement {
+  return el(
+    'a',
+    { class: 'ts-card', href: `#/${tool.slug}` },
+    el('h3', {}, tool.name),
+    el('p', {}, tool.description),
+  )
+}
+
 function home(): HTMLElement {
   return el(
     'section',
@@ -62,26 +71,42 @@ function home(): HTMLElement {
     el(
       'p',
       { class: 'ts-lede' },
-      'Pick a tool from the left. Everything runs in your browser — no ads, no sign-up, no server. ',
+      'Everything runs in your browser — no ads, no sign-up, no server. ',
       'Your data never leaves this tab.',
     ),
-    el(
-      'div',
-      { class: 'ts-grid ts-grid-wide' },
-      ...tools.map((tool) =>
-        el(
-          'a',
-          { class: 'ts-card', href: `#/${tool.slug}` },
-          el('h3', {}, tool.name),
-          el('p', {}, tool.description),
-        ),
-      ),
-    ),
+    homeSearch(),
   )
 }
 
 function notFound(slug: string): HTMLElement {
-  return el('section', { class: 'ts-home' }, el('h1', {}, 'Not found'), el('p', {}, `No tool called “${slug}”.`))
+  return el(
+    'section',
+    { class: 'ts-home' },
+    el('h1', {}, 'Not found'),
+    el('p', {}, `No tool called “${slug}”.`),
+    homeSearch(),
+  )
+}
+
+function homeSearch(): HTMLElement {
+  const grid = el('div', { class: 'ts-grid ts-grid-wide' })
+  const renderGrid = (items: Tool[]) => {
+    clear(grid)
+    if (items.length === 0) {
+      grid.append(el('p', { class: 'ts-empty' }, 'No tools match that search.'))
+      return
+    }
+    grid.append(...items.map(toolCard))
+  }
+  const query = el('input', {
+    class: 'ts-search ts-search-hero',
+    type: 'search',
+    placeholder: 'Search tools…',
+    'aria-label': 'Search tools',
+    oninput: (e: Event) => renderGrid(searchTools((e.target as HTMLInputElement).value)),
+  }) as HTMLInputElement
+  renderGrid(tools)
+  return el('div', {}, query, grid)
 }
 
 export function mountApp(app: HTMLElement): void {
