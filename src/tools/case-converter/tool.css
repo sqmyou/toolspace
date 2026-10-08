@@ -1,0 +1,37 @@
+/* One row per transform: the name reads as a label, the result as the value,
+   and the copy button sits at the end so the column of values stays aligned. */
+.ts-case-list { display: flex; flex-direction: column; }
+
+.ts-case-row {
+  display: grid;
+  grid-template-columns: minmax(0, 132px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.ts-case-row:last-child { border-bottom: 0; }
+.ts-case-row:hover { background: var(--bg-input); }
+
+.ts-case-row__label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-family: var(--mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ts-case-row__value {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .ts-case-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .ts-case-row__label { grid-column: 1 / -1; }
+}

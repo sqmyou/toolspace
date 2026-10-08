@@ -1,10 +1,22 @@
+import {
+  actions,
+  button,
+  checkbox,
+  copyButton,
+  note,
+  outputBlock,
+  panel,
+  textarea,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
-import { copyChip } from '../../core/ui'
 import type { Tool } from '../../core/types'
 import {
   camelCase, constantCase, dotCase, kebabCase, lower, pascalCase, reverse,
   sentenceCase, snakeCase, titleCase, toggleCase, transformLines, upper,
 } from './case'
+
+const SAMPLE = 'the Quick brown FOX jumps over the lazy dog'
 
 const TRANSFORMS: { label: string; run: (input: string) => string }[] = [
   { label: 'UPPER CASE', run: upper },
@@ -28,72 +40,88 @@ const tool: Tool = {
   category: 'Text',
   keywords: ['case', 'uppercase', 'lowercase', 'camel', 'snake', 'kebab', 'title', 'sort lines', 'dedupe'],
   render(root) {
-    const input = el('textarea', {
-      class: 'ts-textarea',
+    const input = textarea({
       rows: 6,
       placeholder: 'Paste or type text…',
-      'aria-label': 'Input text',
-    }) as HTMLTextAreaElement
+      mono: false,
+      onInput: () => {
+        renderResults()
+        renderLines()
+      },
+    })
 
-    const results = el('div', { class: 'ts-copy-list' })
+    const values = el('div', { class: 'ts-case-list' })
+    const linesOut = textarea({ rows: 4, readonly: true, mono: false })
+    const linesBlock = outputBlock(linesOut, { label: 'Cleaned lines', copy: () => linesOut.value })
 
-    const trim = el('input', { type: 'checkbox' }) as HTMLInputElement
-    const sort = el('input', { type: 'checkbox' }) as HTMLInputElement
-    const dedupe = el('input', { type: 'checkbox' }) as HTMLInputElement
-    const reverseLines = el('input', { type: 'checkbox' }) as HTMLInputElement
-    const linesOut = el('textarea', { class: 'ts-textarea', rows: 4, readonly: true }) as HTMLTextAreaElement
+    let trim = false
+    let sort = false
+    let dedupe = false
+    let reverseLines = false
 
     function renderResults() {
-      results.replaceChildren(
+      values.replaceChildren(
         ...TRANSFORMS.map((transform) =>
           el(
             'div',
-            { class: 'ts-copy-row' },
-            el('span', { class: 'ts-muted' }, transform.label),
-            copyChip(() => transform.run(input.value)),
+            { class: 'ts-case-row' },
+            el('span', { class: 'ts-case-row__label' }, transform.label),
+            el('span', { class: 'ts-case-row__value ts-k-mono' }, transform.run(input.value) || '—'),
+            copyButton(() => transform.run(input.value), { label: 'Copy', size: 'sm' }),
           ),
         ),
       )
     }
 
     function renderLines() {
-      linesOut.value = transformLines(input.value, {
-        trim: trim.checked,
-        sort: sort.checked,
-        dedupe: dedupe.checked,
-        reverse: reverseLines.checked,
-      })
+      linesOut.value = transformLines(input.value, { trim, sort, dedupe, reverse: reverseLines })
     }
 
-    input.addEventListener('input', () => {
+    function refresh() {
       renderResults()
       renderLines()
-    })
-    for (const box of [trim, sort, dedupe, reverseLines]) box.addEventListener('change', renderLines)
+    }
 
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'Input'), input),
-        el('h3', { class: 'ts-subhead' }, 'Converted'),
-        results,
-        el('h3', { class: 'ts-subhead' }, 'Line tools'),
-        el(
-          'div',
-          { class: 'ts-row ts-wrap' },
-          el('label', { class: 'ts-inline-field' }, trim, 'Trim & drop blanks'),
-          el('label', { class: 'ts-inline-field' }, sort, 'Sort'),
-          el('label', { class: 'ts-inline-field' }, dedupe, 'Dedupe'),
-          el('label', { class: 'ts-inline-field' }, reverseLines, 'Reverse'),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Input', icon: 'text' },
+          input,
+          actions(
+            button('Load sample', {
+              icon: 'refresh',
+              onClick: () => {
+                input.value = SAMPLE
+                refresh()
+              },
+            }),
+            button('Clear', {
+              icon: 'x',
+              onClick: () => {
+                input.value = ''
+                refresh()
+              },
+            }),
+          ),
         ),
-        el('div', { class: 'ts-field' }, linesOut),
-        el('p', { class: 'ts-note' }, 'Everything is transformed locally in your browser.'),
+        panel({ title: 'Converted', icon: 'type', flush: true }, values),
+        panel(
+          { title: 'Line tools', icon: 'sliders' },
+          actions(
+            checkbox({ label: 'Trim & drop blanks', onChange: (checked) => { trim = checked; renderLines() } }),
+            checkbox({ label: 'Sort', onChange: (checked) => { sort = checked; renderLines() } }),
+            checkbox({ label: 'Dedupe', onChange: (checked) => { dedupe = checked; renderLines() } }),
+            checkbox({ label: 'Reverse', onChange: (checked) => { reverseLines = checked; renderLines() } }),
+          ),
+          linesBlock,
+        ),
+        note('Everything is transformed locally in your browser.'),
       ),
     )
 
-    renderResults()
-    renderLines()
+    input.value = SAMPLE
+    refresh()
   },
 }
 
