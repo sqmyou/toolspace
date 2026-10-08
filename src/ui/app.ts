@@ -1,7 +1,43 @@
 import { clear, el } from '../core/dom'
+import { favourites, isFavourite, onFavouritesChange, toggleFavourite } from '../core/favourites'
 import { categoryHue, sigilTile } from '../core/identity'
 import { categories, findTool, searchTools, tools } from '../core/registry'
 import type { Tool } from '../core/types'
+
+const STAR_ON =
+  '<svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="m12 3.6 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.8l5.9-.9z"/></svg>'
+const STAR_OFF =
+  '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="m12 3.6 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.8l5.9-.9z"/></svg>'
+
+/**
+ * The star toggle shown on cards, rows and tool pages. Stopping propagation
+ * matters on the card, which is itself a link to the tool.
+ */
+function starButton(slug: string, name: string): HTMLButtonElement {
+  const button = el('button', {
+    type: 'button',
+    class: 'ts-star',
+    'aria-pressed': isFavourite(slug) ? 'true' : 'false',
+  }) as HTMLButtonElement
+
+  function paint() {
+    const on = isFavourite(slug)
+    button.classList.toggle('is-on', on)
+    button.setAttribute('aria-pressed', on ? 'true' : 'false')
+    button.innerHTML = on ? STAR_ON : STAR_OFF
+    button.title = on ? `Remove ${name} from starred` : `Star ${name}`
+    button.setAttribute('aria-label', button.title)
+  }
+
+  button.addEventListener('click', (event) => {
+    event.preventDefault()
+    event.stopPropagation()
+    toggleFavourite(slug)
+    paint()
+  })
+  paint()
+  return button
+}
 
 /**
  * The tool's generated identity badge, tinted by its category. A handful of
@@ -186,6 +222,7 @@ function toolCard(tool: Tool): HTMLElement {
       { class: 'ts-card-top' },
       tileEl(tool),
       el('span', { class: 'ts-card-head' }, el('h3', {}, tool.name), el('span', { class: 'ts-card-cat' }, tool.category)),
+      starButton(tool.slug, tool.name),
     ),
     el('p', {}, tool.description),
   )
@@ -203,6 +240,20 @@ function toolRow(tool: Tool): HTMLElement {
       el('span', { class: 'ts-row-name' }, tool.name),
       el('span', { class: 'ts-row-desc' }, tool.description),
     ),
+    starButton(tool.slug, tool.name),
+  )
+}
+
+/** The pinned "Starred" strip, shown above everything when it has entries. */
+function starredSection(): HTMLElement | null {
+  const slugs = favourites()
+  const starred = slugs.map(findTool).filter((tool): tool is Tool => Boolean(tool))
+  if (starred.length === 0) return null
+  return el(
+    'div',
+    { class: 'ts-section ts-starred' },
+    sectionHead('Starred', `${starred.length} pinned`),
+    el('div', { class: 'ts-grid' }, ...starred.map(toolCard)),
   )
 }
 
@@ -311,6 +362,17 @@ function home(): HTMLElement {
 
   const catCount = categories().length
 
+  // The pinned strip lives above the search, so it is re-rendered on every
+  // change rather than being rebuilt with the rest of the page.
+  const pinned = el('div', { class: 'ts-pinned' })
+  function renderStarred() {
+    const next = starredSection()
+    clear(pinned)
+    if (next) pinned.append(next)
+  }
+  renderStarred()
+  onFavouritesChange(renderStarred)
+
   return el(
     'section',
     { class: 'ts-home' },
@@ -338,6 +400,7 @@ function home(): HTMLElement {
         el('div', { class: 'ts-mstat' }, el('span', { class: 'ts-mstat-value' }, '1'), el('span', { class: 'ts-mstat-label' }, 'external host')),
       ),
     ),
+    pinned,
     el('div', { class: 'ts-browse' }, el('span', { class: 'ts-browse-label' }, 'Browse'), catBar),
     section,
   )
@@ -389,6 +452,7 @@ function toolPage(tool: Tool, palette: Palette): HTMLElement {
         'div',
         { class: 'ts-tool-actions' },
         el('button', { type: 'button', class: 'ts-button', onclick: () => palette.open() }, 'Find another tool'),
+        starButton(tool.slug, tool.name),
       ),
     ),
     body,

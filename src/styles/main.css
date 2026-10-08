@@ -524,6 +524,30 @@ a { color: inherit; }
   transform: translateY(-2px);
   box-shadow: var(--shadow-sm);
 }
+/* --- Starred tools ------------------------------------------------------- */
+.ts-star {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--faint);
+  cursor: pointer;
+  line-height: 0;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.ts-star:hover { color: var(--accent); border-color: var(--border); background: var(--bg-input); }
+.ts-star.is-on { color: var(--accent); }
+.ts-star:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+/* A pinned strip above the browse controls. Empty until something is starred. */
+.ts-pinned:empty { display: none; }
+.ts-pinned { margin-bottom: 26px; }
+.ts-starred .ts-section-head h2::before { color: var(--accent); }
+
 .ts-card-top { display: flex; align-items: center; gap: 11px; }
 .ts-card-head { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .ts-title-icon { font-size: 0.85em; margin-right: 6px; }
