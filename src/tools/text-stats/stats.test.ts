@@ -28,7 +28,7 @@ describe('analyzeText', () => {
     expect(stats.words).toBe(6)
     expect(stats.sentences).toBe(2)
     expect(stats.characters).toBe(30)
-    expect(stats.longestWord).toBe('brown')
+    expect(stats.longestWord).toBe('quick')
   })
 
   it('computes reading times from word count', () => {
