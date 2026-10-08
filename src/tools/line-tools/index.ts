@@ -1,17 +1,20 @@
+import {
+  actions,
+  button,
+  checkbox,
+  field,
+  grid,
+  note,
+  outputBlock,
+  panel,
+  select,
+  textarea,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
-import { copyChip, download } from '../../core/ui'
+import { download } from '../../core/ui'
 import type { Tool } from '../../core/types'
 import { DEFAULT_OPTIONS, lineStats, processLines, type LineOptions } from './lines'
-
-function checkbox(label: string, get: (options: LineOptions) => boolean, set: (options: LineOptions, value: boolean) => void, options: LineOptions, onChange: () => void): HTMLElement {
-  const input = el('input', { type: 'checkbox' }) as HTMLInputElement
-  input.checked = get(options)
-  input.addEventListener('change', () => {
-    set(options, input.checked)
-    onChange()
-  })
-  return el('label', { class: 'ts-inline-field' }, input, label)
-}
 
 const tool: Tool = {
   slug: 'line-tools',
@@ -21,81 +24,114 @@ const tool: Tool = {
   keywords: ['lines', 'sort', 'dedupe', 'unique', 'shuffle', 'reverse', 'trim', 'number', 'list'],
   render(root) {
     const options: LineOptions = { ...DEFAULT_OPTIONS }
-    const input = el('textarea', { class: 'ts-textarea ts-mono', rows: 8, spellcheck: false, placeholder: 'One item per line…' }) as HTMLTextAreaElement
-    const output = el('pre', { class: 'ts-json-block' })
-    const stats = el('p', { class: 'ts-muted' })
+    const input = textarea({
+      rows: 10,
+      mono: true,
+      placeholder: 'One item per line…',
+      onInput: () => run(),
+    })
+    const pre = el('div', { class: 'ts-k-mono' })
+    const block = outputBlock(pre, { label: 'Result', copy: () => rendered })
 
-    const sortSelect = el('select', { class: 'ts-select' }) as HTMLSelectElement
-    for (const [value, label] of [['none', 'Keep order'], ['asc', 'A → Z'], ['desc', 'Z → A'], ['length', 'By length']] as const) {
-      sortSelect.append(el('option', { value }, label))
-    }
-    sortSelect.addEventListener('change', () => {
-      options.sort = sortSelect.value as LineOptions['sort']
-      run()
+    const sortSelect = select({
+      options: [
+        { value: 'none', label: 'Keep order' },
+        { value: 'asc', label: 'A → Z' },
+        { value: 'desc', label: 'Z → A' },
+        { value: 'length', label: 'By length' },
+      ],
+      value: 'none',
+      onChange: (value) => {
+        options.sort = value as LineOptions['sort']
+        run()
+      },
     })
 
-    const numberSelect = el('select', { class: 'ts-select' }) as HTMLSelectElement
-    for (const [value, label] of [['none', 'No numbers'], ['plain', '1 2 3'], ['dot', '1. 2. 3.'], ['paren', '1) 2) 3)']] as const) {
-      numberSelect.append(el('option', { value }, label))
-    }
-    numberSelect.addEventListener('change', () => {
-      options.numbering = numberSelect.value as LineOptions['numbering']
-      run()
+    const numberSelect = select({
+      options: [
+        { value: 'none', label: 'No numbers' },
+        { value: 'plain', label: '1 2 3' },
+        { value: 'dot', label: '1. 2. 3.' },
+        { value: 'paren', label: '1) 2) 3)' },
+      ],
+      value: 'none',
+      onChange: (value) => {
+        options.numbering = value as LineOptions['numbering']
+        run()
+      },
+    })
+
+    const switches: { key: keyof LineOptions; label: string }[] = [
+      { key: 'trim', label: 'Trim' },
+      { key: 'dropEmpty', label: 'Drop empty' },
+      { key: 'dedupe', label: 'Deduplicate' },
+      { key: 'dedupeCaseSensitive', label: 'Dedupe is case-sensitive' },
+      { key: 'caseSensitive', label: 'Sort is case-sensitive' },
+      { key: 'natural', label: 'Natural sort' },
+      { key: 'reverse', label: 'Reverse' },
+      { key: 'shuffle', label: 'Shuffle' },
+    ]
+
+    const controls = switches.map((item) => {
+      const label = checkbox({
+        label: item.label,
+        checked: Boolean(options[item.key]),
+        onChange: (checked) => {
+          ;(options[item.key] as boolean) = checked
+          run()
+        },
+      })
+      return label
     })
 
     let rendered = ''
 
     function run() {
       rendered = processLines(input.value, options)
-      output.textContent = rendered
+      pre.textContent = rendered
       const info = lineStats(rendered)
-      stats.textContent = `${info.lines} lines · ${info.unique} unique · ${info.words} words · ${info.bytes} bytes`
+      block.setMeta(`${info.lines} lines · ${info.unique} unique · ${info.words} words · ${info.bytes} bytes`)
     }
 
-    input.addEventListener('input', run)
-
-    const onToggle = () => run()
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el(
-          'div',
-          { class: 'ts-row ts-wrap' },
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Sort'), sortSelect),
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Numbering'), numberSelect),
-        ),
-        el(
-          'div',
-          { class: 'ts-row ts-wrap' },
-          checkbox('Trim', (o) => o.trim, (o, v) => (o.trim = v), options, onToggle),
-          checkbox('Drop empty', (o) => o.dropEmpty, (o, v) => (o.dropEmpty = v), options, onToggle),
-          checkbox('Deduplicate', (o) => o.dedupe, (o, v) => (o.dedupe = v), options, onToggle),
-          checkbox('Dedupe is case-sensitive', (o) => o.dedupeCaseSensitive, (o, v) => (o.dedupeCaseSensitive = v), options, onToggle),
-          checkbox('Sort is case-sensitive', (o) => o.caseSensitive, (o, v) => (o.caseSensitive = v), options, onToggle),
-          checkbox('Natural sort', (o) => o.natural, (o, v) => (o.natural = v), options, onToggle),
-          checkbox('Reverse', (o) => o.reverse, (o, v) => (o.reverse = v), options, onToggle),
-          checkbox('Shuffle', (o) => o.shuffle, (o, v) => (o.shuffle = v), options, onToggle),
-        ),
-        el(
-          'div',
-          { class: 'ts-row ts-wrap' },
-          el('div', { class: 'ts-field ts-grow' }, el('label', {}, 'Input'), input),
-        ),
-        el(
-          'div',
-          { class: 'ts-row ts-between' },
-          stats,
-          el(
-            'div',
-            { class: 'ts-tool-actions' },
-            copyChip(() => rendered, 'Copy'),
-            el('button', { class: 'ts-button', type: 'button', onclick: () => download('lines.txt', rendered, 'text/plain') }, 'Download'),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Input', icon: 'text' },
+          input,
+          actions(
+            button('Load sample', {
+              icon: 'refresh',
+              onClick: () => {
+                input.value = 'banana\nApple\ncherry\nbanana\n\n  date  \nApple'
+                run()
+              },
+            }),
+            button('Clear', {
+              icon: 'x',
+              onClick: () => {
+                input.value = ''
+                run()
+              },
+            }),
           ),
         ),
-        output,
-        el('p', { class: 'ts-note' }, 'All processing happens in your browser.'),
+        panel(
+          { title: 'Order & numbering', icon: 'sliders' },
+          actions(
+            field(sortSelect, { label: 'Sort', grow: true }),
+            field(numberSelect, { label: 'Numbering', grow: true }),
+          ),
+        ),
+        panel({ title: 'Transforms', icon: 'type' }, grid(210, ...controls)),
+        block,
+        actions(
+          button('Download .txt', {
+            icon: 'download',
+            onClick: () => download('lines.txt', rendered, 'text/plain'),
+          }),
+        ),
+        note('All processing happens in your browser.'),
       ),
     )
 

@@ -1,5 +1,18 @@
-import { el } from '../../core/dom'
-import { copyChip, download } from '../../core/ui'
+import {
+  actions,
+  button,
+  checkbox,
+  field,
+  grid,
+  note,
+  outputBlock,
+  panel,
+  stat,
+  stats,
+  textarea,
+  textField,
+  toolLayout,
+} from '../../core/components'
 import type { Tool } from '../../core/types'
 import { clean, inspect, type CleanOptions } from './whitespace'
 
@@ -28,31 +41,43 @@ const tool: Tool = {
   category: 'Text',
   keywords: ['whitespace', 'trim', 'clean', 'tabs', 'spaces', 'crlf', 'blank lines', 'format'],
   render(root) {
-    const input = el('textarea', { class: 'ts-textarea ts-mono', rows: 12, spellcheck: false }) as HTMLTextAreaElement
-    input.value = SAMPLE
-    const output = el('textarea', { class: 'ts-textarea ts-mono', rows: 12, spellcheck: false, readonly: true }) as HTMLTextAreaElement
-    const issues = el('div', { class: 'ts-ws-issues' })
-    const summary = el('p', { class: 'ts-muted' })
+    const input = textarea({ rows: 12, mono: true, value: SAMPLE, onInput: () => run() })
+    const outputArea = textarea({ rows: 12, mono: true, readonly: true })
+    const resultBlock = outputBlock(outputArea, { label: 'Cleaned output', copy: () => cleaned })
 
-    const checks = TOGGLES.map((toggle) => {
-      const box = el('input', { type: 'checkbox', checked: true }) as HTMLInputElement
-      return { toggle, box }
-    })
-    const maxBlank = el('input', { class: 'ts-input ts-mono', type: 'number', min: '0', value: '1' }) as HTMLInputElement
-    const tabWidth = el('input', { class: 'ts-input ts-mono', type: 'number', min: '1', max: '16', value: '4' }) as HTMLInputElement
+    const maxBlank = textField({ type: 'number', value: '1', mono: true, onInput: () => run() })
+    const tabWidth = textField({ type: 'number', value: '4', mono: true, onInput: () => run() })
+
+    const found = stats()
+    const toggles: { control: HTMLInputElement; key: keyof CleanOptions }[] = []
     let cleaned = ''
 
+    for (const toggle of TOGGLES) {
+      const label = checkbox({
+        label: toggle.label,
+        hint: toggle.hint,
+        checked: true,
+        onChange: () => run(),
+      })
+      label.classList.add('ts-ws-rule')
+      toggles.push({ key: toggle.key, control: label.querySelector('input') as HTMLInputElement })
+    }
+
     function run() {
-      const options: CleanOptions = { maxBlankLines: Number(maxBlank.value) || 0, tabWidth: Number(tabWidth.value) || 4 }
-      for (const { toggle, box } of checks) options[toggle.key] = box.checked as never
+      const options: CleanOptions = {
+        maxBlankLines: Number(maxBlank.value) || 0,
+        tabWidth: Number(tabWidth.value) || 4,
+      }
+      for (const { key, control } of toggles) options[key] = control.checked as never
       const result = clean(input.value, options)
       cleaned = result.text
-      output.value = result.text
-      summary.textContent = `${result.linesBefore} → ${result.linesAfter} lines · ${result.charactersRemoved} characters removed`
+      outputArea.value = result.text
+      resultBlock.setMeta(
+        `${result.linesBefore} → ${result.linesAfter} lines · ${result.charactersRemoved} characters removed`,
+      )
 
-      const found = inspect(input.value)
-      issues.replaceChildren()
-      const labels: [keyof typeof found, string][] = [
+      const issues = inspect(input.value)
+      const labels: [keyof typeof issues, string][] = [
         ['trailingWhitespace', 'lines with trailing space'],
         ['leadingWhitespace', 'lines with leading space'],
         ['tabs', 'tab characters'],
@@ -60,39 +85,48 @@ const tool: Tool = {
         ['multipleSpaces', 'runs of multiple spaces'],
         ['blankLines', 'blank lines'],
       ]
-      for (const [key, label] of labels) {
-        const count = found[key]
-        issues.append(el('span', { class: count > 0 ? 'ts-ws-issue ts-ws-issue-on' : 'ts-ws-issue' }, `${count} ${label}`))
-      }
+      found.replaceChildren(
+        ...labels.map(([key, label]) => {
+          const count = issues[key]
+          return stat({ label, value: String(count), hint: count > 0 ? 'needs cleaning' : 'clean' })
+        }),
+      )
     }
 
-    for (const { box } of checks) box.addEventListener('change', run)
-    maxBlank.addEventListener('input', run)
-    tabWidth.addEventListener('input', run)
-    input.addEventListener('input', run)
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'Input'), input),
-        el('div', { class: 'ts-ws-issues' }, el('span', { class: 'ts-muted' }, 'Detected:'), issues),
-        el(
-          'div',
-          { class: 'ts-checkbox-grid' },
-          ...checks.map(({ toggle, box }) =>
-            el('label', { class: 'ts-check' }, box, el('span', {}, toggle.label, el('small', { class: 'ts-ws-hint' }, toggle.hint))),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Input', icon: 'text' },
+          input,
+          actions(
+            button('Load sample', {
+              icon: 'refresh',
+              onClick: () => {
+                input.value = SAMPLE
+                run()
+              },
+            }),
+            button('Clear', {
+              icon: 'x',
+              onClick: () => {
+                input.value = ''
+                run()
+              },
+            }),
           ),
         ),
-        el(
-          'div',
-          { class: 'ts-row ts-wrap' },
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Max blank lines'), maxBlank),
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Tab width'), tabWidth),
+        panel({ title: 'Detected', icon: 'eye' }, found),
+        panel(
+          { title: 'Rules', icon: 'sliders' },
+          grid(230, ...toggles.map(({ control }) => control.closest('.ts-k-check') as HTMLElement)),
+          actions(
+            field(maxBlank, { label: 'Max blank lines', grow: true }),
+            field(tabWidth, { label: 'Tab width', grow: true }),
+          ),
         ),
-        el('div', { class: 'ts-row ts-between' }, summary, el('div', { class: 'ts-tool-actions' }, copyChip(() => cleaned, 'Copy'), el('button', { class: 'ts-button', type: 'button', onclick: () => download('cleaned.txt', cleaned) }, 'Download'))),
-        el('div', { class: 'ts-field' }, el('label', {}, 'Cleaned output'), output),
-        el('p', { class: 'ts-note' }, 'Rules run in a fixed order so the same input always gives the same output. Nothing is uploaded.'),
+        resultBlock,
+        note('Rules run in a fixed order so the same input always gives the same output. Nothing is uploaded.'),
       ),
     )
 
