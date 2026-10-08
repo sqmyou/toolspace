@@ -688,7 +688,10 @@ a { color: inherit; }
 .ts-row { display: flex; gap: 8px; align-items: center; }
 .ts-between { justify-content: space-between; }
 .ts-wrap { flex-wrap: wrap; }
-.ts-inline-field { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.ts-inline-field { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; max-width: 100%; min-width: 0; font-size: 13px; color: var(--muted); }
+/* A long native control (a preset list, a colour well) must never push the
+   row past the viewport on a narrow phone. */
+.ts-inline-field > .ts-select, .ts-inline-field > .ts-input { min-width: 0; max-width: 100%; }
 
 .ts-input,
 .ts-search {
