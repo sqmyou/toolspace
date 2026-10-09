@@ -1555,6 +1555,42 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
   border-radius: var(--radius-sm);
 }
 
+/* --- Findings ------------------------------------------------------------- */
+.ts-k-findings { display: flex; flex-direction: column; gap: 6px; }
+.ts-k-finding {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+}
+.ts-k-finding--ok { border-left-color: var(--ok); }
+.ts-k-finding--warn { border-left-color: var(--warn); }
+.ts-k-finding--danger { border-left-color: var(--danger); }
+.ts-k-finding--accent { border-left-color: var(--accent); }
+
+.ts-k-finding__status {
+  flex: none;
+  width: 62px;
+  padding-top: 1px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ts-k-finding--ok .ts-k-finding__status { color: var(--ok); }
+.ts-k-finding--warn .ts-k-finding__status { color: var(--warn); }
+.ts-k-finding--danger .ts-k-finding__status { color: var(--danger); }
+.ts-k-finding--accent .ts-k-finding__status { color: var(--accent); }
+
+.ts-k-finding__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ts-k-finding__name { font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
+.ts-k-finding__message { font-size: 13px; color: var(--muted); }
+
 /* --- Meter ---------------------------------------------------------------- */
 .ts-k-meter {
   height: 8px;

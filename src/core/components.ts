@@ -248,6 +248,43 @@ export function slider(options: SliderOptions): HTMLElement {
   )
 }
 
+/* -------------------------------------------------------------------------
+   Findings
+   ------------------------------------------------------------------------- */
+
+export interface FindingRowOptions {
+  /** Short status word shown in the left gutter, e.g. "Good" or "Missing". */
+  status: string
+  tone: Tone
+  /** The thing being judged, usually a header or key name. */
+  name: string
+  message: string
+  /** Optional trailing control, e.g. a copy button for the raw value. */
+  action?: Node
+}
+
+/** One judged item: a tone-coloured status gutter, a name and an explanation. */
+export function findingRow(options: FindingRowOptions): HTMLElement {
+  const row = el(
+    'div',
+    { class: `ts-k-finding ts-k-finding--${options.tone}` },
+    el('span', { class: 'ts-k-finding__status' }, options.status),
+    el(
+      'div',
+      { class: 'ts-k-finding__body' },
+      el('code', { class: 'ts-k-finding__name ts-k-mono' }, options.name),
+      el('span', { class: 'ts-k-finding__message' }, options.message),
+    ),
+  )
+  if (options.action) row.append(options.action)
+  return row
+}
+
+/** A vertical list of findings. */
+export function findings(...children: (Node | string)[]): HTMLElement {
+  return el('div', { class: 'ts-k-findings' }, ...children)
+}
+
 export interface Meter {
   root: HTMLElement
   /** Set the fill from a 0–1 ratio and a 0–4 score that picks the colour. */

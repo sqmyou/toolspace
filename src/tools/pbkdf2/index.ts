@@ -1,5 +1,16 @@
-import { el } from '../../core/dom'
-import { copyChip } from '../../core/ui'
+import {
+  actions,
+  button,
+  copyRow,
+  field,
+  grid,
+  kvList,
+  note,
+  panel,
+  select,
+  textField,
+  toolLayout,
+} from '../../core/components'
 import type { Tool } from '../../core/types'
 import { DEFAULT_ITERATIONS, derive, describeCost, PBKDF2_HASHES, Pbkdf2Error, randomSalt, type DeriveOptions, type Pbkdf2Hash } from './pbkdf2'
 
@@ -10,80 +21,75 @@ const tool: Tool = {
   category: 'Security',
   keywords: ['pbkdf2', 'kdf', 'derive', 'key', 'password', 'salt', 'iterations', 'hash'],
   render(root) {
-    const passwordInput = el('input', { class: 'ts-input', type: 'password', value: '', spellcheck: false, placeholder: 'Password…', autocomplete: 'off' }) as HTMLInputElement
-    const saltInput = el('input', { class: 'ts-input ts-mono', type: 'text', value: 'salt', spellcheck: false }) as HTMLInputElement
-    const saltEncoding = el('select', { class: 'ts-select' }) as HTMLSelectElement
-    for (const encoding of ['utf8', 'hex', 'base64']) saltEncoding.append(el('option', { value: encoding }, encoding))
-    const hashSelect = el('select', { class: 'ts-select' }) as HTMLSelectElement
-    for (const hash of PBKDF2_HASHES) hashSelect.append(el('option', { value: hash, selected: hash === 'SHA-256' }, hash))
-    const iterationsInput = el('input', { class: 'ts-input ts-mono', type: 'number', value: String(DEFAULT_ITERATIONS), min: '1', step: '1000' }) as HTMLInputElement
-    const lengthInput = el('input', { class: 'ts-input ts-mono', type: 'number', value: '32', min: '1', max: '1024' }) as HTMLInputElement
-    const cost = el('span', { class: 'ts-muted' })
-    const error = el('p', { class: 'ts-error', hidden: true })
-    const output = el('div', { class: 'ts-copy-list' })
+    const password = textField({ type: 'password', placeholder: 'Password…', onInput: () => run() })
+    password.autocomplete = 'off'
+    const salt = textField({ value: 'salt', mono: true, onInput: () => run() })
+    const saltEncoding = select({
+      options: ['utf8', 'hex', 'base64'].map((value) => ({ value, label: value })),
+      value: 'utf8',
+      onChange: () => run(),
+    })
+    const hash = select({
+      options: PBKDF2_HASHES.map((value) => ({ value, label: value })),
+      value: 'SHA-256',
+      onChange: () => run(),
+    })
+    const iterations = textField({ type: 'number', value: String(DEFAULT_ITERATIONS), mono: true, onInput: () => run() })
+    const length = textField({ type: 'number', value: '32', mono: true, onInput: () => run() })
+    const error = note('', 'danger')
+    error.hidden = true
+    const cost = note('')
+    const rows = kvList()
     let token = 0
 
     async function run() {
       const current = ++token
-      output.replaceChildren()
       try {
         const options: DeriveOptions = {
-          iterations: Number(iterationsInput.value) || DEFAULT_ITERATIONS,
-          hash: hashSelect.value as Pbkdf2Hash,
-          length: Number(lengthInput.value) || 32,
+          iterations: Number(iterations.value) || DEFAULT_ITERATIONS,
+          hash: hash.value as Pbkdf2Hash,
+          length: Number(length.value) || 32,
           saltEncoding: saltEncoding.value as DeriveOptions['saltEncoding'],
         }
         cost.textContent = describeCost(options.iterations!)
-        const result = await derive(passwordInput.value, saltInput.value, options)
+        const result = await derive(password.value, salt.value, options)
         if (current !== token) return
-        output.append(
-          el('div', { class: 'ts-copy-row' }, el('span', { class: 'ts-muted' }, 'Hex'), copyChip(result.hex)),
-          el('div', { class: 'ts-copy-row' }, el('span', { class: 'ts-muted' }, 'Base64'), copyChip(result.base64)),
-        )
+        rows.replaceChildren(copyRow('Hex', result.hex), copyRow('Base64', result.base64))
         error.hidden = true
       } catch (err) {
         if (current !== token) return
+        rows.replaceChildren()
         error.textContent = err instanceof Pbkdf2Error ? err.message : 'Could not derive a key with those inputs.'
         error.hidden = false
       }
     }
 
-    const newSalt = el('button', {
-      class: 'ts-button',
-      type: 'button',
-      onclick: () => {
-        saltInput.value = randomSalt(16)
-        saltEncoding.value = 'hex'
-        run()
-      },
-    }, 'Random salt')
-
-    for (const input of [passwordInput, saltInput, iterationsInput, lengthInput]) input.addEventListener('input', run)
-    for (const select of [saltEncoding, hashSelect]) select.addEventListener('change', run)
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'Password'), passwordInput),
-        el(
-          'div',
-          { class: 'ts-row ts-wrap' },
-          el('div', { class: 'ts-field ts-grow' }, el('label', {}, 'Salt'), saltInput),
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Salt encoding'), saltEncoding),
-          newSalt,
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Inputs', icon: 'key' },
+          field(password, { label: 'Password' }),
+          grid(240, field(salt, { label: 'Salt' }), field(saltEncoding, { label: 'Salt encoding' })),
+          actions(
+            button('Random salt', {
+              icon: 'refresh',
+              onClick: () => {
+                salt.value = randomSalt(16)
+                saltEncoding.value = 'hex'
+                run()
+              },
+            }),
+          ),
         ),
-        el(
-          'div',
-          { class: 'ts-row ts-wrap' },
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Hash'), hashSelect),
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Iterations'), iterationsInput),
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Length (bytes)'), lengthInput),
+        panel(
+          { title: 'Derivation', icon: 'sliders' },
+          grid(150, field(hash, { label: 'Hash' }), field(iterations, { label: 'Iterations' }), field(length, { label: 'Length (bytes)' })),
+          cost,
+          error,
         ),
-        el('div', { class: 'ts-row ts-between' }, el('span', {}, 'Cost'), cost),
-        error,
-        output,
-        el('p', { class: 'ts-note' }, 'Derivation happens in your browser with the WebCrypto API. The password and salt never leave the page.'),
+        panel({ title: 'Derived key', icon: 'lock' }, rows),
+        note('Derivation happens in your browser with the WebCrypto API. The password and salt never leave the page.'),
       ),
     )
 
