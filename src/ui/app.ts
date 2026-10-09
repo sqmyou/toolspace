@@ -637,17 +637,25 @@ interface InstallPromptEvent extends Event {
  * and Firefox never fire it, so there the button simply never appears.
  */
 function installButton(): HTMLButtonElement {
+  const standalone = () =>
+    window.matchMedia?.('(display-mode: standalone)').matches ||
+    (navigator as unknown as { standalone?: boolean }).standalone === true
+
+  // Only hide when the app is already installed. Chrome fires
+  // `beforeinstallprompt` for the native prompt, but Safari and Firefox never
+  // do, so gating visibility on that event would hide the button — and its
+  // instructions — on exactly the browsers that need them most.
   const node = el(
     'button',
-    { type: 'button', class: 'ts-k-btn ts-k-btn--ghost ts-install', hidden: true },
+    { type: 'button', class: 'ts-k-btn ts-k-btn--ghost ts-install', hidden: standalone() },
     iconEl('download', 15),
     el('span', { class: 'ts-install-label' }, 'Install app'),
   )
   let deferred: InstallPromptEvent | null = null
 
-  const standalone = () =>
-    window.matchMedia?.('(display-mode: standalone)').matches ||
-    (navigator as unknown as { standalone?: boolean }).standalone === true
+  const isIos = () =>
+    /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 
   window.addEventListener('beforeinstallprompt', (event) => {
     event.preventDefault()
@@ -661,17 +669,18 @@ function installButton(): HTMLButtonElement {
   })
 
   node.addEventListener('click', async () => {
-    if (!deferred) {
-      // No prompt is available (iOS, or the criteria are not met): point at the
-      // browser's own menu instead of pretending the click did something.
-      node.querySelector('.ts-install-label')!.textContent = standalone() ? 'Installed' : 'Use the share menu'
-      setTimeout(() => (node.querySelector('.ts-install-label')!.textContent = 'Install app'), 2600)
+    if (deferred) {
+      await deferred.prompt()
+      await deferred.userChoice
+      deferred = null
+      node.hidden = true
       return
     }
-    await deferred.prompt()
-    await deferred.userChoice
-    deferred = null
-    node.hidden = true
+    // No native prompt available (or not yet fired): tell the user where the
+    // control actually lives instead of a button that looks inert.
+    const label = node.querySelector('.ts-install-label')!
+    label.textContent = standalone() ? 'Installed' : isIos() ? 'Share → Add to Home Screen' : 'Browser menu → Install'
+    setTimeout(() => (label.textContent = 'Install app'), 3400)
   })
 
   return node
