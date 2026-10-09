@@ -30,6 +30,10 @@ const tool: Tool = {
   description: 'Paste any YouTube link, pick a size and grab that thumbnail — copy the URL or download the image.',
   category: 'Media',
   keywords: ['youtube', 'thumbnail', 'grabber', 'downloader', 'video', 'cover image', 'yt', 'shorts'],
+  remote: {
+    host: 'i.ytimg.com',
+    note: 'It asks i.ytimg.com for the public thumbnail image of the video you linked. Nothing you type is sent anywhere else, and no cookies are involved.',
+  },
   render(root) {
     const input = textField({
       value: SAMPLE,

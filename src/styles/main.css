@@ -775,6 +775,36 @@ a { color: inherit; }
 .ts-rail-fact__value { font-size: var(--text-base); color: var(--fg); }
 .ts-rail-fact__value.is-hue { color: hsl(var(--h, 205) 68% 68%); }
 .ts-rail-note { color: var(--muted); font-size: var(--text-base); line-height: 1.55; margin: 0; }
+.ts-rail-note--remote {
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-left: 2px solid var(--warn);
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+  color: var(--muted);
+}
+.ts-rail-note--remote strong { color: var(--warn); font-weight: 600; }
+
+/* The "network" tag: a quiet, honest marker that a tool leaves the tab. It
+   sits on cards and index rows so the offline/online split is visible before
+   a tool is opened, without shouting. */
+.ts-tag-network {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px 1px 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  color: var(--warn);
+  font-family: var(--mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.ts-tag-network svg { flex: none; }
+.ts-dot-sep { color: var(--faint); margin: 0 5px; }
 .ts-rail-link {
   display: inline-flex;
   align-items: center;

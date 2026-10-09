@@ -26,6 +26,7 @@ const CATEGORY_HUES: Record<string, number> = {
   DevOps: 30,
   Documents: 96,
   Encoding: 158,
+  Gaming: 262,
   Math: 292,
   Media: 315,
   Network: 225,

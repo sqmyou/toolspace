@@ -212,7 +212,19 @@ function commandPalette(onSelect: (slug: string) => void): Palette {
   }
 }
 
-/** A tool card. `feature` promotes it to a hero cell in a bento grid. */
+/** Small "needs the network" tag, shown wherever a tool is listed. */
+function remoteTag(): HTMLElement {
+  return el(
+    'span',
+    {
+      class: 'ts-tag-network',
+      title: 'This tool contacts a third-party site to do its job',
+    },
+    iconEl('globe', 11),
+    el('span', {}, 'network'),
+  )
+}
+
 function toolCard(tool: Tool, feature = false): HTMLElement {
   return el(
     'a',
@@ -229,7 +241,12 @@ function toolCard(tool: Tool, feature = false): HTMLElement {
         'span',
         { class: 'ts-card-head' },
         el('h3', {}, tool.name),
-        el('span', { class: 'ts-card-cat' }, tool.category),
+        el(
+          'span',
+          { class: 'ts-card-cat' },
+          tool.category,
+          ...(tool.remote ? [el('span', { class: 'ts-dot-sep', 'aria-hidden': 'true' }, '·'), remoteTag()] : []),
+        ),
       ),
       starButton(tool.slug, tool.name),
     ),
@@ -253,6 +270,7 @@ function toolRow(tool: Tool): HTMLElement {
       el('span', { class: 'ts-row-name' }, tool.name),
       el('span', { class: 'ts-row-desc' }, tool.description),
     ),
+    ...(tool.remote ? [remoteTag()] : []),
     starButton(tool.slug, tool.name),
   )
 }
@@ -377,6 +395,8 @@ function home(): HTMLElement {
   renderGrid()
 
   const catCount = categories().length
+  const remoteHosts = new Set(tools.filter((t) => t.remote).map((t) => t.remote!.host))
+  const remoteTools = tools.filter((t) => t.remote).length
 
   // The pinned strip lives above the search, so it is re-rendered on every
   // change rather than being rebuilt with the rest of the page.
@@ -418,7 +438,7 @@ function home(): HTMLElement {
       el(
         'p',
         { class: 'ts-lede' },
-        'No ads, no sign-up, no server. Every tool runs locally — nothing you paste is ever uploaded. The one exception is the YouTube thumbnail grabber, which asks i.ytimg.com for the public image you linked.',
+        `No ads, no sign-up, no server. ${tools.length - remoteTools} of ${tools.length} tools run entirely offline — nothing you paste is ever uploaded. The ${remoteTools} that need the network are marked, and the only thing they send is the public lookup you type.`,
       ),
       el('div', { class: 'ts-masthead-search' }, search),
       el(
@@ -426,7 +446,13 @@ function home(): HTMLElement {
         { class: 'ts-masthead-stats' },
         el('div', { class: 'ts-mstat' }, el('span', { class: 'ts-mstat-value' }, String(tools.length)), el('span', { class: 'ts-mstat-label' }, 'tools')),
         el('div', { class: 'ts-mstat' }, el('span', { class: 'ts-mstat-value' }, String(catCount)), el('span', { class: 'ts-mstat-label' }, 'categories')),
-        el('div', { class: 'ts-mstat' }, el('span', { class: 'ts-mstat-value' }, '1'), el('span', { class: 'ts-mstat-label' }, 'external host')),
+        el('div', { class: 'ts-mstat' }, el('span', { class: 'ts-mstat-value' }, String(tools.length - remoteTools)), el('span', { class: 'ts-mstat-label' }, 'run fully offline')),
+        el(
+          'div',
+          { class: 'ts-mstat' },
+          el('span', { class: 'ts-mstat-value' }, String(remoteTools)),
+          el('span', { class: 'ts-mstat-label' }, remoteHosts.size === 1 ? 'needs one host' : 'need the network'),
+        ),
       ),
     ),
     pinned,
@@ -462,7 +488,7 @@ function navCard(direction: 'prev' | 'next', tool: Tool): HTMLElement {
 
 /** The narrow info rail beside a tool body: facts, the network note, a link. */
 function toolRail(tool: Tool): HTMLElement {
-  const external = tool.slug === 'youtube-thumbnail'
+  const remote = tool.remote
   const facts = el(
     'div',
     { class: 'ts-rail-facts' },
@@ -485,7 +511,7 @@ function toolRail(tool: Tool): HTMLElement {
       el(
         'span',
         { class: 'ts-rail-fact__value' },
-        external ? 'One request to i.ytimg.com' : 'None — nothing is uploaded',
+        remote ? `One request to ${remote.host}` : 'None — nothing is uploaded',
       ),
     ),
   )
@@ -494,11 +520,12 @@ function toolRail(tool: Tool): HTMLElement {
     'aside',
     { class: 'ts-tool-rail', 'aria-label': 'Tool details' },
     facts,
-    external
+    remote
       ? el(
           'p',
-          { class: 'ts-rail-note' },
-          'This is the one tool that touches the network: it asks i.ytimg.com for the public thumbnail image you linked. Nothing you type is sent anywhere.',
+          { class: 'ts-rail-note ts-rail-note--remote' },
+          el('strong', {}, 'Needs the network. '),
+          remote.note,
         )
       : el(
           'p',
