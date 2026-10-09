@@ -425,15 +425,21 @@ a { color: inherit; }
 .ts-sigil svg { display: block; }
 
 /* --- Home ----------------------------------------------------------------- */
+/* Oversized display type with tight tracking. The `.ts-headline` lines can
+   rise into view (see Motion), so the heading sits behind two overflow-hidden
+   line boxes; the CSS default is the settled state, never an empty one. */
 .ts-home h1 {
   font-size: var(--text-display);
-  line-height: 1.03;
+  line-height: 0.98;
   letter-spacing: var(--tracking-display);
   font-weight: 700;
-  margin: 0 0 16px;
+  margin: 0 0 18px;
   text-wrap: balance;
 }
-.ts-home h1 .ts-accent { color: var(--accent); }
+.ts-headline { display: flex; flex-direction: column; }
+.ts-headline__line { display: block; overflow: hidden; padding-bottom: 0.06em; }
+.ts-headline__inner { display: block; }
+.ts-home h1 .ts-accent { color: var(--accent); font-style: normal; }
 .ts-lede { color: var(--muted); max-width: 56ch; margin: 0 0 22px; font-size: var(--text-lg); }
 
 .ts-masthead {
@@ -454,17 +460,20 @@ a { color: inherit; }
   background: linear-gradient(90deg, var(--accent), transparent);
 }
 .ts-eyebrow {
-  margin: 0 0 12px;
+  margin: 0 0 14px;
   font-family: var(--mono);
   font-size: var(--text-xs);
   letter-spacing: var(--tracking-mono);
   text-transform: uppercase;
   color: var(--accent);
 }
-.ts-masthead-search { max-width: 560px; }
+.ts-masthead-search { max-width: 560px; margin: 0 0 4px; }
+/* The standalone home search is larger than a tool field — it is the page's
+   primary action, not a form control. */
+.ts-masthead-input { height: 46px; font-size: var(--text-md); padding: 0 14px; }
 .ts-masthead-stats { display: flex; flex-wrap: wrap; gap: 26px; margin-top: 22px; }
 .ts-mstat { display: flex; flex-direction: column; gap: 1px; }
-.ts-mstat-value { font-family: var(--mono); font-size: var(--text-xl); font-weight: 600; letter-spacing: -0.02em; }
+.ts-mstat-value { font-family: var(--mono); font-size: var(--text-xl); font-weight: 600; letter-spacing: var(--tracking-tight); }
 .ts-mstat-label { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.1em; color: var(--faint); font-family: var(--mono); }
 
 .ts-browse { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
@@ -601,7 +610,28 @@ a { color: inherit; }
 }
 .ts-empty { color: var(--muted); font-size: var(--text-md); }
 
-/* Dense index: for the big families, where a card each would bury the list. */
+/* --- Bento ----------------------------------------------------------------
+   Big families get size-as-hierarchy: one hero cell, then equal cards. The
+   hero spans two tracks (and two rows when there is room), so the grid has a
+   focal point instead of reading as an even field of tiles. */
+.ts-bento { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.ts-card--feature { grid-column: span 2; gap: 12px; padding: 18px 19px; }
+@media (max-width: 559px) {
+  /* On a single track a `span 2` would force an implicit column wider than
+     the viewport, so the hero becomes a full-width band instead. */
+  .ts-card--feature { grid-column: 1 / -1; }
+}
+.ts-card--feature h3 { font-size: var(--text-lg); letter-spacing: var(--tracking-tight); }
+.ts-card--feature p { font-size: var(--text-base); }
+.ts-card--feature .ts-card-cat { margin-top: 2px; }
+@media (min-width: 720px) {
+  .ts-card--feature { grid-row: span 2; justify-content: center; }
+}
+
+/* A section that leads with a bento gets a touch more air than a row list. */
+.ts-family.is-feature { margin-bottom: 38px; }
+
+/* Dense index: for the long tail, where a card each would bury the list. */
 .ts-row-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 2px; }
 .ts-row-item {
   display: flex;

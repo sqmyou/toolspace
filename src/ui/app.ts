@@ -212,26 +212,40 @@ function commandPalette(onSelect: (slug: string) => void): Palette {
   }
 }
 
-function toolCard(tool: Tool): HTMLElement {
+/** A tool card. `feature` promotes it to a hero cell in a bento grid. */
+function toolCard(tool: Tool, feature = false): HTMLElement {
   return el(
     'a',
-    { class: 'ts-card', href: `#/${tool.slug}`, style: `--h:${categoryHue(tool.category)}` },
+    {
+      class: `ts-card${feature ? ' ts-card--feature' : ''}`,
+      href: `#/${tool.slug}`,
+      style: `--h:${categoryHue(tool.category)}`,
+    },
     el(
       'span',
       { class: 'ts-card-top' },
-      tileEl(tool),
-      el('span', { class: 'ts-card-head' }, el('h3', {}, tool.name), el('span', { class: 'ts-card-cat' }, tool.category)),
+      tileEl(tool, feature ? 44 : 34),
+      el(
+        'span',
+        { class: 'ts-card-head' },
+        el('h3', {}, tool.name),
+        el('span', { class: 'ts-card-cat' }, tool.category),
+      ),
       starButton(tool.slug, tool.name),
     ),
     el('p', {}, tool.description),
   )
 }
 
-/** A single "row" used by the dense index sections. */
+/** A single row used by the dense index for the long tail of tools. */
 function toolRow(tool: Tool): HTMLElement {
   return el(
     'a',
-    { class: 'ts-row-item', href: `#/${tool.slug}` },
+    {
+      class: 'ts-row-item',
+      href: `#/${tool.slug}`,
+      style: `--h:${categoryHue(tool.category)}`,
+    },
     tileEl(tool, 26),
     el(
       'span',
@@ -252,7 +266,7 @@ function starredSection(): HTMLElement | null {
     'div',
     { class: 'ts-section ts-starred' },
     sectionHead('Starred', `${starred.length} pinned`),
-    el('div', { class: 'ts-grid' }, ...starred.map(toolCard)),
+    el('div', { class: 'ts-grid' }, ...starred.map((tool) => toolCard(tool))),
   )
 }
 
@@ -267,13 +281,16 @@ function sectionHead(title: string, meta: string, tint?: number): HTMLElement {
   )
 }
 
+/** Families at or above this size get the bento treatment; the rest get rows. */
+const BIG_FAMILY = 8
+
 function home(): HTMLElement {
-  const section = el('section', { class: 'ts-section' })
+  const results = el('section', { class: 'ts-section' })
 
   const search = el('input', {
-    class: 'ts-input',
+    class: 'ts-input ts-masthead-input',
     type: 'search',
-    placeholder: 'Search tools… try “jasn” or “base 64”',
+    placeholder: `Search ${tools.length} tools… try “jwt”, “colour” or “base 64”`,
     'aria-label': 'Search tools',
     autocomplete: 'off',
   }) as HTMLInputElement
@@ -281,58 +298,58 @@ function home(): HTMLElement {
   const catBar = el('div', { class: 'ts-cat-bar', role: 'group', 'aria-label': 'Filter by category' })
   let category = ''
 
+  /** The no-query view: big families as a bento, the long tail as dense rows. */
+  function familySections(): HTMLElement[] {
+    return categories().map((name) => {
+      const group = tools.filter((tool) => tool.category === name)
+      const big = group.length >= BIG_FAMILY
+      return el(
+        'div',
+        { class: `ts-section ts-family${big ? ' is-feature' : ' is-dense'}` },
+        sectionHead(name, `${group.length}`, categoryHue(name)),
+        big
+          ? el('div', { class: 'ts-bento' }, ...group.map((tool, i) => toolCard(tool, i === 0)))
+          : el('div', { class: 'ts-row-grid' }, ...group.map(toolRow)),
+      )
+    })
+  }
+
   function renderGrid() {
-    clear(section)
+    clear(results)
     const items = searchTools(search.value, category ? { category } : {})
     if (items.length === 0) {
-      section.append(el('p', { class: 'ts-empty' }, 'No tools match that search.'))
+      results.append(el('p', { class: 'ts-empty' }, 'No tools match that search.'))
       return
     }
     if (search.value.trim() || category) {
       const hue = category ? categoryHue(category) : undefined
-      section.append(
+      results.append(
         sectionHead(category || 'Results', `${items.length} ${items.length === 1 ? 'tool' : 'tools'}`, hue),
       )
-      const list = el('div', { class: 'ts-grid' })
-      list.append(...items.map(toolCard))
-      section.append(list)
+      results.append(el('div', { class: 'ts-grid' }, ...items.map((tool) => toolCard(tool))))
       return
     }
-    // No query: group by category. Big families get the dense index (a card
-    // each would bury them below the fold); small ones get cards.
-    for (const name of categories()) {
-      const group = items.filter((tool) => tool.category === name)
-      const dense = group.length >= 5
-      section.append(
-        el(
-          'div',
-          { class: 'ts-section' },
-          sectionHead(name, `${group.length}`, categoryHue(name)),
-          dense
-            ? el('div', { class: 'ts-row-grid' }, ...group.map(toolRow))
-            : el('div', { class: 'ts-grid' }, ...group.map(toolCard)),
-        ),
-      )
-    }
+    results.append(...familySections())
   }
 
   function renderChips() {
     clear(catBar)
-    const all = el(
-      'button',
-      {
-        type: 'button',
-        class: `ts-cat-chip ts-cat-chip-all${category === '' ? ' is-active' : ''}`,
-        onclick: () => {
-          category = ''
-          renderChips()
-          renderGrid()
+    catBar.append(
+      el(
+        'button',
+        {
+          type: 'button',
+          class: `ts-cat-chip ts-cat-chip-all${category === '' ? ' is-active' : ''}`,
+          onclick: () => {
+            category = ''
+            renderChips()
+            renderGrid()
+          },
         },
-      },
-      'All',
-      el('small', {}, String(tools.length)),
+        'All',
+        el('small', {}, String(tools.length)),
+      ),
     )
-    catBar.append(all)
     for (const name of categories()) {
       const count = tools.filter((tool) => tool.category === name).length
       catBar.append(
@@ -372,6 +389,24 @@ function home(): HTMLElement {
   renderStarred()
   onFavouritesChange(renderStarred)
 
+  // The headline is split into masked lines so it can rise into view without
+  // the layout shifting. The CSS keeps the final state as the default, so the
+  // text is fully visible with scripting or motion turned off.
+  const headline = el(
+    'h1',
+    { class: 'ts-headline' },
+    el(
+      'span',
+      { class: 'ts-headline__line' },
+      el('span', { class: 'ts-headline__inner' }, el('em', { class: 'ts-accent' }, `${tools.length} tools`), ' that never'),
+    ),
+    el(
+      'span',
+      { class: 'ts-headline__line' },
+      el('span', { class: 'ts-headline__inner' }, 'leave your browser.'),
+    ),
+  )
+
   return el(
     'section',
     { class: 'ts-home' },
@@ -379,12 +414,7 @@ function home(): HTMLElement {
       'div',
       { class: 'ts-masthead' },
       el('p', { class: 'ts-eyebrow' }, 'Privacy-first developer tools'),
-      el(
-        'h1',
-        {},
-        el('span', { class: 'ts-accent' }, `${tools.length} tools`),
-        ' that never leave your browser.',
-      ),
+      headline,
       el(
         'p',
         { class: 'ts-lede' },
@@ -401,7 +431,7 @@ function home(): HTMLElement {
     ),
     pinned,
     el('div', { class: 'ts-browse' }, el('span', { class: 'ts-browse-label' }, 'Browse'), catBar),
-    section,
+    results,
   )
 }
 
