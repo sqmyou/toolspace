@@ -1,0 +1,74 @@
+/* Click Speed Test. The pad is the whole point, so it gets a full-width
+   surface and the numbers orbit it rather than competing with it. */
+
+.ts-cps-timer {
+  font-family: var(--mono);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+}
+
+.ts-cps-bar { height: 4px; border-radius: 999px; background: var(--border); overflow: hidden; }
+.ts-cps-bar__fill {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: hsl(var(--h, 48) 88% 60%);
+  transition: width 0.08s linear;
+}
+
+.ts-cps-pad {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 220px;
+  padding: 24px;
+  font: inherit;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border-strong);
+  background: linear-gradient(180deg, var(--bg-soft), var(--bg));
+  color: var(--fg);
+  user-select: none;
+  -webkit-user-select: none;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.06s ease;
+}
+.ts-cps-pad:hover { border-color: hsl(var(--h, 48) 70% 50% / 0.7); }
+.ts-cps-pad:active { transform: scale(0.995); }
+.ts-cps-pad.is-running {
+  border-style: solid;
+  border-color: hsl(var(--h, 48) 88% 58%);
+  background: linear-gradient(180deg, hsl(var(--h, 48) 88% 58% / 0.08), transparent);
+}
+.ts-cps-pad.is-done { border-style: solid; border-color: var(--border-strong); }
+
+.ts-cps-pad__count {
+  font-family: var(--display, var(--mono));
+  font-size: clamp(56px, 14vw, 96px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.ts-cps-pad__count.is-pop { animation: ts-cps-pop 0.12s ease; }
+@keyframes ts-cps-pop { 50% { transform: scale(1.07); } }
+
+.ts-cps-pad__hint { color: var(--faint); font-size: var(--text-sm); }
+
+.ts-cps-results { display: flex; flex-direction: column; gap: 12px; }
+.ts-cps-grade {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  letter-spacing: var(--tracking-tight);
+  color: hsl(var(--h, 48) 85% 62%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ts-cps-pad__count.is-pop { animation: none; }
+  .ts-cps-bar__fill { transition: none; }
+}

@@ -1,0 +1,47 @@
+/* Atomic Clock. The face is the anchor; the copyable values sit beside it so
+   the page reads as a measuring instrument, not a wall of text. */
+
+.ts-clock-face {
+  font-family: var(--display, var(--mono));
+  font-size: clamp(40px, 9vw, 68px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+}
+.ts-clock-millis { color: hsl(var(--h, 246) 70% 68%); }
+
+.ts-clock-date { margin-top: 6px; color: var(--muted); font-size: var(--text-base); }
+.ts-clock-zone { color: var(--faint); font-size: var(--text-sm); font-family: var(--mono); }
+
+.ts-clock-other {
+  font-family: var(--mono);
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.ts-clock-otherzone { color: var(--faint); font-size: var(--text-sm); font-family: var(--mono); }
+
+.ts-clock-world { display: flex; flex-direction: column; gap: 1px; }
+.ts-clock-worldrow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: baseline;
+  padding: 7px 8px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-base);
+}
+.ts-clock-worldrow:nth-child(odd) { background: var(--bg-soft); }
+.ts-clock-worldrow__zone { color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ts-clock-worldrow__time { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.ts-clock-worldrow__offset { color: var(--faint); font-family: var(--mono); font-size: var(--text-sm); }
+
+.ts-clock-ticks { color: var(--faint); font-size: var(--text-sm); font-family: var(--mono); }
+
+@media (max-width: 420px) {
+  .ts-clock-worldrow { grid-template-columns: 1fr auto; }
+  .ts-clock-worldrow__offset { display: none; }
+}

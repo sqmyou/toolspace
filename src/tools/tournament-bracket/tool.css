@@ -1,0 +1,82 @@
+/* Tournament Bracket. A horizontally scrollable set of columns, one per
+   round, so a wide bracket reads left to right the way a real one does. The
+   scroll is on the bracket itself, never the page — that is what keeps the
+   body from overflowing on a phone. */
+
+.ts-bracket {
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  padding: 4px 2px 12px;
+  scrollbar-width: thin;
+  overscroll-behavior-x: contain;
+}
+
+.ts-bracket-round { display: flex; flex-direction: column; gap: 10px; min-width: 168px; flex: 0 0 auto; }
+.ts-bracket-round__name {
+  margin: 0;
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--faint);
+  font-family: var(--mono);
+  font-weight: 600;
+}
+.ts-bracket-round__matches { display: flex; flex-direction: column; gap: 10px; justify-content: space-around; flex: 1; }
+
+.ts-bracket-match {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  overflow: hidden;
+}
+
+.ts-bracket-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: var(--text-base);
+  text-align: left;
+  background: none;
+  border: 0;
+  color: var(--fg);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.ts-bracket-side + .ts-bracket-side { border-top: 1px solid var(--border); }
+.ts-bracket-side:hover:not(:disabled) { background: var(--bg); }
+.ts-bracket-side.is-winner {
+  background: hsl(var(--h, 48) 80% 55% / 0.12);
+  color: var(--fg);
+  font-weight: 600;
+}
+.ts-bracket-side.is-empty { color: var(--faint); cursor: default; font-style: italic; }
+.ts-bracket-side:disabled { opacity: 0.7; }
+
+.ts-bracket-seed {
+  flex: none;
+  width: 20px;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: var(--text-2xs);
+  color: var(--faint);
+}
+.ts-bracket-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ts-bracket-check { color: hsl(var(--h, 48) 80% 58%); font-weight: 700; }
+
+.ts-bracket-champion {
+  margin-top: 12px;
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: var(--tracking-tight);
+  color: var(--faint);
+  min-height: 1.3em;
+}
+.ts-bracket-champion.is-set { color: hsl(var(--h, 48) 85% 62%); }
+.ts-bracket-meta { margin: 0; color: var(--faint); font-size: var(--text-sm); font-family: var(--mono); }
+.ts-bracket-empty { margin: 0; color: var(--faint); font-size: var(--text-base); }

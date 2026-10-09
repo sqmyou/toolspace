@@ -1,0 +1,34 @@
+/* Aspect Ratio Calculator. The live rectangle is the point: the numbers above
+   it are just how you steer it. */
+
+.ts-ar-shape {
+  display: grid;
+  place-items: center;
+  min-height: 232px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(var(--border) 1px, transparent 1px) 0 0 / 100% 24px,
+    linear-gradient(90deg, var(--border) 1px, transparent 1px) 0 0 / 24px 100%,
+    var(--bg-soft);
+  background-color: var(--bg-soft);
+}
+
+.ts-ar-rect {
+  border-radius: 3px;
+  border: 1px solid hsl(var(--h, 330) 70% 62%);
+  background: hsl(var(--h, 330) 70% 62% / 0.14);
+  box-shadow: 0 0 0 1px hsl(var(--h, 330) 70% 62% / 0.2), 0 12px 30px -22px hsl(var(--h, 330) 70% 55% / 0.9);
+  transition: width 0.18s ease, height 0.18s ease;
+}
+
+.ts-ar-caption {
+  margin: 10px 0 0;
+  color: var(--faint);
+  font-size: var(--text-sm);
+  font-family: var(--mono);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ts-ar-rect { transition: none; }
+}
