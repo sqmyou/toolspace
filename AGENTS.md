@@ -89,6 +89,11 @@ is actionable:
 
 ## Gotchas
 
+- **`tool-styles.ts` must keep `eager: true`.** Per-tool `tool.css` is discovered
+  with `import.meta.glob(..., { eager: true, query: '?inline' })`. Drop `eager`
+  and Vite stops inlining those files, so every tool's custom CSS silently
+  vanishes from the bundle — typecheck, tests and build all still pass.
+
 - **Smoke-testing locally:** `vite preview` rejects the runtime proxy hosts with
   `403 Blocked request. This host is not allowed`. Serve the build directly
   instead: `cd dist && python3 -m http.server 12000 --bind 0.0.0.0`, then open
