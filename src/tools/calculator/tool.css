@@ -9,12 +9,28 @@
   background: var(--bg-input);
 }
 
+.ts-calc-readout-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ts-calc-readout-top .ts-k-btn { flex: none; }
+
 .ts-calc-result { font-size: 30px; line-height: 1.2; word-break: break-all; }
 .ts-calc-result.is-error { color: var(--danger); }
 .ts-calc-detail { min-height: 18px; color: var(--warn); font-size: 13px; }
+.ts-calc-modes { margin-top: 10px; }
 
 .ts-calc-pad { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
 .ts-calc-key { font-family: var(--mono); font-size: 15px; padding: 14px 0; }
+
+.ts-calc-history-head {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
 
 .ts-calc-history { display: flex; flex-direction: column; max-height: 320px; overflow-y: auto; }
 .ts-calc-entry {
@@ -34,3 +50,18 @@
 .ts-calc-entry-expr { color: var(--muted); font-size: 12.5px; }
 .ts-calc-entry-val { font-family: var(--mono); font-size: 14px; }
 .ts-calc-empty { padding: 12px; margin: 0; }
+
+/* Programs: picker, per-program settings, input slots, shared readout. */
+.ts-calc-program { display: flex; flex-direction: column; gap: 12px; }
+.ts-calc-settings { display: flex; flex-wrap: wrap; gap: 8px; }
+.ts-calc-program-hint { margin: 0; }
+.ts-calc-program-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.ts-calc-program-readout {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-input);
+}
+.ts-calc-program-out { font-size: 24px; line-height: 1.2; word-break: break-all; }
+.ts-calc-program-out.is-error { color: var(--danger); font-size: 16px; }
+

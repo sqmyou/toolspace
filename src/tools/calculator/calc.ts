@@ -288,3 +288,182 @@ export function formatNumber(value: number): string {
   if (magnitude >= 1e15 || magnitude < 1e-6) return value.toExponential(10).replace(/\.?0+e/, 'e')
   return String(Number(value.toPrecision(14)))
 }
+
+/* ---------------------------------------------------------------------------
+   Programs
+   ---------------------------------------------------------------------------
+   Beyond the free-text expression box, the calculator offers a handful of
+   "programs": a small, fixed computation with one or two inputs. They cover
+   the things an expression box handles badly — unit conversion and bitwise
+   work — and they are all ordinary JavaScript, so a program that makes no
+   sense for its input throws CalcError and is reported as "Invalid" rather
+   than silently producing a wrong number.
+   ------------------------------------------------------------------------- */
+
+export type AngleMode = 'deg' | 'rad' | 'grad' | 'turn' | 'mil'
+export type DmsMode = 'dd' | 'dm' | 'dms'
+export type BitwiseOp = 'and' | 'or' | 'xor' | 'not'
+export type NumberMode = 'dec' | 'hex' | 'bin'
+
+export interface ProgramContext {
+  /** Unit the angle inputs are given in. */
+  angleMode: AngleMode
+  /** How many DMS slots to show: decimal, degrees+minutes, or d/m/s. */
+  dmsMode: DmsMode
+  bitwiseOp: BitwiseOp
+  /** Operand width in bits: 8, 16 or 32. */
+  notWidth: number
+}
+
+export const DEFAULT_PROGRAM_CONTEXT: ProgramContext = {
+  angleMode: 'deg',
+  dmsMode: 'dms',
+  bitwiseOp: 'and',
+  notWidth: 16,
+}
+
+/** How many degrees one unit of each mode is worth. */
+const DEGREES_PER_UNIT: Record<AngleMode, number> = {
+  deg: 1,
+  rad: 180 / Math.PI,
+  grad: 0.9,
+  turn: 360,
+  mil: 180 / 3200,
+}
+
+export const ANGLE_UNITS: { value: AngleMode; label: string; suffix: string }[] = [
+  { value: 'deg', label: 'Degrees', suffix: '°' },
+  { value: 'rad', label: 'Radians', suffix: ' rad' },
+  { value: 'grad', label: 'Gradians', suffix: ' grad' },
+  { value: 'turn', label: 'Turns', suffix: ' turn' },
+  { value: 'mil', label: 'Mils', suffix: ' mil' },
+]
+
+export const BITWISE_WIDTHS = [8, 16, 32]
+
+export function toDegrees(value: number, mode: AngleMode): number {
+  return value * DEGREES_PER_UNIT[mode]
+}
+
+export function fromDegrees(degrees: number, mode: AngleMode): number {
+  return degrees / DEGREES_PER_UNIT[mode]
+}
+
+/** Combine a sign-magnitude d/m/s triple into decimal degrees. */
+export function dmsToDegrees(degrees: number, minutes = 0, seconds = 0): number {
+  const sign = degrees < 0 || minutes < 0 || seconds < 0 ? -1 : 1
+  return degrees + sign * (Math.abs(minutes) / 60 + Math.abs(seconds) / 3600)
+}
+
+export interface DmsParts {
+  degrees: number
+  minutes: number
+  seconds: number
+}
+
+/** Split decimal degrees into a sign-magnitude d/m/s triple. */
+export function degreesToDms(degrees: number): DmsParts {
+  const sign = degrees < 0 ? -1 : 1
+  const absolute = Math.abs(degrees)
+  const whole = Math.floor(absolute)
+  const minutePart = (absolute - whole) * 60
+  const minutes = Math.floor(minutePart)
+  const seconds = Number(((minutePart - minutes) * 60).toPrecision(10))
+  return { degrees: sign * whole, minutes, seconds }
+}
+
+/** Mask a value into `width` bits, as an unsigned integer. */
+function toUnsigned(value: number, width: number): number {
+  const modulus = 2 ** width
+  return ((Math.trunc(value) % modulus) + modulus) % modulus
+}
+
+/** Reinterpret an unsigned width-bit value as signed (two's complement). */
+function toSigned(value: number, width: number): number {
+  const signBit = 2 ** (width - 1)
+  return value >= signBit ? value - 2 ** width : value
+}
+
+/**
+ * Run a bitwise operation at a given width. Operands must fit the width
+ * (either as an unsigned value or a negative two's-complement one); anything
+ * outside that range is Invalid, which is what stops `NOT` being applied to a
+ * number the width cannot even represent.
+ */
+export function bitwiseOp(op: BitwiseOp, a: number, b: number, width: number): number {
+  const modulus = 2 ** width
+  const fits = (value: number) => Number.isInteger(value) && value >= -(modulus / 2) && value <= modulus - 1
+  if (!fits(a) || !fits(b)) throw new CalcError(`${a} does not fit in ${width} bits.`)
+  const left = toUnsigned(a, width)
+  const right = toUnsigned(b, width)
+  let raw: number
+  switch (op) {
+    case 'and':
+      raw = left & right
+      break
+    case 'or':
+      raw = left | right
+      break
+    case 'xor':
+      raw = left ^ right
+      break
+    case 'not':
+      raw = ~left
+      break
+  }
+  return toSigned(toUnsigned(raw, width), width)
+}
+
+export type ProgramId = 'angle' | 'dms' | 'bitwise'
+
+export interface CalcProgram {
+  id: ProgramId
+  label: string
+  hint: string
+  /** Input slot labels for the current settings. */
+  fields: (context: ProgramContext) => string[]
+  /** Compute a result, or throw CalcError for input the program cannot take. */
+  run: (values: number[], context: ProgramContext) => number
+}
+
+export const PROGRAMS: CalcProgram[] = [
+  {
+    id: 'angle',
+    label: 'Angle Converter',
+    hint: 'Convert an angle between degrees, radians, gradians, turns and mils',
+    fields: () => ['Angle'],
+    run: (values, context) => toDegrees(values[0] ?? 0, context.angleMode),
+  },
+  {
+    id: 'dms',
+    label: 'DMS Converter',
+    hint: 'Combine degrees, minutes and seconds into decimal degrees',
+    fields: (context) =>
+      context.dmsMode === 'dd' ? ['Degrees'] : context.dmsMode === 'dm' ? ['Degrees', 'Minutes'] : ['Degrees', 'Minutes', 'Seconds'],
+    run: (values, context) => {
+      const [degrees = 0, minutes = 0, seconds = 0] = values
+      if (context.dmsMode === 'dd') return degrees
+      if (context.dmsMode === 'dm') return dmsToDegrees(degrees, minutes)
+      return dmsToDegrees(degrees, minutes, seconds)
+    },
+  },
+  {
+    id: 'bitwise',
+    label: 'Bitwise',
+    hint: 'AND, OR, XOR and NOT at 8, 16 or 32 bits',
+    fields: (context) => (context.bitwiseOp === 'not' ? ['Operand'] : ['A', 'B']),
+    run: (values, context) => bitwiseOp(context.bitwiseOp, values[0] ?? 0, values[1] ?? 0, context.notWidth),
+  },
+]
+
+export function programById(id: ProgramId): CalcProgram {
+  return PROGRAMS.find((program) => program.id === id) ?? PROGRAMS[0]
+}
+
+/** Format a value for the selected number mode, for the readout and the copy action. */
+export function formatInMode(value: number, mode: NumberMode): string {
+  if (mode === 'dec') return formatNumber(value)
+  if (!Number.isInteger(value)) return formatNumber(value)
+  if (mode === 'hex') return (value < 0 ? '-0x' + Math.abs(value).toString(16) : '0x' + value.toString(16)).toUpperCase()
+  return (value < 0 ? '-' : '') + '0b' + Math.abs(value).toString(2)
+}
