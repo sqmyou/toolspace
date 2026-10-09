@@ -1,5 +1,19 @@
+import {
+  actions,
+  badge,
+  copyButton,
+  copyRow,
+  field,
+  grid,
+  kvList,
+  note,
+  outputBlock,
+  panel,
+  select,
+  textField,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
-import { copyChip } from '../../core/ui'
 import type { Tool } from '../../core/types'
 import { formatCode, generateTotp, hotp, base32Decode, otpauthUri, TotpError, type TotpAlgorithm } from './totp'
 
@@ -10,51 +24,68 @@ const tool: Tool = {
   category: 'Security',
   keywords: ['totp', 'hotp', 'otp', '2fa', 'mfa', 'authenticator', 'rfc6238', 'base32', 'one-time'],
   render(root) {
-    const secretInput = el('input', { class: 'ts-input ts-mono', type: 'text', value: 'JBSWY3DPEHPK3PXP', spellcheck: false, 'aria-label': 'Base32 secret' }) as HTMLInputElement
-    const digitsSelect = el('select', { class: 'ts-select' }) as HTMLSelectElement
-    for (const digits of [6, 7, 8]) digitsSelect.append(el('option', { value: String(digits), selected: digits === 6 }, `${digits} digits`))
-    const periodSelect = el('select', { class: 'ts-select' }) as HTMLSelectElement
-    for (const period of [30, 60]) periodSelect.append(el('option', { value: String(period), selected: period === 30 }, `${period}s`))
-    const algorithmSelect = el('select', { class: 'ts-select' }) as HTMLSelectElement
-    for (const algorithm of ['SHA-1', 'SHA-256', 'SHA-512'] as TotpAlgorithm[]) algorithmSelect.append(el('option', { value: algorithm }, algorithm))
+    const secret = textField({ value: 'JBSWY3DPEHPK3PXP', mono: true, onInput: () => refresh() })
+    const digits = select({
+      options: [6, 7, 8].map((value) => ({ value: String(value), label: `${value} digits` })),
+      value: '6',
+      onChange: () => refresh(),
+    })
+    const period = select({
+      options: [30, 60].map((value) => ({ value: String(value), label: `${value}s` })),
+      value: '30',
+      onChange: () => refresh(),
+    })
+    const algorithm = select({
+      options: ['SHA-1', 'SHA-256', 'SHA-512'].map((value) => ({ value, label: value })),
+      value: 'SHA-1',
+      onChange: () => refresh(),
+    })
 
-    const codeDisplay = el('code', { class: 'ts-otp-code' })
+    const code = el('code', { class: 'ts-otp-code' }, '------')
     const progress = el('div', { class: 'ts-otp-progress-inner' })
-    const remainingText = el('span', { class: 'ts-muted' })
-    const error = el('p', { class: 'ts-error', hidden: true })
+    const remaining = badge('—')
+    const error = note('', 'danger')
+    error.hidden = true
 
-    const counterInput = el('input', { class: 'ts-input ts-mono', type: 'number', value: '0', min: '0', 'aria-label': 'HOTP counter' }) as HTMLInputElement
-    const hotpOut = el('code', { class: 'ts-otp-inline' })
+    const counter = textField({ type: 'number', value: '0', mono: true, onInput: () => refresh() })
+    const hotpRow = kvList()
 
-    const accountInput = el('input', { class: 'ts-input', type: 'text', value: '', spellcheck: false, placeholder: 'me@example.com' }) as HTMLInputElement
-    const issuerInput = el('input', { class: 'ts-input', type: 'text', value: '', spellcheck: false, placeholder: 'Example' }) as HTMLInputElement
-    const uriOut = el('pre', { class: 'ts-uri-out' })
+    const account = textField({ placeholder: 'me@example.com', onInput: () => refresh() })
+    const issuer = textField({ placeholder: 'Example', onInput: () => refresh() })
+    let uri = ''
+    const uriOut = outputBlock('', { label: 'otpauth:// URI', copy: () => uri })
 
     let timer: number | undefined
     let currentCode = ''
 
     function options() {
       return {
-        digits: Number(digitsSelect.value),
-        step: Number(periodSelect.value),
-        algorithm: algorithmSelect.value as TotpAlgorithm,
+        digits: Number(digits.value),
+        step: Number(period.value),
+        algorithm: algorithm.value as TotpAlgorithm,
       }
     }
 
     async function tick() {
       try {
-        const result = await generateTotp(secretInput.value, options())
+        const result = await generateTotp(secret.value, options())
         currentCode = result.code
-        codeDisplay.textContent = formatCode(result.code)
-        remainingText.textContent = `${result.secondsRemaining}s left`
+        code.textContent = formatCode(result.code)
+        remaining.textContent = `${result.secondsRemaining}s left`
+        remaining.className = `ts-k-badge ts-k-badge--${result.secondsRemaining > 5 ? 'ok' : 'warn'}`
         progress.style.width = `${(result.secondsRemaining / result.period) * 100}%`
         error.hidden = true
-        uriOut.textContent = otpauthUri(secretInput.value.replace(/\s/g, ''), accountInput.value, issuerInput.value, options())
+        uri = otpauthUri(secret.value.replace(/\s/g, ''), account.value, issuer.value, options())
+        uriOut.body.replaceChildren(uri)
+        uriOut.setMeta('')
       } catch (err) {
-        codeDisplay.textContent = '------'
+        currentCode = ''
+        code.textContent = '------'
         progress.style.width = '0%'
-        remainingText.textContent = ''
-        uriOut.textContent = ''
+        remaining.textContent = '—'
+        uri = ''
+        uriOut.body.replaceChildren('')
+        uriOut.setMeta('')
         error.textContent = err instanceof TotpError ? err.message : 'Enter a Base32 secret.'
         error.hidden = false
       }
@@ -62,10 +93,11 @@ const tool: Tool = {
 
     async function updateHotp() {
       try {
-        const key = base32Decode(secretInput.value)
-        hotpOut.textContent = await hotp(key, Number(counterInput.value) | 0, Number(digitsSelect.value), algorithmSelect.value as TotpAlgorithm)
+        const key = base32Decode(secret.value)
+        const value = await hotp(key, Number(counter.value) | 0, Number(digits.value), algorithm.value as TotpAlgorithm)
+        hotpRow.replaceChildren(copyRow('Code', value))
       } catch {
-        hotpOut.textContent = '—'
+        hotpRow.replaceChildren(copyRow('Code', '—'))
       }
     }
 
@@ -74,50 +106,23 @@ const tool: Tool = {
       void updateHotp()
     }
 
-    for (const input of [secretInput, accountInput, issuerInput, counterInput]) input.addEventListener('input', refresh)
-    for (const select of [digitsSelect, periodSelect, algorithmSelect]) select.addEventListener('change', refresh)
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'Base32 secret'), secretInput),
-        el(
-          'div',
-          { class: 'ts-row ts-wrap' },
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Digits'), digitsSelect),
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Period'), periodSelect),
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Algorithm'), algorithmSelect),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Secret', icon: 'key' },
+          field(secret, { label: 'Base32 secret' }),
+          grid(150, field(digits, { label: 'Digits' }), field(period, { label: 'Period' }), field(algorithm, { label: 'Algorithm' })),
+          error,
         ),
-        error,
-        el(
-          'div',
-          { class: 'ts-otp-card' },
-          codeDisplay,
-          el('div', { class: 'ts-otp-progress' }, progress),
-          el(
-            'div',
-            { class: 'ts-row ts-between' },
-            remainingText,
-            copyChip(() => formatCode(currentCode), 'Copy code'),
-          ),
+        panel(
+          { title: 'Time-based code', icon: 'clock' },
+          el('div', { class: 'ts-otp-card' }, code, el('div', { class: 'ts-otp-progress' }, progress)),
+          actions(remaining, copyButton(() => formatCode(currentCode), { label: 'Copy code' })),
         ),
-        el('h3', { class: 'ts-subhead' }, 'Counter-based (HOTP)'),
-        el(
-          'div',
-          { class: 'ts-row ts-wrap' },
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Counter'), counterInput),
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Code'), hotpOut, copyChip(() => hotpOut.textContent ?? '')),
-        ),
-        el('h3', { class: 'ts-subhead' }, 'otpauth:// URI'),
-        el(
-          'div',
-          { class: 'ts-row ts-wrap' },
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Account'), accountInput),
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Issuer'), issuerInput),
-        ),
-        uriOut,
-        el('p', { class: 'ts-note' }, 'Secrets stay in this page. Codes are computed with the WebCrypto API in your browser and are never sent anywhere.'),
+        panel({ title: 'Counter-based (HOTP)', icon: 'hash' }, field(counter, { label: 'Counter' }), hotpRow),
+        panel({ title: 'Provisioning', icon: 'external' }, grid(220, field(account, { label: 'Account' }), field(issuer, { label: 'Issuer' })), uriOut),
+        note('Secrets stay in this page. Codes are computed with the WebCrypto API in your browser and are never sent anywhere.'),
       ),
     )
 

@@ -1,5 +1,19 @@
+import {
+  actions,
+  button,
+  checkbox,
+  copyButton,
+  copyRow,
+  field,
+  grid,
+  kvList,
+  note,
+  panel,
+  select,
+  textField,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
-import { copyChip } from '../../core/ui'
 import type { Tool } from '../../core/types'
 import { randomBetween, randomHex, randomPassword, randomToken, type CharSetName } from './random'
 
@@ -17,34 +31,54 @@ const tool: Tool = {
   category: 'Security',
   keywords: ['random', 'crypto', 'password', 'token', 'hex', 'bytes', 'secure', 'entropy', 'nonce'],
   render(root) {
-    const kind = el(
-      'select',
-      { class: 'ts-select' },
-      el('option', { value: 'number' }, 'Number in a range'),
-      el('option', { value: 'bytes' }, 'Random bytes (hex)'),
-      el('option', { value: 'token' }, 'URL-safe token'),
-      el('option', { value: 'password' }, 'Password'),
-    ) as HTMLSelectElement
-    const min = el('input', { class: 'ts-input ts-mono', type: 'number', value: '1' }) as HTMLInputElement
-    const max = el('input', { class: 'ts-input ts-mono', type: 'number', value: '100' }) as HTMLInputElement
-    const length = el('input', { class: 'ts-input ts-mono', type: 'number', min: '1', max: '256', value: '16' }) as HTMLInputElement
-    const count = el('input', { class: 'ts-input ts-mono', type: 'number', min: '1', max: '20', value: '5' }) as HTMLInputElement
-    const requireEach = el('input', { type: 'checkbox', checked: true }) as HTMLInputElement
-    const setBoxes = SET_LABELS.map(([name, label]) => ({ name, box: el('input', { type: 'checkbox', checked: true }) as HTMLInputElement, label }))
-    const error = el('p', { class: 'ts-error', hidden: true })
-    const list = el('div', { class: 'ts-copy-list' })
+    let kind = 'number'
+    const min = textField({ type: 'number', value: '1', mono: true, onInput: () => generate() })
+    const max = textField({ type: 'number', value: '100', mono: true, onInput: () => generate() })
+    const length = textField({ type: 'number', value: '16', mono: true, onInput: () => generate() })
+    const count = textField({ type: 'number', value: '5', mono: true, onInput: () => generate() })
+    let requireEach = true
+    const setState: Record<string, boolean> = { lower: true, upper: true, digits: true, symbols: true }
+    const error = note('', 'danger')
+    error.hidden = true
+    const list = kvList()
     let values: string[] = []
 
-    function controlGroup() {
-      const show = (node: HTMLElement, visible: boolean) => node.toggleAttribute('hidden', !visible)
-      show(min.closest('.ts-inline-field') as HTMLElement, kind.value === 'number')
-      show(max.closest('.ts-inline-field') as HTMLElement, kind.value === 'number')
-      show(length.closest('.ts-inline-field') as HTMLElement, kind.value !== 'number')
-      show(setsBox, kind.value === 'password')
-      show(requireEach.closest('.ts-inline-field') as HTMLElement, kind.value === 'password')
-    }
+    const kindControl = select({
+      options: [
+        { value: 'number', label: 'Number in a range' },
+        { value: 'bytes', label: 'Random bytes (hex)' },
+        { value: 'token', label: 'URL-safe token' },
+        { value: 'password', label: 'Password' },
+      ],
+      value: 'number',
+      onChange: (value) => {
+        kind = value
+        controlGroup()
+        generate()
+      },
+    })
 
-    const setsBox = el('div', { class: 'ts-row ts-wrap' }, ...setBoxes.map(({ box, label }) => el('label', { class: 'ts-inline-field' }, box, label)))
+    const setsRow = el(
+      'div',
+      { class: 'ts-k-actions' },
+      ...SET_LABELS.map(([name, label]) =>
+        checkbox({ label, checked: true, onChange: (checked) => { setState[name] = checked; generate() } }),
+      ),
+    )
+    const rangeFields = el('div', { class: 'ts-k-grid' }, field(min, { label: 'Min' }), field(max, { label: 'Max' }))
+    const lengthField = field(length, { label: 'Length / bytes' })
+    const passwordExtras = el(
+      'div',
+      { class: 'ts-k-actions' },
+      checkbox({ label: 'Require one of each selected set', checked: true, onChange: (checked) => { requireEach = checked; generate() } }),
+    )
+
+    function controlGroup() {
+      rangeFields.hidden = kind !== 'number'
+      lengthField.hidden = kind === 'number'
+      setsRow.hidden = kind !== 'password'
+      passwordExtras.hidden = kind !== 'password'
+    }
 
     function generate() {
       list.replaceChildren()
@@ -52,15 +86,15 @@ const tool: Tool = {
         const total = Math.max(1, Math.min(20, Number(count.value) || 1))
         values = []
         for (let i = 0; i < total; i++) {
-          if (kind.value === 'number') values.push(String(randomBetween(Number(min.value) || 0, Number(max.value) || 0)))
-          else if (kind.value === 'bytes') values.push(randomHex(Number(length.value) || 16))
-          else if (kind.value === 'token') values.push(randomToken(Number(length.value) || 16))
+          if (kind === 'number') values.push(String(randomBetween(Number(min.value) || 0, Number(max.value) || 0)))
+          else if (kind === 'bytes') values.push(randomHex(Number(length.value) || 16))
+          else if (kind === 'token') values.push(randomToken(Number(length.value) || 16))
           else {
-            const sets = setBoxes.filter(({ box }) => box.checked).map(({ name }) => name)
-            values.push(randomPassword({ length: Number(length.value) || 16, sets, requireEach: requireEach.checked }))
+            const sets = SET_LABELS.filter(([name]) => setState[name]).map(([name]) => name)
+            values.push(randomPassword({ length: Number(length.value) || 16, sets, requireEach }))
           }
         }
-        for (const value of values) list.append(el('div', { class: 'ts-copy-row' }, el('code', { class: 'ts-random-value' }, value), copyChip(value, 'Copy')))
+        list.replaceChildren(...values.map((value, index) => copyRow(`#${index + 1}`, value)))
         error.hidden = true
       } catch (err) {
         values = []
@@ -69,32 +103,24 @@ const tool: Tool = {
       }
     }
 
-    kind.addEventListener('change', () => {
-      controlGroup()
-      generate()
-    })
-    for (const input of [min, max, length, count, requireEach, ...setBoxes.map(({ box }) => box)]) input.addEventListener('change', generate)
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool' },
-        el(
-          'div',
-          { class: 'ts-row ts-wrap' },
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Type'), kind),
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Min'), min),
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Max'), max),
-          el('div', { class: 'ts-inline-field' }, el('label', {}, kind.value === 'password' ? 'Length' : 'Length / bytes'), length),
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'How many'), count),
+      toolLayout(
+        {},
+        panel(
+          { title: 'What to generate', icon: 'wand' },
+          grid(180, field(kindControl, { label: 'Type' }), field(count, { label: 'How many' })),
+          rangeFields,
+          lengthField,
+          setsRow,
+          passwordExtras,
+          error,
         ),
-        setsBox,
-        el('label', { class: 'ts-inline-field' }, requireEach, 'Require one of each selected set'),
-        error,
-        el('div', { class: 'ts-row ts-between' }, el('span', { class: 'ts-muted' }, 'Results'), el('button', { class: 'ts-button ts-primary', type: 'button', onclick: generate }, 'Generate')),
-        list,
-        copyChip(() => values.join('\n'), 'Copy all'),
-        el('p', { class: 'ts-note' }, 'Values come from crypto.getRandomValues with rejection sampling, so every result in the range is equally likely. Nothing is sent anywhere.'),
+        panel(
+          { title: 'Results', icon: 'bolt' },
+          actions(button('Generate', { variant: 'primary', icon: 'refresh', onClick: generate }), copyButton(() => values.join('\n'), { label: 'Copy all' })),
+          list,
+        ),
+        note('Values come from crypto.getRandomValues with rejection sampling, so every result in the range is equally likely. Nothing is sent anywhere.'),
       ),
     )
 
