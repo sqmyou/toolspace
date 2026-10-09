@@ -1,3 +1,17 @@
+import {
+  actions,
+  badge,
+  button,
+  field,
+  kvList,
+  meter,
+  note,
+  panel,
+  stat,
+  stats,
+  textField,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
 import type { Tool } from '../../core/types'
 import { analyzePassword } from './strength'
@@ -9,27 +23,14 @@ const tool: Tool = {
   category: 'Security',
   keywords: ['password', 'strength', 'entropy', 'crack', 'security', 'meter', 'check'],
   render(root) {
-    const input = el('input', {
-      class: 'ts-input ts-mono',
-      type: 'password',
-      spellcheck: false,
-      autocomplete: 'off',
-      placeholder: 'Type a password to analyse…',
-      'aria-label': 'Password to analyse',
-    }) as HTMLInputElement
-
-    const reveal = el('button', { class: 'ts-button', type: 'button' }, 'Show') as HTMLButtonElement
-    reveal.addEventListener('click', () => {
-      const shown = input.type === 'text'
-      input.type = shown ? 'password' : 'text'
-      reveal.textContent = shown ? 'Show' : 'Hide'
-    })
-
-    const meterFill = el('div', { class: 'ts-meter-fill' })
-    const meter = el('div', { class: 'ts-meter', 'aria-hidden': 'true' }, meterFill)
-    const label = el('div', { class: 'ts-strength-label' })
-    const stats = el('div', { class: 'ts-strength-stats' })
-    const lists = el('div', { class: 'ts-json-grid' })
+    let shown = false
+    const input = textField({ type: 'password', placeholder: 'Type a password to analyse…', onInput: () => run() })
+    input.autocomplete = 'off'
+    const strength = meter()
+    const label = badge('—')
+    const figures = stats()
+    const weaknesses = kvList()
+    const suggestions = kvList()
 
     function li(text: string, kind: 'good' | 'bad') {
       return el('div', { class: `ts-claim ts-claim-${kind === 'good' ? 'ok' : 'warning'}` }, el('span', { class: 'ts-claim-dot' }), text)
@@ -37,53 +38,41 @@ const tool: Tool = {
 
     function run() {
       const result = analyzePassword(input.value)
-      meter.dataset.score = String(result.score)
-      meterFill.style.width = `${((result.score + 1) / 5) * 100}%`
-      meterFill.dataset.score = String(result.score)
+      strength.set(result.score, (result.score + 1) / 5)
       label.textContent = result.label
+      label.className = `ts-k-badge ts-k-badge--${result.score >= 3 ? 'ok' : result.score >= 2 ? 'warn' : 'danger'}`
 
-      stats.replaceChildren(
-        el('div', { class: 'ts-stat' }, el('span', { class: 'ts-stat-value' }, input.value ? `${Math.round(result.entropyBits)}` : '0'), el('span', { class: 'ts-muted' }, 'bits of entropy')),
-        el('div', { class: 'ts-stat' }, el('span', { class: 'ts-stat-value' }, result.crackTime), el('span', { class: 'ts-muted' }, 'to crack offline')),
-        el('div', { class: 'ts-stat' }, el('span', { class: 'ts-stat-value' }, `10^${result.guessesLog10.toFixed(1)}`), el('span', { class: 'ts-muted' }, 'guesses')),
+      figures.replaceChildren(
+        stat({ label: 'Entropy', value: input.value ? `${Math.round(result.entropyBits)}` : '0', hint: 'bits' }),
+        stat({ label: 'Time to crack', value: result.crackTime, hint: 'offline attack' }),
+        stat({ label: 'Guesses', value: `10^${result.guessesLog10.toFixed(1)}` }),
       )
 
-      const blocks: HTMLElement[] = []
-      if (result.weaknesses.length) {
-        blocks.push(
-          el(
-            'div',
-            { class: 'ts-json-block' },
-            el('div', { class: 'ts-json-head' }, el('span', {}, 'Weaknesses')),
-            el('div', { class: 'ts-claim-list' }, ...result.weaknesses.map((w) => li(w, 'bad'))),
-          ),
-        )
-      }
-      if (result.suggestions.length) {
-        blocks.push(
-          el(
-            'div',
-            { class: 'ts-json-block' },
-            el('div', { class: 'ts-json-head' }, el('span', {}, 'Suggestions')),
-            el('div', { class: 'ts-claim-list' }, ...result.suggestions.map((s) => li(s, 'good'))),
-          ),
-        )
-      }
-      lists.replaceChildren(...blocks)
+      weaknesses.replaceChildren(...result.weaknesses.map((text) => li(text, 'bad')))
+      suggestions.replaceChildren(...result.suggestions.map((text) => li(text, 'good')))
     }
 
-    input.addEventListener('input', run)
+    const reveal = button('Show', {
+      onClick: () => {
+        shown = !shown
+        input.type = shown ? 'text' : 'password'
+        const text = reveal.querySelector('span')
+        if (text) text.textContent = shown ? 'Hide' : 'Show'
+      },
+    })
 
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'Password'), el('div', { class: 'ts-row' }, input, reveal)),
-        meter,
-        label,
-        stats,
-        lists,
-        el('p', { class: 'ts-note' }, 'Analysis runs locally. The password is never sent anywhere and is not stored.'),
+      toolLayout(
+        {},
+        panel(
+          { title: 'Password', icon: 'lock' },
+          el("div", { class: "ts-k-actions" }, el("div", { class: "ts-k-field--grow" }, field(input, { label: "Password" })), reveal),
+        ),
+        actions(strength.root, label),
+        figures,
+        panel({ title: 'Weaknesses', icon: 'shield' }, weaknesses),
+        panel({ title: 'Suggestions', icon: 'sparkle' }, suggestions),
+        note('Analysis runs locally. The password is never sent anywhere and is not stored.'),
       ),
     )
 

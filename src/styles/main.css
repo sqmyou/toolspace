@@ -1555,6 +1555,26 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
   border-radius: var(--radius-sm);
 }
 
+/* --- Meter ---------------------------------------------------------------- */
+.ts-k-meter {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.ts-k-meter__fill {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: var(--danger);
+  transition: width 0.25s ease, background 0.25s ease;
+}
+.ts-k-meter__fill[data-score="1"],
+.ts-k-meter__fill[data-score="2"] { background: var(--warn); }
+.ts-k-meter__fill[data-score="3"] { background: var(--accent); }
+.ts-k-meter__fill[data-score="4"] { background: var(--ok); }
+
 /* --- Colour chips --------------------------------------------------------- */
 .ts-k-colors { display: flex; flex-wrap: wrap; gap: 8px; }
 .ts-k-color {

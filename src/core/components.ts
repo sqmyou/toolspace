@@ -248,6 +248,25 @@ export function slider(options: SliderOptions): HTMLElement {
   )
 }
 
+export interface Meter {
+  root: HTMLElement
+  /** Set the fill from a 0–1 ratio and a 0–4 score that picks the colour. */
+  set: (score: number, ratio: number) => void
+}
+
+/** A slim strength/progress bar, toned by score. */
+export function meter(): Meter {
+  const fill = el('div', { class: 'ts-k-meter__fill' })
+  const root = el('div', { class: 'ts-k-meter' }, fill)
+  return {
+    root,
+    set: (score, ratio) => {
+      fill.style.width = `${Math.max(0, Math.min(1, ratio)) * 100}%`
+      fill.dataset.score = String(score)
+    },
+  }
+}
+
 /* -------------------------------------------------------------------------
    Buttons
    ------------------------------------------------------------------------- */

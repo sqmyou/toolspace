@@ -1,4 +1,17 @@
-import { el } from '../../core/dom'
+import {
+  actions,
+  badge,
+  button,
+  checkbox,
+  copyButton,
+  grid,
+  meter,
+  note,
+  outputBlock,
+  panel,
+  slider,
+  toolLayout,
+} from '../../core/components'
 import type { Tool } from '../../core/types'
 import {
   alphabetSize,
@@ -53,125 +66,89 @@ const tool: Tool = {
   render(root) {
     const options: PasswordOptions = { ...DEFAULT_OPTIONS }
     let avoidAmbiguous = false
+    let password = ''
+    const strength = meter()
+    const label = badge('—')
+    const hint = note('')
+    const output = outputBlock('', { label: 'Password', copy: () => password })
 
-    const output = el('input', {
-      class: 'ts-output',
-      readonly: true,
-      spellcheck: false,
-      'aria-label': 'Generated password',
-    }) as HTMLInputElement
-
-    const meterFill = el('div', { class: 'ts-meter-fill' })
-    const meterLabel = el('span', { class: 'ts-muted' })
-    const hint = el('p', { class: 'ts-hint' })
-
-    const lengthInput = el('input', {
-      type: 'range',
-      min: '4',
-      max: '128',
-      value: String(options.length),
-      oninput: (e: Event) => {
-        options.length = Number((e.target as HTMLInputElement).value)
-        lengthValue.textContent = String(options.length)
+    const length = slider({
+      label: 'Length',
+      min: 4,
+      max: 128,
+      value: options.length,
+      onInput: (value) => {
+        options.length = value
         run()
       },
-    }) as HTMLInputElement
-    const lengthValue = el('span', { class: 'ts-value' }, String(options.length))
+    })
 
-    function checkbox(key: keyof PasswordOptions, label: string, desc: string) {
-      return el(
-        'label',
-        { class: 'ts-check' },
-        el('input', {
-          type: 'checkbox',
-          checked: options[key] as boolean,
-          onchange: (e: Event) => {
-            options[key] = (e.target as HTMLInputElement).checked as never
-            run()
-          },
-        }),
-        el('span', {}, el('strong', {}, label), el('small', {}, ` ${desc}`)),
-      )
+    function toggle(key: keyof PasswordOptions, text: string, desc: string) {
+      return checkbox({
+        label: text,
+        hint: desc,
+        checked: options[key] as boolean,
+        onChange: (checked) => {
+          options[key] = checked as never
+          run()
+        },
+      })
     }
 
     function run() {
       try {
-        const password = generatePassword(options, { avoidAmbiguous, random: secureRandom })
-        output.value = password
-        const bits = estimateStrength(password, alphabetSize(options, avoidAmbiguous)).entropyBits
-        const { score, label } = estimateStrength(password, alphabetSize(options, avoidAmbiguous))
-        meterFill.style.width = `${(score / 4) * 100}%`
-        meterFill.dataset.score = String(score)
-        meterLabel.textContent = `${label} · ~${Math.round(bits)} bits of entropy`
-        hint.textContent = `A machine guessing 10 billion times a second would need about ${crackTime(bits)}.`
+        password = generatePassword(options, { avoidAmbiguous, random: secureRandom })
+        const size = alphabetSize(options, avoidAmbiguous)
+        const estimate = estimateStrength(password, size)
+        strength.set(estimate.score, estimate.score / 4)
+        label.textContent = estimate.label
+        label.className = `ts-k-badge ts-k-badge--${estimate.score >= 3 ? 'ok' : estimate.score >= 2 ? 'warn' : 'danger'}`
+        hint.textContent = `${Math.round(estimate.entropyBits)} bits of entropy. A machine guessing 10 billion times a second would need about ${crackTime(estimate.entropyBits)}.`
+        output.body.replaceChildren(password)
+        output.setMeta(`${password.length} characters`)
         hint.hidden = false
       } catch (error) {
-        output.value = ''
-        meterFill.style.width = '0%'
-        meterLabel.textContent = ''
+        password = ''
+        strength.set(0, 0)
+        label.textContent = '—'
         hint.textContent = error instanceof PasswordError ? error.message : 'Could not generate a password.'
+        output.body.replaceChildren('')
+        output.setMeta('')
         hint.hidden = false
       }
     }
 
-    async function copy() {
-      if (!output.value) return
-      try {
-        await navigator.clipboard.writeText(output.value)
-        copyButton.textContent = 'Copied'
-        setTimeout(() => (copyButton.textContent = 'Copy'), 1200)
-      } catch {
-        output.select()
-      }
-    }
-
-    const copyButton = el('button', { class: 'ts-button', onclick: copy }, 'Copy')
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool' },
-        el(
-          'div',
-          { class: 'ts-field' },
-          el('label', {}, 'Password'),
-          el('div', { class: 'ts-row' }, output, copyButton),
-        ),
-        el(
-          'div',
-          { class: 'ts-meter', role: 'meter' },
-          meterFill,
-        ),
-        el('div', { class: 'ts-row ts-between' }, meterLabel),
+      toolLayout(
+        {},
+        output,
+        actions(strength.root, label),
         hint,
-        el(
-          'div',
-          { class: 'ts-field' },
-          el('label', {}, 'Length ', lengthValue),
-          lengthInput,
+        panel(
+          { title: 'Rules', icon: 'sliders' },
+          length,
+          grid(180,
+            toggle('lowercase', 'Lowercase', 'a–z'),
+            toggle('uppercase', 'Uppercase', 'A–Z'),
+            toggle('digits', 'Digits', '0–9'),
+            toggle('symbols', 'Symbols', '!@#$…'),
+          ),
+          actions(
+            checkbox({
+              label: 'Avoid ambiguous characters',
+              hint: 'skips I, l, 1, O, 0, o',
+              onChange: (checked) => {
+                avoidAmbiguous = checked
+                run()
+              },
+            }),
+          ),
         ),
-        el(
-          'div',
-          { class: 'ts-checkbox-grid' },
-          checkbox('lowercase', 'Lowercase', 'a–z'),
-          checkbox('uppercase', 'Uppercase', 'A–Z'),
-          checkbox('digits', 'Digits', '0–9'),
-          checkbox('symbols', 'Symbols', '!@#$…'),
+        actions(
+          button('Generate another', { variant: 'primary', icon: 'refresh', onClick: run }),
+          copyButton(() => password, { label: 'Copy' }),
         ),
-        el(
-          'label',
-          { class: 'ts-check' },
-          el('input', {
-            type: 'checkbox',
-            onchange: (e: Event) => {
-              avoidAmbiguous = (e.target as HTMLInputElement).checked
-              run()
-            },
-          }),
-          el('span', {}, el('strong', {}, 'Avoid ambiguous characters'), el('small', {}, ' skips I, l, 1, O, 0, o')),
-        ),
-        el('button', { class: 'ts-button ts-primary', onclick: run }, 'Generate another'),
-        el('p', { class: 'ts-note' }, 'Generated with your browser’s secure random number generator. Nothing leaves this page.'),
+        note('Generated with your browser’s secure random number generator. Nothing leaves this page.'),
       ),
     )
 
