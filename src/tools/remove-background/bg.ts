@@ -188,9 +188,142 @@ export interface RemovalSettings {
   despill: number
 }
 
+/* ---------------------------------------------------------------------------
+   Manual brush
+   ------------------------------------------------------------------------- */
+
+export interface BrushPoint {
+  x: number
+  y: number
+}
+
+/**
+ * One painted path. `radius` is in source pixels. `erase` hides more (forces
+ * the mask to "background", i.e. transparent); `restore` brings the subject
+ * back (forces the mask to "subject", i.e. opaque).
+ */
+export interface BrushStroke {
+  mode: 'erase' | 'restore'
+  radius: number
+  points: BrushPoint[]
+}
+
+/** Set a disc of the mask, clipped to the image. */
+function stampDisc(mask: Uint8Array, width: number, height: number, cx: number, cy: number, radius: number, value: number) {
+  const r = Math.max(0, radius)
+  const r2 = r * r
+  const x0 = Math.max(0, Math.floor(cx - r))
+  const x1 = Math.min(width - 1, Math.ceil(cx + r))
+  const y0 = Math.max(0, Math.floor(cy - r))
+  const y1 = Math.min(height - 1, Math.ceil(cy + r))
+  for (let y = y0; y <= y1; y += 1) {
+    const dy = y - cy
+    for (let x = x0; x <= x1; x += 1) {
+      const dx = x - cx
+      if (dx * dx + dy * dy <= r2) mask[y * width + x] = value
+    }
+  }
+}
+
+/**
+ * Paint one stroke onto a mask in place. Consecutive points are joined by
+ * discs spaced a fraction of the radius apart, so a fast drag leaves a solid
+ * line rather than a row of dots.
+ */
+export function paintStroke(mask: Uint8Array, width: number, height: number, stroke: BrushStroke): void {
+  // The mask holds 1 for background. Erasing paints background, restoring
+  // paints subject, so the two modes set opposite values.
+  const value = stroke.mode === 'erase' ? 1 : 0
+  const radius = Math.max(0.5, stroke.radius)
+  const points = stroke.points.length > 0 ? stroke.points : [{ x: 0, y: 0 }]
+  const spacing = Math.max(1, radius / 2)
+
+  stampDisc(mask, width, height, points[0].x, points[0].y, radius, value)
+  for (let i = 1; i < points.length; i += 1) {
+    const a = points[i - 1]
+    const b = points[i]
+    const distance = Math.hypot(b.x - a.x, b.y - a.y)
+    const steps = Math.max(1, Math.ceil(distance / spacing))
+    for (let s = 1; s <= steps; s += 1) {
+      const t = s / steps
+      stampDisc(mask, width, height, a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, radius, value)
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Replacement background
+   ------------------------------------------------------------------------- */
+
+export function hexToRgb(hex: string): Rgb {
+  const clean = hex.replace('#', '')
+  const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean
+  const value = Number.parseInt(full, 16)
+  if (!Number.isFinite(value) || full.length !== 6) return { r: 0, g: 0, b: 0 }
+  return { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 }
+}
+
+export function rgbToHex({ r, g, b }: Rgb): string {
+  const part = (n: number) => Math.round(Math.min(255, Math.max(0, n))).toString(16).padStart(2, '0')
+  return `#${part(r)}${part(g)}${part(b)}`
+}
+
+/** A replacement backdrop: nothing, a flat colour, or a two-stop gradient. */
+export type BackgroundFill =
+  | { kind: 'transparent' }
+  | { kind: 'solid'; color: Rgb }
+  /** `angle` in degrees: 0 is left→right, 90 is top→bottom. */
+  | { kind: 'linear'; from: Rgb; to: Rgb; angle: number }
+
+/** The fill colour at a pixel, used by both the canvas and the CSS swatch. */
+export function fillColorAt(fill: BackgroundFill, width: number, height: number, x: number, y: number): Rgb | null {
+  if (fill.kind === 'transparent') return null
+  if (fill.kind === 'solid') return fill.color
+
+  const rad = (fill.angle * Math.PI) / 180
+  const dx = Math.cos(rad)
+  const dy = Math.sin(rad)
+  const project = (px: number, py: number) => px * dx + py * dy
+  // Corners use the last pixel index, not the dimension, so the gradient's two
+  // stops land exactly on the extremes of the image rather than one pixel past.
+  const w = width - 1
+  const h = height - 1
+  const corners = [project(0, 0), project(w, 0), project(0, h), project(w, h)]
+  const min = Math.min(...corners)
+  const max = Math.max(...corners)
+  const span = max - min || 1
+  const t = Math.min(1, Math.max(0, (project(x, y) - min) / span))
+  return {
+    r: fill.from.r + (fill.to.r - fill.from.r) * t,
+    g: fill.from.g + (fill.to.g - fill.from.g) * t,
+    b: fill.from.b + (fill.to.b - fill.from.b) * t,
+  }
+}
+
+/**
+ * Put a backdrop back behind the cut-out. Where the cut-out is transparent the
+ * fill shows through at full strength; where it is opaque the subject wins.
+ * The result is fully opaque, which is what a JPEG export needs.
+ */
+export function compositeBackground(data: Uint8ClampedArray, width: number, height: number, fill: BackgroundFill): void {
+  if (fill.kind === 'transparent') return
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const i = (y * width + x) * 4
+      const alpha = data[i + 3] / 255
+      const colour = fillColorAt(fill, width, height, x, y) as Rgb
+      data[i] = colour.r * (1 - alpha) + data[i] * alpha
+      data[i + 1] = colour.g * (1 - alpha) + data[i + 1] * alpha
+      data[i + 2] = colour.b * (1 - alpha) + data[i + 2] * alpha
+      data[i + 3] = 255
+    }
+  }
+}
+
 /**
  * Run the whole pipeline over a copy of the pixels. Returns new data rather
- * than mutating, so the caller can re-run with different settings.
+ * than mutating, so the caller can re-run with different settings. Any manual
+ * brush strokes are applied on top of the automatic mask before feathering.
  */
 export function removeBackground(
   source: Uint8ClampedArray,
@@ -198,10 +331,12 @@ export function removeBackground(
   height: number,
   settings: RemovalSettings,
   background?: Rgb,
+  strokes: BrushStroke[] = [],
 ): Uint8ClampedArray {
   const data = new Uint8ClampedArray(source)
   const backdrop = background ?? estimateBackground(data, width, height)
   const mask = backgroundMask(data, width, height, backdrop, settings.tolerance)
+  for (const stroke of strokes) paintStroke(mask, width, height, stroke)
   const feathered = featherMask(mask, width, height, settings.feather)
   applyMask(data, feathered)
   despill(data, backdrop, settings.despill)

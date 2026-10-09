@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { applyMask, backgroundMask, colorDistance, despill, estimateBackground, featherMask, removeBackground } from './bg'
+import {
+  applyMask,
+  backgroundMask,
+  colorDistance,
+  compositeBackground,
+  despill,
+  estimateBackground,
+  featherMask,
+  fillColorAt,
+  hexToRgb,
+  paintStroke,
+  removeBackground,
+  rgbToHex,
+} from './bg'
 
 /** Build a pixel buffer from a row-major list of [r,g,b,a] tuples. */
 function pixels(rows: number[][]): Uint8ClampedArray {
@@ -178,5 +191,137 @@ describe('removeBackground', () => {
     const data = solid(width, height, [255, 255, 255])
     removeBackground(data, width, height, { tolerance: 10, feather: 0, despill: 0 })
     expect(data[3]).toBe(255)
+  })
+
+  it('lets an erase stroke remove part of the subject', () => {
+    const width = 7
+    const height = 7
+    const data = solid(width, height, [255, 255, 255])
+    for (let y = 2; y <= 4; y += 1) for (let x = 2; x <= 4; x += 1) setPixel(data, width, x, y, [20, 20, 20])
+    const clean = removeBackground(data, width, height, { tolerance: 10, feather: 0, despill: 0 })
+    expect(clean[(3 * width + 3) * 4 + 3]).toBe(255)
+    const painted = removeBackground(data, width, height, { tolerance: 10, feather: 0, despill: 0 }, undefined, [
+      { mode: 'erase', radius: 1, points: [{ x: 3, y: 3 }] },
+    ])
+    expect(painted[(3 * width + 3) * 4 + 3]).toBe(0)
+  })
+
+  it('lets a restore stroke bring back part of the removed backdrop', () => {
+    const width = 7
+    const height = 7
+    const data = solid(width, height, [255, 255, 255])
+    const painted = removeBackground(data, width, height, { tolerance: 10, feather: 0, despill: 0 }, undefined, [
+      { mode: 'restore', radius: 1, points: [{ x: 0, y: 0 }] },
+    ])
+    expect(painted[3]).toBe(255)
+  })
+})
+
+describe('paintStroke', () => {
+  it('erases by marking a disc as background', () => {
+    const width = 5
+    const height = 5
+    const mask = new Uint8Array(width * height)
+    paintStroke(mask, width, height, { mode: 'erase', radius: 1, points: [{ x: 2, y: 2 }] })
+    expect(mask[2 * width + 2]).toBe(1)
+    expect(mask[2 * width + 0]).toBe(0)
+  })
+
+  it('restores by marking a disc as subject', () => {
+    const width = 5
+    const height = 5
+    const mask = new Uint8Array(width * height).fill(1)
+    paintStroke(mask, width, height, { mode: 'restore', radius: 2, points: [{ x: 2, y: 2 }] })
+    expect(mask[2 * width + 2]).toBe(0)
+  })
+
+  it('interpolates between distant points so a fast drag is solid', () => {
+    const width = 20
+    const height = 4
+    const mask = new Uint8Array(width * height)
+    paintStroke(mask, width, height, { mode: 'erase', radius: 1, points: [{ x: 1, y: 2 }, { x: 18, y: 2 }] })
+    // Every pixel along the middle row should have been erased.
+    for (let x = 0; x < width; x += 1) expect(mask[2 * width + x]).toBe(1)
+  })
+
+  it('clips to the image bounds without throwing', () => {
+    const mask = new Uint8Array(4 * 4)
+    expect(() => paintStroke(mask, 4, 4, { mode: 'erase', radius: 3, points: [{ x: -2, y: -2 }, { x: 9, y: 9 }] })).not.toThrow()
+  })
+})
+
+describe('hexToRgb / rgbToHex', () => {
+  it('parses six- and three-digit hex', () => {
+    expect(hexToRgb('#ff8800')).toEqual({ r: 255, g: 136, b: 0 })
+    expect(hexToRgb('#f80')).toEqual({ r: 255, g: 136, b: 0 })
+  })
+
+  it('round-trips through rgbToHex', () => {
+    expect(rgbToHex({ r: 12, g: 200, b: 34 })).toBe('#0cc822')
+    expect(hexToRgb(rgbToHex({ r: 10, g: 20, b: 30 }))).toEqual({ r: 10, g: 20, b: 30 })
+  })
+
+  it('falls back to black for junk', () => {
+    expect(hexToRgb('nope')).toEqual({ r: 0, g: 0, b: 0 })
+  })
+})
+
+describe('fillColorAt', () => {
+  it('returns null for transparent', () => {
+    expect(fillColorAt({ kind: 'transparent' }, 10, 10, 3, 3)).toBeNull()
+  })
+
+  it('returns the same colour everywhere for a solid fill', () => {
+    const fill = { kind: 'solid', color: { r: 1, g: 2, b: 3 } } as const
+    expect(fillColorAt(fill, 10, 10, 0, 0)).toEqual({ r: 1, g: 2, b: 3 })
+    expect(fillColorAt(fill, 10, 10, 9, 9)).toEqual({ r: 1, g: 2, b: 3 })
+  })
+
+  it('runs left to right at 0 degrees', () => {
+    const fill = { kind: 'linear', from: { r: 0, g: 0, b: 0 }, to: { r: 255, g: 255, b: 255 }, angle: 0 } as const
+    expect(fillColorAt(fill, 11, 11, 0, 5)?.r).toBe(0)
+    expect(fillColorAt(fill, 11, 11, 10, 5)?.r).toBe(255)
+    expect(fillColorAt(fill, 11, 11, 5, 5)?.r).toBeCloseTo(127.5, 0)
+  })
+
+  it('runs top to bottom at 90 degrees', () => {
+    const fill = { kind: 'linear', from: { r: 0, g: 0, b: 0 }, to: { r: 255, g: 255, b: 255 }, angle: 90 } as const
+    expect(fillColorAt(fill, 11, 11, 5, 0)?.r).toBeCloseTo(0, 5)
+    expect(fillColorAt(fill, 11, 11, 5, 10)?.r).toBe(255)
+  })
+})
+
+describe('compositeBackground', () => {
+  it('is a no-op for transparent', () => {
+    const data = pixels([[10, 20, 30, 0]])
+    compositeBackground(data, 1, 1, { kind: 'transparent' })
+    expect(Array.from(data)).toEqual([10, 20, 30, 0])
+  })
+
+  it('fills transparent pixels with the colour and makes them opaque', () => {
+    const data = pixels([[0, 0, 0, 0]])
+    compositeBackground(data, 1, 1, { kind: 'solid', color: { r: 200, g: 100, b: 50 } })
+    expect(Array.from(data)).toEqual([200, 100, 50, 255])
+  })
+
+  it('keeps opaque subject pixels', () => {
+    const data = pixels([[9, 8, 7, 255]])
+    compositeBackground(data, 1, 1, { kind: 'solid', color: { r: 200, g: 100, b: 50 } })
+    expect(Array.from(data)).toEqual([9, 8, 7, 255])
+  })
+
+  it('blends a half-transparent edge pixel', () => {
+    const data = pixels([[0, 0, 0, 128]])
+    compositeBackground(data, 1, 1, { kind: 'solid', color: { r: 255, g: 255, b: 255 } })
+    expect(data[0]).toBeGreaterThan(120)
+    expect(data[0]).toBeLessThan(136)
+    expect(data[3]).toBe(255)
+  })
+
+  it('paints a gradient across a row', () => {
+    const data = new Uint8ClampedArray(3 * 4)
+    compositeBackground(data, 3, 1, { kind: 'linear', from: { r: 0, g: 0, b: 0 }, to: { r: 240, g: 0, b: 0 }, angle: 0 })
+    expect(data[0]).toBe(0)
+    expect(data[8]).toBe(240)
   })
 })

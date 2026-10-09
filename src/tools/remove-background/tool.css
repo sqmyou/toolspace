@@ -15,6 +15,21 @@
   border-radius: var(--radius-sm);
 }
 .ts-cut-canvas.is-picking { cursor: crosshair; box-shadow: 0 0 0 2px var(--accent); }
+.ts-cut-canvas.is-brushing { cursor: none; touch-action: none; }
+
+/* Brush layer: the canvas plus a pointer-following size preview. */
+.ts-cut-brushwrap { position: relative; display: block; line-height: 0; }
+.ts-cut-brush {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  /* Two rings, light over dark, so the cursor reads on any image. */
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9), 0 0 0 2.5px rgba(16, 18, 22, 0.75);
+}
+.ts-cut-brush.is-on.is-over { opacity: 1; }
 
 .ts-cut-backdrop { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
 .ts-cut-chip {
@@ -28,9 +43,34 @@
     linear-gradient(-45deg, #d8d8d8 25%, transparent 25%);
   background-size: 8px 8px;
 }
+.ts-cut-chip--lg { width: 34px; height: 34px; background-repeat: repeat; }
+
+/* Replacement background: preset swatches and the fine-grained pickers. */
+.ts-cut-fill-group { display: grid; gap: 10px; }
+.ts-cut-swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.ts-cut-swatch {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--sw);
+  cursor: pointer;
+  transition: transform 0.1s ease, border-color 0.1s ease;
+}
+.ts-cut-swatch:hover { transform: translateY(-1px); border-color: var(--accent); }
+.ts-cut-swatch:active { transform: translateY(0) scale(0.96); }
+.ts-cut-swatch:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
 
 .ts-k-btn.is-on { border-color: var(--accent); color: var(--accent); }
+.ts-k-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
 @media (max-width: 700px) {
   .ts-cut-stage { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ts-cut-swatch { transition: none; }
+  .ts-cut-swatch:hover, .ts-cut-swatch:active { transform: none; }
 }
