@@ -5,9 +5,9 @@ import {
   characters,
   consistencyFrom,
   keystrokeStats,
-  linearTrend,
   perSecondSeries,
   shuffled,
+  speedChartSvg,
   weakKeys,
   type KeyEvent,
 } from './typing'
@@ -69,44 +69,14 @@ function writeBest(wpm: number): void {
 }
 
 /** Draw the speed-over-time chart as a numbers-only SVG string, so it is injection-safe. */
-function chartSvg(samples: { second: number; wpm: number }[]): string {
-  if (samples.length < 2) return ''
-  const width = 640
-  const height = 160
-  const padX = 10
-  const padY = 14
-  const values = samples.map((sample) => sample.wpm)
-  const peak = Math.max(20, ...values)
-  const step = (width - padX * 2) / (samples.length - 1)
-  const x = (index: number) => padX + index * step
-  const y = (value: number) => height - padY - (value / peak) * (height - padY * 2)
-
-  const points = values.map((value, index) => `${x(index).toFixed(1)},${y(value).toFixed(1)}`)
-  const area = `M ${padX},${height - padY} L ${points.join(' L ')} L ${x(values.length - 1).toFixed(1)},${height - padY} Z`
-  const bars = values
-    .map((value, index) => {
-      const top = y(value)
-      return `<rect class="ts-type-chart__bar" x="${(x(index) - step * 0.28).toFixed(1)}" y="${top.toFixed(1)}" width="${(step * 0.56).toFixed(1)}" height="${(height - padY - top).toFixed(1)}" rx="2" />`
-    })
-    .join('')
-  const trend = linearTrend(values).map((value, index) => `${x(index).toFixed(1)},${y(value).toFixed(1)}`)
-  const dots = values.map((value, index) => `<circle class="ts-type-chart__dot" cx="${x(index).toFixed(1)}" cy="${y(value).toFixed(1)}" r="2.4" />`).join('')
-
-  return (
-    `<svg class="ts-type-chart" viewBox="0 0 ${width} ${height}" role="img" ` +
-    `aria-label="Words per minute across ${samples.length} seconds">` +
-    `<path class="ts-type-chart__area" d="${area}" />${bars}` +
-    `<polyline class="ts-type-chart__trend" points="${trend.join(' ')}" />` +
-    `<polyline class="ts-type-chart__line" points="${points.join(' ')}" />${dots}</svg>`
-  )
-}
+const chartSvg = speedChartSvg
 
 const tool: Tool = {
   slug: 'typing-speed-test',
   name: 'Typing Speed Test',
-  description: 'A monkeytype-style test: pick time or words, punctuation and numbers, then read your WPM, accuracy and consistency over a live chart.',
+  description: 'Pick time or words, add punctuation and numbers, then read your WPM, accuracy and consistency over a live chart.',
   category: 'Numbers',
-  keywords: ['typing', 'wpm', 'speed', 'keyboard', 'monkeytype', 'words per minute', 'accuracy', 'practice', 'test', 'consistency'],
+  keywords: ['typing', 'wpm', 'speed', 'keyboard', 'words per minute', 'accuracy', 'practice', 'test', 'consistency'],
   render(root) {
     let mode: Mode = 'time'
     let duration: Duration = 30
@@ -206,9 +176,25 @@ const tool: Tool = {
     function measure() {
       const first = charSpans[0]
       if (!first) return
+      // The tool renders before its section is in the document, so the first
+      // measurement can read a zero or unavailable line-height. Recompute until
+      // the layout is real; otherwise the clip is locked to height:0 and the
+      // whole test is invisible.
       const computed = parseFloat(getComputedStyle(track).lineHeight)
-      if (!lineHeight) lineHeight = Number.isFinite(computed) && computed > 0 ? computed : first.offsetHeight * 1.65
+      if (Number.isFinite(computed) && computed > 0) lineHeight = computed
+      else if (first.offsetHeight > 0) lineHeight = first.offsetHeight * 1.7
+      if (!lineHeight) return
       clip.style.height = `${lineHeight * VISIBLE_LINES}px`
+    }
+
+    // A ResizeObserver fires once the section joins the document and whenever
+    // the font or width changes, which is exactly when the line box is known.
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(() => {
+        measure()
+        positionCaret()
+      })
+      observer.observe(track)
     }
 
     function buildSpans() {
@@ -366,9 +352,13 @@ const tool: Tool = {
     function tick() {
       if (!running) return
       const elapsed = performance.now() - startedAt
-      const live = keystrokeStats(events, typed.length, elapsed)
-      liveWpm.textContent = live.rawWpm.toFixed(0)
-      liveAcc.textContent = `${live.accuracy.toFixed(0)}%`
+      // Before half a second the per-minute maths divides by a near-zero
+      // interval and throws out huge numbers, so hold the readout steady.
+      if (elapsed >= 500) {
+        const live = keystrokeStats(events, typed.length, elapsed)
+        liveWpm.textContent = live.rawWpm.toFixed(0)
+        liveAcc.textContent = `${live.accuracy.toFixed(0)}%`
+      }
 
       if (mode === 'time') {
         const left = Math.max(0, duration * 1000 - elapsed)

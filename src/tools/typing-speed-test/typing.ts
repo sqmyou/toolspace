@@ -63,18 +63,6 @@ export function keystrokeStats(events: KeyEvent[], finalLength: number, duration
 }
 
 /**
- * A 0..100 consistency score from how evenly the inter-key gaps fell.
- * `100 × mean ÷ (mean + stdDev)` is bounded, has no magic constants, and
- * rewards a steady rhythm over a spiky one.
- */
-export function consistencyOf(intervalMs: number[], mean: number): number {
-  if (intervalMs.length < 2 || mean <= 0) return 0
-  const variance = intervalMs.reduce((sum, gap) => sum + (gap - mean) ** 2, 0) / intervalMs.length
-  const deviation = Math.sqrt(variance)
-  return (100 * mean) / (mean + deviation)
-}
-
-/**
  * Build a practice text from a word bank.
  *
  * Words are drawn in a fixed order with no immediate repeat, and joined with
@@ -207,4 +195,42 @@ export function consistencyFrom(gaps: number[]): { score: number; mean: number; 
   const coefficient = deviation / mean
   const score = Math.min(100, Math.max(0, Math.round(100 * (1 - coefficient / 2))))
   return { score, mean, deviation }
+}
+
+/**
+ * The speed-over-time chart as an SVG string.
+ *
+ * Every value is a number, so the result is injection-safe by construction and
+ * can be dropped straight into `innerHTML`. Returns an empty string when there
+ * is not enough of a run to draw (fewer than two whole seconds).
+ */
+export function speedChartSvg(samples: Array<{ second: number; wpm: number }>, width = 640, height = 160): string {
+  if (samples.length < 2) return ''
+  const padX = 10
+  const padY = 14
+  const values = samples.map((sample) => sample.wpm)
+  const peak = Math.max(20, ...values)
+  const step = (width - padX * 2) / (samples.length - 1)
+  const x = (index: number) => padX + index * step
+  const y = (value: number) => height - padY - (value / peak) * (height - padY * 2)
+
+  const round = (value: number) => value.toFixed(1)
+  const points = values.map((value, index) => `${round(x(index))},${round(y(value))}`)
+  const area = `M ${padX},${height - padY} L ${points.join(' L ')} L ${round(x(values.length - 1))},${height - padY} Z`
+  const bars = values
+    .map((value, index) => {
+      const top = y(value)
+      return `<rect class="ts-type-chart__bar" x="${round(x(index) - step * 0.28)}" y="${round(top)}" width="${round(step * 0.56)}" height="${round(Math.max(0, height - padY - top))}" rx="2" />`
+    })
+    .join('')
+  const trend = linearTrend(values).map((value, index) => `${round(x(index))},${round(y(value))}`)
+  const dots = values.map((value, index) => `<circle class="ts-type-chart__dot" cx="${round(x(index))}" cy="${round(y(value))}" r="2.4" />`).join('')
+
+  return (
+    `<svg class="ts-type-chart" viewBox="0 0 ${width} ${height}" role="img" ` +
+    `aria-label="Words per minute across ${samples.length} seconds">` +
+    `<path class="ts-type-chart__area" d="${area}" />${bars}` +
+    `<polyline class="ts-type-chart__trend" points="${trend.join(' ')}" />` +
+    `<polyline class="ts-type-chart__line" points="${points.join(' ')}" />${dots}</svg>`
+  )
 }

@@ -89,6 +89,16 @@ is actionable:
 
 ## Gotchas
 
+- **A tool renders before it is in the document.** `toolPage()` calls
+  `tool.render(body)` and only appends the section to `main` afterwards, so at
+  render time the tool is detached. Any measurement that reads the layout
+  (`getComputedStyle(...).lineHeight`, `offsetWidth`, `getBoundingClientRect`)
+  returns zero or an empty string. The typing-speed-test bug came from exactly
+  this: it measured a detached track, cached `lineHeight` as NaN and locked the
+  clip to `height: 0`, so the whole test was invisible. Measure lazily and
+  re-measure once attached (a `ResizeObserver` on the element is the clean fix),
+  and never assume the first layout pass is real.
+
 - **`tool-styles.ts` must keep `eager: true`.** Per-tool `tool.css` is discovered
   with `import.meta.glob(..., { eager: true, query: '?inline' })`. Drop `eager`
   and Vite stops inlining those files, so every tool's custom CSS silently

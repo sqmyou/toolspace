@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  buildText, characters, consistencyFrom, consistencyOf, keystrokeStats, linearTrend, perSecondSeries, shuffled, weakKeys, type KeyEvent,
+  buildText, characters, consistencyFrom, keystrokeStats, linearTrend, perSecondSeries, shuffled, speedChartSvg, weakKeys, type KeyEvent,
 } from './typing'
 
 function event(char: string | null, correct: boolean, at: number, expected?: string | null): KeyEvent {
@@ -60,23 +60,6 @@ describe('keystrokeStats', () => {
     const events = Array.from({ length: 300 }, (_, i) => event('a', true, i * 200))
     const stats = keystrokeStats(events, 300, 60000)
     expect(stats.wpm).toBeCloseTo(60, 6)
-  })
-})
-
-describe('consistencyOf', () => {
-  it('scores even gaps at 100', () => {
-    expect(consistencyOf([100, 100, 100], 100)).toBe(100)
-  })
-
-  it('scores spiky gaps lower but above zero', () => {
-    const spiky = consistencyOf([20, 400, 30, 500], 237.5)
-    expect(spiky).toBeGreaterThan(0)
-    expect(spiky).toBeLessThan(100)
-  })
-
-  it('needs at least two gaps', () => {
-    expect(consistencyOf([100], 100)).toBe(0)
-    expect(consistencyOf([], 0)).toBe(0)
   })
 })
 
@@ -205,3 +188,36 @@ describe('consistencyFrom', () => {
     expect(score).toBeLessThan(100)
   })
 })
+
+describe('speedChartSvg', () => {
+  const samples = (ws: number[]) => ws.map((wpm, index) => ({ second: index + 1, wpm }))
+
+  it('needs at least two seconds to draw', () => {
+    expect(speedChartSvg([])).toBe('')
+    expect(speedChartSvg(samples([60]))).toBe('')
+  })
+
+  it('draws a line, an area, a trend and one dot per second', () => {
+    const svg = speedChartSvg(samples([40, 50, 60, 55]))
+    expect(svg.startsWith('<svg')).toBe(true)
+    expect(svg).toContain('ts-type-chart__line')
+    expect(svg).toContain('ts-type-chart__area')
+    expect(svg).toContain('ts-type-chart__trend')
+    expect(svg.match(/<circle/g)).toHaveLength(4)
+    expect(svg.match(/<rect/g)).toHaveLength(4)
+    expect(svg).toContain('aria-label="Words per minute across 4 seconds"')
+  })
+
+  it('keeps every dot inside the viewbox for a flat run', () => {
+    const svg = speedChartSvg(samples([0, 0, 0]), 640, 160)
+    const coords = [...svg.matchAll(/(?:cx|cy)="([-\d.]+)"/g)].map((match) => Number(match[1]))
+    expect(coords.every((value) => value >= 0 && value <= 640)).toBe(true)
+  })
+
+  it('never emits a script tag even for a hostile sample', () => {
+    const svg = speedChartSvg(samples([1e9, 5]))
+    expect(svg).not.toContain('<script')
+    expect(svg).toContain('viewBox')
+  })
+})
+
