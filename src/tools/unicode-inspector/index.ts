@@ -1,5 +1,15 @@
+import {
+  actions,
+  card,
+  cards,
+  copyButton,
+  copyRow,
+  note,
+  panel,
+  textarea,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
-import { copyChip } from '../../core/ui'
 import type { Tool } from '../../core/types'
 import { decodeHtml, encodeHtml, inspect } from './unicode'
 
@@ -10,59 +20,34 @@ const tool: Tool = {
   category: 'Text',
   keywords: ['unicode', 'codepoint', 'html entity', 'escape', 'emoji', 'utf-8'],
   render(root) {
-    const input = el('textarea', {
-      class: 'ts-textarea',
-      rows: 2,
-      placeholder: 'Type or paste text…',
-      'aria-label': 'Text to inspect',
-    }) as HTMLTextAreaElement
-
-    const grid = el('div', { class: 'ts-unicode-grid' })
-    const entities = el('div', { class: 'ts-copy-list' })
+    const input = textarea({ rows: 2, placeholder: 'Type or paste text…', onInput: () => update() })
+    input.spellcheck = false
+    const grid = cards()
+    const entities = el('div', { class: 'ts-k-kvlist' })
 
     function update() {
-      const infos = inspect(input.value)
-      const cells = infos.map((info) =>
-        el(
-          'div',
-          { class: 'ts-unicode-cell' },
-          el('span', { class: 'ts-unicode-glyph' }, info.char),
-          el('span', { class: 'ts-mono ts-value' }, info.unicode),
-          el('span', { class: 'ts-muted' }, `dec ${info.decimal}`),
-          el('span', { class: 'ts-muted' }, `js ${info.js}`),
-          el('span', { class: 'ts-muted' }, `html ${info.html}`),
-          info.name ? el('span', { class: 'ts-hint' }, info.name) : null,
+      grid.replaceChildren(
+        ...inspect(input.value).map((info) =>
+          card(
+            { title: info.unicode, meta: info.char || undefined },
+            el('div', { class: 'ts-k-kvlist' }, copyRow('decimal', info.decimal, { copy: false }), copyRow('JS', info.js, { copy: false }), copyRow('HTML', info.html, { copy: false })),
+            info.name ? el('p', { class: 'ts-k-hint' }, info.name) : el('span'),
+          ),
         ),
       )
-      grid.replaceChildren(...cells)
       entities.replaceChildren(
-        el(
-          'div',
-          { class: 'ts-copy-row' },
-          el('span', { class: 'ts-muted' }, 'Encode'),
-          copyChip(() => encodeHtml(input.value)),
-        ),
-        el(
-          'div',
-          { class: 'ts-copy-row' },
-          el('span', { class: 'ts-muted' }, 'Decode'),
-          copyChip(() => decodeHtml(input.value)),
-        ),
+        copyRow('Encode', encodeHtml(input.value)),
+        copyRow('Decode', decodeHtml(input.value)),
       )
     }
 
-    input.addEventListener('input', update)
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'Text'), input),
-        el('h3', { class: 'ts-subhead' }, 'HTML entities'),
-        entities,
-        el('h3', { class: 'ts-subhead' }, 'Code points'),
-        grid,
-        el('p', { class: 'ts-note' }, 'Inspection happens in your browser.'),
+      toolLayout(
+        {},
+        panel({ title: 'Text', icon: 'text' }, input, note('Inspection happens in your browser.')),
+        panel({ title: 'HTML entities', icon: 'code' }, entities),
+        panel({ title: 'Code points', icon: 'list' }, grid),
+        actions(copyButton(() => encodeHtml(input.value), { label: 'Copy encoded' })),
       ),
     )
 

@@ -1,8 +1,7 @@
-.ts-csp-grid { display: flex; flex-direction: column; gap: 10px; }
-.ts-csp-row { display: grid; grid-template-columns: 220px 1fr; gap: 12px; align-items: center; }
-.ts-csp-hint { grid-column: 2; }
+.ts-csp-grid { display: flex; flex-direction: column; gap: 14px; }
+.ts-csp-row { display: grid; grid-template-columns: minmax(180px, 240px) 1fr; gap: 12px; align-items: start; }
+.ts-csp-row__head { display: flex; flex-direction: column; gap: 3px; }
 
-@media (max-width: 620px) {
-  .ts-csp-row { grid-template-columns: 1fr; }
-  .ts-csp-hint { grid-column: 1; }
+@media (max-width: 720px) {
+  .ts-csp-row { grid-template-columns: 1fr; gap: 6px; }
 }
