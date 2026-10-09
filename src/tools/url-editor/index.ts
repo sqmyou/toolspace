@@ -1,5 +1,18 @@
+import {
+  actions,
+  button,
+  checkbox,
+  copyRow,
+  field,
+  iconButton,
+  kvList,
+  note,
+  outputBlock,
+  panel,
+  textarea,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
-import { copyChip } from '../../core/ui'
 import type { Tool } from '../../core/types'
 import { buildUrl, decodeUrl, encodeUrl, parseUrl, type QueryParam } from './url'
 
@@ -10,30 +23,24 @@ const tool: Tool = {
   category: 'Encoding',
   keywords: ['url', 'query string', 'percent encoding', 'uri', 'params', 'decode'],
   render(root) {
-    const input = el('textarea', {
-      class: 'ts-textarea',
-      rows: 3,
-      placeholder: 'https://example.com/path?a=1&b=2#top',
-      'aria-label': 'URL',
-    }) as HTMLTextAreaElement
-
+    const input = textarea({ rows: 3, placeholder: 'https://example.com/path?a=1&b=2#top', onInput: () => parseInput() })
     let parsed = { base: '', params: [] as QueryParam[], hash: '' }
+    let encode = true
+    let sort = false
     const paramList = el('div', { class: 'ts-param-list' })
-    const encodeBox = el('input', { type: 'checkbox', checked: true }) as HTMLInputElement
-    const sortBox = el('input', { type: 'checkbox' }) as HTMLInputElement
-    const built = el('textarea', { class: 'ts-textarea', rows: 3, readonly: true }) as HTMLTextAreaElement
-    const error = el('p', { class: 'ts-error', hidden: true })
+    const error = note('', 'danger')
+    error.hidden = true
+    const built = outputBlock('', { label: 'Rebuilt URL', copy: () => built.body.textContent ?? '' })
+    const codec = kvList()
 
     function rebuild() {
-      built.value = buildUrl(parsed.base, parsed.params, parsed.hash, {
-        encode: encodeBox.checked,
-        sort: sortBox.checked,
-      })
+      built.body.replaceChildren(buildUrl(parsed.base, parsed.params, parsed.hash, { encode, sort }))
+      built.setMeta(`${parsed.params.length} param${parsed.params.length === 1 ? '' : 's'}`)
     }
 
     function paramRow(param: QueryParam, index: number) {
-      const key = el('input', { class: 'ts-input ts-mono', value: param.key }) as HTMLInputElement
-      const value = el('input', { class: 'ts-input ts-mono', value: param.value }) as HTMLInputElement
+      const key = el('input', { class: 'ts-k-input ts-k-mono', value: param.key, 'aria-label': 'Parameter name' }) as HTMLInputElement
+      const value = el('input', { class: 'ts-k-input ts-k-mono', value: param.value, 'aria-label': 'Parameter value' }) as HTMLInputElement
       key.addEventListener('input', () => {
         parsed.params[index].key = key.value
         rebuild()
@@ -47,35 +54,38 @@ const tool: Tool = {
         { class: 'ts-param-row' },
         key,
         value,
-        el('button', {
-          class: 'ts-button ts-icon-button',
-          type: 'button',
-          title: 'Remove',
-          onclick: () => {
+        iconButton('close', {
+          label: 'Remove parameter',
+          size: 'sm',
+          variant: 'ghost',
+          onClick: () => {
             parsed.params.splice(index, 1)
             renderParams()
             rebuild()
           },
-        }, '✕'),
+        }),
       )
     }
 
     function renderParams() {
       paramList.replaceChildren(
         ...parsed.params.map(paramRow),
-        el(
-          'button',
-          {
-            class: 'ts-button',
-            type: 'button',
-            onclick: () => {
-              parsed.params.push({ key: '', value: '' })
-              renderParams()
-              rebuild()
-            },
+        button('Add parameter', {
+          icon: 'plus',
+          size: 'sm',
+          onClick: () => {
+            parsed.params.push({ key: '', value: '' })
+            renderParams()
+            rebuild()
           },
-          '+ Add parameter',
-        ),
+        }),
+      )
+    }
+
+    function renderCodec() {
+      codec.replaceChildren(
+        copyRow('Encode', encodeUrl(input.value)),
+        copyRow('Decode', decodeUrl(input.value)),
       )
     }
 
@@ -89,46 +99,28 @@ const tool: Tool = {
       }
       renderParams()
       rebuild()
+      renderCodec()
     }
-
-    input.addEventListener('input', parseInput)
-    encodeBox.addEventListener('change', rebuild)
-    sortBox.addEventListener('change', rebuild)
-
-    const codec = el('div', { class: 'ts-copy-list' })
-    function renderCodec() {
-      codec.replaceChildren(
-        el('div', { class: 'ts-copy-row' }, el('span', { class: 'ts-muted' }, 'Encode'), copyChip(() => encodeUrl(input.value))),
-        el('div', { class: 'ts-copy-row' }, el('span', { class: 'ts-muted' }, 'Decode'), copyChip(() => decodeUrl(input.value))),
-      )
-    }
-    input.addEventListener('input', renderCodec)
 
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'URL or path'), input),
-        error,
-        el('h3', { class: 'ts-subhead' }, 'Query parameters'),
-        paramList,
-        el(
-          'div',
-          { class: 'ts-row ts-wrap' },
-          el('label', { class: 'ts-inline-field' }, encodeBox, 'Percent-encode values'),
-          el('label', { class: 'ts-inline-field' }, sortBox, 'Sort keys'),
+      toolLayout(
+        { wide: true },
+        panel({ title: 'URL', icon: 'globe' }, field(input, { label: 'URL or path' }), error),
+        panel(
+          { title: 'Query parameters', icon: 'sliders' },
+          paramList,
+          actions(
+            checkbox({ label: 'Percent-encode values', checked: true, onChange: (checked) => { encode = checked; rebuild() } }),
+            checkbox({ label: 'Sort keys', onChange: (checked) => { sort = checked; rebuild() } }),
+          ),
         ),
-        el('h3', { class: 'ts-subhead' }, 'Rebuilt URL'),
         built,
-        el('div', { class: 'ts-row ts-wrap' }, copyChip(() => built.value, 'Copy URL')),
-        el('h3', { class: 'ts-subhead' }, 'Encode / decode whole URL'),
-        codec,
-        el('p', { class: 'ts-note' }, 'All parsing happens locally.'),
+        panel({ title: 'Encode / decode whole URL', icon: 'swap' }, codec),
+        note('All parsing happens locally.'),
       ),
     )
 
     parseInput()
-    renderCodec()
   },
 }
 

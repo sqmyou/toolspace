@@ -1,11 +1,20 @@
+import {
+  actions,
+  button,
+  chips,
+  copyRow,
+  field,
+  grid,
+  kvList,
+  note,
+  outputBlock,
+  panel,
+  textField,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
-import { copyChip } from '../../core/ui'
 import type { Tool } from '../../core/types'
 import { createEasing, evaluate, parseBezier, PRESETS, presetNames, sampleCurve, summarise, toCss, type Bezier } from './bezier'
-
-function numberInput(value: number) {
-  return el('input', { class: 'ts-input ts-mono', type: 'number', step: '0.01', value: String(value) }) as HTMLInputElement
-}
 
 const tool: Tool = {
   slug: 'css-cubic-bezier',
@@ -14,17 +23,21 @@ const tool: Tool = {
   category: 'Design',
   keywords: ['css', 'bezier', 'easing', 'timing function', 'animation', 'transition', 'cubic-bezier'],
   render(root) {
-    const x1 = numberInput(0.42)
-    const y1 = numberInput(0)
-    const x2 = numberInput(0.58)
-    const y2 = numberInput(1)
-    const duration = el('input', { class: 'ts-input ts-mono', type: 'number', min: '100', max: '5000', step: '100', value: '900' }) as HTMLInputElement
-    const error = el('p', { class: 'ts-error', hidden: true })
+    const coords = {
+      x1: textField({ type: 'number', value: '0.42', mono: true, onInput: () => run() }),
+      y1: textField({ type: 'number', value: '0', mono: true, onInput: () => run() }),
+      x2: textField({ type: 'number', value: '0.58', mono: true, onInput: () => run() }),
+      y2: textField({ type: 'number', value: '1', mono: true, onInput: () => run() }),
+    }
+    const duration = textField({ type: 'number', value: '900', mono: true })
+    const error = note('', 'danger')
+    error.hidden = true
     const curve = el('div', { class: 'ts-bezier-curve' })
-    const cssOut = el('code', { class: 'ts-bezier-css' })
-    const details = el('div', { class: 'ts-copy-list' })
+    const details = kvList()
     const ball = el('span', { class: 'ts-bezier-ball' })
     const track = el('div', { class: 'ts-bezier-track' }, ball)
+    let css = ''
+    const cssOut = outputBlock('', { label: 'CSS', copy: () => css })
     let current: Bezier = { x1: 0.42, y1: 0, x2: 0.58, y2: 1 }
     let easing = createEasing(current)
     let frame = 0
@@ -36,7 +49,7 @@ const tool: Tool = {
       const path = points.map((point) => toPath(point.x, point.y)).join(' ')
       const summary = summarise(current)
       curve.innerHTML = `
-        <svg viewBox="-8 -42 116 148" preserveAspectRatio="xMidYMid meet" class="ts-bezier-svg">
+        <svg viewBox="-8 -42 116 148" preserveAspectRatio="xMidYMid meet" class="ts-bezier-svg" aria-hidden="true">
           <line x1="0" y1="100" x2="100" y2="100" class="ts-bezier-axis" />
           <line x1="0" y1="0" x2="100" y2="0" class="ts-bezier-axis" />
           <line x1="0" y1="100" x2="${current.x1 * 100}" y2="${100 - current.y1 * 100}" class="ts-bezier-handle" />
@@ -47,9 +60,10 @@ const tool: Tool = {
           <circle cx="0" cy="100" r="2.5" class="ts-bezier-anchor" />
           <circle cx="100" cy="0" r="2.5" class="ts-bezier-anchor" />
         </svg>`
-      cssOut.textContent = toCss(current)
+      css = toCss(current)
+      cssOut.body.replaceChildren(css)
+      cssOut.setMeta('')
 
-      details.replaceChildren()
       const rows: [string, string][] = [
         ['At 25%', evaluate(current, 0.25).toFixed(4)],
         ['At 50%', evaluate(current, 0.5).toFixed(4)],
@@ -57,12 +71,12 @@ const tool: Tool = {
         ['Overshoots', summary.overshoot ? 'Yes' : 'No'],
         ['Fastest at', `${Math.round(summary.fastestAt * 100)}%`],
       ]
-      for (const [label, value] of rows) details.append(el('div', { class: 'ts-copy-row' }, el('span', { class: 'ts-muted ts-bezier-name' }, label), el('code', { class: 'ts-bezier-value' }, value), copyChip(value, 'Copy')))
+      details.replaceChildren(...rows.map(([label, value]) => copyRow(label, value)))
     }
 
     function run() {
       try {
-        current = parseBezier(`${x1.value}, ${y1.value}, ${x2.value}, ${y2.value}`)
+        current = parseBezier(`${coords.x1.value}, ${coords.y1.value}, ${coords.x2.value}, ${coords.y2.value}`)
         easing = createEasing(current)
         error.hidden = true
         draw()
@@ -96,38 +110,48 @@ const tool: Tool = {
       frame = requestAnimationFrame(step)
     }
 
-    for (const node of [x1, y1, x2, y2]) node.addEventListener('input', run)
-
-    const presetRow = el(
-      'div',
-      { class: 'ts-row ts-wrap' },
-      ...presetNames().map((name) =>
-        el('button', { class: 'ts-chip', type: 'button', onclick: () => { const preset = PRESETS[name]; x1.value = String(preset.x1); y1.value = String(preset.y1); x2.value = String(preset.x2); y2.value = String(preset.y2); run(); play() } }, name),
-      ),
+    const presetRow = chips(
+      presetNames().map((name) => ({
+        label: name,
+        onClick: () => {
+          const preset = PRESETS[name]
+          coords.x1.value = String(preset.x1)
+          coords.y1.value = String(preset.y1)
+          coords.x2.value = String(preset.x2)
+          coords.y2.value = String(preset.y2)
+          run()
+          play()
+        },
+      })),
     )
 
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el(
-          'div',
-          { class: 'ts-row ts-wrap' },
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'x1'), x1),
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'y1'), y1),
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'x2'), x2),
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'y2'), y2),
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Duration (ms)'), duration),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Control points', icon: 'sliders' },
+          grid(110,
+            field(coords.x1, { label: 'x1' }),
+            field(coords.y1, { label: 'y1' }),
+            field(coords.x2, { label: 'x2' }),
+            field(coords.y2, { label: 'y2' }),
+          ),
+          field(duration, { label: 'Duration (ms)' }),
+          error,
         ),
-        error,
-        el('div', { class: 'ts-row ts-between' }, cssOut, copyChip(() => cssOut.textContent ?? '', 'Copy CSS')),
-        curve,
-        el('div', { class: 'ts-row ts-wrap' }, el('button', { class: 'ts-button', type: 'button', onclick: play }, 'Play'), el('button', { class: 'ts-button', type: 'button', onclick: () => { stop(); ball.style.left = '0%' } }, 'Reset')),
-        track,
-        details,
-        el('h3', { class: 'ts-subhead' }, 'Presets'),
-        presetRow,
-        el('p', { class: 'ts-note' }, 'x1 and x2 stay between 0 and 1 as CSS requires; y1 and y2 may go outside that range, which is what produces overshoot and anticipation.'),
+        cssOut,
+        panel(
+          { title: 'Preview', icon: 'play' },
+          curve,
+          actions(
+            button('Play', { variant: 'primary', icon: 'play', onClick: play }),
+            button('Reset', { icon: 'refresh', onClick: () => { stop(); ball.style.left = '0%' } }),
+          ),
+          track,
+        ),
+        panel({ title: 'Curve details', icon: 'chart' }, details),
+        panel({ title: 'Presets', icon: 'wand' }, presetRow),
+        note('x1 and x2 stay between 0 and 1 as CSS requires; y1 and y2 may go outside that range, which is what produces overshoot and anticipation.'),
       ),
     )
 

@@ -1196,7 +1196,9 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 }
 
 .ts-k-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; align-items: start; }
-.ts-k-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--ts-k-min, 180px), 1fr)); gap: 10px; }
+/* `min()` keeps the track from overflowing when a tool asks for a minimum
+   wider than the phone it is being read on. */
+.ts-k-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(var(--ts-k-min, 180px), 100%), 1fr)); gap: 10px; }
 .ts-k-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .ts-k-spacer { flex: 1; }
 

@@ -1,8 +1,6 @@
 .ts-param-list { display: flex; flex-direction: column; gap: 8px; }
 .ts-param-row { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(160px, 2fr) auto; gap: 8px; align-items: center; }
-.ts-icon-button { padding: 10px 12px; }
-
 @media (max-width: 560px) {
   .ts-param-row { grid-template-columns: 1fr auto; }
-  .ts-param-row > .ts-input:first-child { grid-column: 1 / -1; }
+  .ts-param-row > .ts-k-input:first-child { grid-column: 1 / -1; }
 }
