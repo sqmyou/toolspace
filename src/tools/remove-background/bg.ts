@@ -62,6 +62,14 @@ export function estimateBackground(data: Uint8ClampedArray, width: number, heigh
  * Flood filled inward from every border pixel, so a region of background
  * colour *inside* the subject (a white highlight in a logo, say) is kept.
  * `tolerance` is 0-100 and scales the accepted colour distance.
+ *
+ * `drift` (also 0-100) adds *continuity* on top of that: an interior pixel is
+ * also accepted if it is close to the background pixel it grew from, even when
+ * it is far from the estimated average. That is what follows a soft studio or
+ * sky gradient — which averages to something no single pixel matches — while
+ * stopping dead at the sharp edge of a subject. It cannot jump across the
+ * subject, because every step must stay local. At `drift` 0 this is exactly
+ * the plain global flood fill.
  */
 export function backgroundMask(
   data: Uint8ClampedArray,
@@ -69,41 +77,64 @@ export function backgroundMask(
   height: number,
   background: Rgb,
   tolerance: number,
+  drift = 0,
 ): Uint8Array {
   const mask = new Uint8Array(width * height)
   const visited = new Uint8Array(width * height)
   const threshold = (tolerance / 100) * 441.67
+  const driftThreshold = (Math.max(0, drift) / 100) * 441.67
 
+  // Each stack entry is [index, parentR, parentG, parentB]: the colour of the
+  // accepted pixel we grew from, which is what the continuity test compares to.
   const stack: number[] = []
-  const seed = (x: number, y: number) => {
+  const push = (x: number, y: number, pr: number, pg: number, pb: number) => {
     if (x < 0 || y < 0 || x >= width || y >= height) return
-    stack.push(y * width + x)
+    stack.push(y * width + x, pr, pg, pb)
   }
+  const seedBorder = (x: number, y: number) => push(x, y, background.r, background.g, background.b)
   for (let x = 0; x < width; x += 1) {
-    seed(x, 0)
-    seed(x, height - 1)
+    seedBorder(x, 0)
+    seedBorder(x, height - 1)
   }
   for (let y = 0; y < height; y += 1) {
-    seed(0, y)
-    seed(width - 1, y)
+    seedBorder(0, y)
+    seedBorder(width - 1, y)
   }
 
   while (stack.length > 0) {
+    const parentB = stack.pop() as number
+    const parentG = stack.pop() as number
+    const parentR = stack.pop() as number
     const index = stack.pop() as number
     if (visited[index]) continue
     visited[index] = 1
 
     const i = index * 4
     const pixel = { r: data[i], g: data[i + 1], b: data[i + 2] }
-    if (colorDistance(pixel, background) > threshold) continue
-
-    mask[index] = 1
+    const fromBackdrop = colorDistance(pixel, background)
+    const matchesBackdrop = fromBackdrop <= threshold
     const x = index % width
     const y = (index - x) / width
-    seed(x - 1, y)
-    seed(x + 1, y)
-    seed(x, y - 1)
-    seed(x, y + 1)
+    const onBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1
+    // A border seed must match the backdrop outright. Further in, a pixel may
+    // also be accepted by continuity: the step from its parent must be small
+    // *and* it must still be within `driftThreshold` of the backdrop. That
+    // second bound is what stops a walk from climbing one soft edge and then
+    // flooding an entire flat subject.
+    const continues =
+      !onBorder &&
+      driftThreshold > 0 &&
+      fromBackdrop <= driftThreshold &&
+      colorDistance(pixel, { r: parentR, g: parentG, b: parentB }) <= driftThreshold
+    if (!matchesBackdrop && !continues) continue
+
+    mask[index] = 1
+    // Grow from *this* pixel, so continuity follows a gradient one step at a
+    // time rather than measuring every pixel against the flat average.
+    push(x - 1, y, pixel.r, pixel.g, pixel.b)
+    push(x + 1, y, pixel.r, pixel.g, pixel.b)
+    push(x, y - 1, pixel.r, pixel.g, pixel.b)
+    push(x, y + 1, pixel.r, pixel.g, pixel.b)
   }
 
   return mask
@@ -148,6 +179,41 @@ function clampIndex(value: number, length: number): number {
 }
 
 /**
+ * How far the border colour strays from its average, as a 0-100 score. A flat
+ * backdrop scores near zero; a soft gradient or a textured wall scores higher.
+ * Used to pick a starting `drift` so a photo does not need the slider nudged by
+ * hand. The *maximum* is used, not the mean, so that a small but far-off corner
+ * still pushes the score up.
+ */
+export function borderSpread(data: Uint8ClampedArray, width: number, height: number): number {
+  const step = Math.max(1, Math.floor(Math.min(width, height) / 200))
+  let count = 0
+  let mean = { r: 0, g: 0, b: 0 }
+  const read = (x: number, y: number) => {
+    const i = (y * width + x) * 4
+    return { r: data[i], g: data[i + 1], b: data[i + 2] }
+  }
+  const sample = (x: number, y: number) => {
+    const colour = read(x, y)
+    mean = { r: mean.r + colour.r, g: mean.g + colour.g, b: mean.b + colour.b }
+    count += 1
+    return colour
+  }
+  const colours: Rgb[] = []
+  for (let x = 0; x < width; x += step) {
+    colours.push(sample(x, 0), sample(x, height - 1))
+  }
+  for (let y = 0; y < height; y += step) {
+    colours.push(sample(0, y), sample(width - 1, y))
+  }
+  if (count === 0) return 0
+  mean = { r: mean.r / count, g: mean.g / count, b: mean.b / count }
+  let worst = 0
+  for (const colour of colours) worst = Math.max(worst, colorDistance(colour, mean))
+  return Math.min(100, (worst / 441.67) * 100)
+}
+
+/**
  * Apply a mask to the alpha channel. The mask is 1 for background, so alpha
  * is inverted; `blurred` may be a feathered float mask.
  */
@@ -184,6 +250,8 @@ export function despill(data: Uint8ClampedArray, background: Rgb, strength: numb
 
 export interface RemovalSettings {
   tolerance: number
+  /** 0-100. Continuity allowance for soft/gradient backdrops; 0 is the plain fill. */
+  drift: number
   feather: number
   despill: number
 }
@@ -335,7 +403,7 @@ export function removeBackground(
 ): Uint8ClampedArray {
   const data = new Uint8ClampedArray(source)
   const backdrop = background ?? estimateBackground(data, width, height)
-  const mask = backgroundMask(data, width, height, backdrop, settings.tolerance)
+  const mask = backgroundMask(data, width, height, backdrop, settings.tolerance, settings.drift)
   for (const stroke of strokes) paintStroke(mask, width, height, stroke)
   const feathered = featherMask(mask, width, height, settings.feather)
   applyMask(data, feathered)

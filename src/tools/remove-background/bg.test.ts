@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   applyMask,
   backgroundMask,
+  borderSpread,
   colorDistance,
   compositeBackground,
   despill,
@@ -113,6 +114,84 @@ describe('backgroundMask', () => {
     const mask = backgroundMask(data, 2, 2, { r: 10, g: 10, b: 10 }, 10)
     expect(Array.from(mask)).toEqual([1, 1, 1, 1])
   })
+
+  it('drift 0 is the plain global fill: a pixel far from the backdrop stays', () => {
+    const width = 5
+    const height = 5
+    // Backdrop averages to mid-grey, but the right half drifts lighter.
+    const data = solid(width, height, [100, 100, 100])
+    for (let y = 0; y < height; y += 1) for (let x = 2; x < width; x += 1) setPixel(data, width, x, y, [200, 200, 200])
+    const estimated = { r: 150, g: 150, b: 150 }
+    const mask = backgroundMask(data, width, height, estimated, 5, 0)
+    // The far side is 87 away, well past the tolerance, so it is left as subject.
+    expect(mask[2 * width + 4]).toBe(0)
+  })
+
+  it('drift follows a soft gradient across the whole backdrop', () => {
+    const width = 9
+    const height = 9
+    const data = solid(width, height, [0, 0, 0])
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const shade = 60 + Math.round((x / (width - 1)) * 160)
+        setPixel(data, width, x, y, [shade, shade, shade])
+      }
+    }
+    const estimated = { r: 140, g: 140, b: 140 }
+    // No single flat colour matches both ends within tolerance...
+    const plain = backgroundMask(data, width, height, estimated, 5, 0)
+    // ...but continuity walks it, one small step at a time.
+    const drifted = backgroundMask(data, width, height, estimated, 5, 30)
+    expect(plain[4 * width + 7]).toBe(0)
+    expect(drifted[4 * width + 7]).toBe(1)
+  })
+
+  it('drift will not flood a subject that is far from the backdrop', () => {
+    const width = 9
+    const height = 9
+    const data = solid(width, height, [100, 100, 100])
+    // A flat pale subject block in the middle.
+    for (let y = 2; y <= 6; y += 1) for (let x = 2; x <= 6; x += 1) setPixel(data, width, x, y, [250, 250, 250])
+    // With drift 40 the step budget is ~177, and the edge jump (150) is inside
+    // it — a step-only rule would flood straight through. The added bound
+    // (distance from the backdrop, 259) is what keeps the subject intact.
+    const mask = backgroundMask(data, width, height, { r: 100, g: 100, b: 100 }, 10, 40)
+    for (let y = 2; y <= 6; y += 1) {
+      for (let x = 2; x <= 6; x += 1) expect(mask[y * width + x]).toBe(0)
+    }
+    expect(mask[0]).toBe(1)
+  })
+
+  it('drift stops at a sharp edge and cannot jump a subject', () => {
+    const width = 9
+    const height = 9
+    // A dark bar straight down the middle, gradient backdrop either side.
+    const data = solid(width, height, [0, 0, 0])
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const inBar = x === 4
+        const shade = inBar ? 0 : 60 + Math.round((x / (width - 1)) * 160)
+        setPixel(data, width, x, y, [shade, shade, shade])
+      }
+    }
+    const estimated = { r: 140, g: 140, b: 140 }
+    const mask = backgroundMask(data, width, height, estimated, 12, 40)
+    expect(mask[4 * width + 4]).toBe(0)
+  })
+})
+
+describe('borderSpread', () => {
+  it('scores a flat border near zero', () => {
+    const data = solid(8, 8, [120, 120, 120])
+    expect(borderSpread(data, 8, 8)).toBeLessThan(1)
+  })
+
+  it('scores a gradient border higher than a flat one', () => {
+    const flat = solid(12, 12, [120, 120, 120])
+    const ramp = solid(12, 12, [0, 0, 0])
+    for (let y = 0; y < 12; y += 1) for (let x = 0; x < 12; x += 1) setPixel(ramp, 12, x, y, [x * 20, x * 20, x * 20])
+    expect(borderSpread(ramp, 12, 12)).toBeGreaterThan(borderSpread(flat, 12, 12) + 10)
+  })
 })
 
 describe('featherMask', () => {
@@ -180,7 +259,7 @@ describe('removeBackground', () => {
     const height = 5
     const data = solid(width, height, [240, 240, 240])
     setPixel(data, width, 2, 2, [20, 20, 20])
-    const result = removeBackground(data, width, height, { tolerance: 12, feather: 0, despill: 0 })
+    const result = removeBackground(data, width, height, { tolerance: 12, drift: 0, feather: 0, despill: 0 })
     expect(result[3]).toBe(0)
     expect(result[(2 * width + 2) * 4 + 3]).toBe(255)
   })
@@ -189,7 +268,7 @@ describe('removeBackground', () => {
     const width = 3
     const height = 3
     const data = solid(width, height, [255, 255, 255])
-    removeBackground(data, width, height, { tolerance: 10, feather: 0, despill: 0 })
+    removeBackground(data, width, height, { tolerance: 10, drift: 0, feather: 0, despill: 0 })
     expect(data[3]).toBe(255)
   })
 
@@ -198,9 +277,9 @@ describe('removeBackground', () => {
     const height = 7
     const data = solid(width, height, [255, 255, 255])
     for (let y = 2; y <= 4; y += 1) for (let x = 2; x <= 4; x += 1) setPixel(data, width, x, y, [20, 20, 20])
-    const clean = removeBackground(data, width, height, { tolerance: 10, feather: 0, despill: 0 })
+    const clean = removeBackground(data, width, height, { tolerance: 10, drift: 0, feather: 0, despill: 0 })
     expect(clean[(3 * width + 3) * 4 + 3]).toBe(255)
-    const painted = removeBackground(data, width, height, { tolerance: 10, feather: 0, despill: 0 }, undefined, [
+    const painted = removeBackground(data, width, height, { tolerance: 10, drift: 0, feather: 0, despill: 0 }, undefined, [
       { mode: 'erase', radius: 1, points: [{ x: 3, y: 3 }] },
     ])
     expect(painted[(3 * width + 3) * 4 + 3]).toBe(0)
@@ -210,7 +289,7 @@ describe('removeBackground', () => {
     const width = 7
     const height = 7
     const data = solid(width, height, [255, 255, 255])
-    const painted = removeBackground(data, width, height, { tolerance: 10, feather: 0, despill: 0 }, undefined, [
+    const painted = removeBackground(data, width, height, { tolerance: 10, drift: 0, feather: 0, despill: 0 }, undefined, [
       { mode: 'restore', radius: 1, points: [{ x: 0, y: 0 }] },
     ])
     expect(painted[3]).toBe(255)

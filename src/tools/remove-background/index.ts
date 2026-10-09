@@ -18,6 +18,7 @@ import type { Tool } from '../../core/types'
 import {
   compositeBackground,
   estimateBackground,
+  borderSpread,
   hexToRgb,
   removeBackground,
   rgbToHex,
@@ -74,7 +75,7 @@ const tool: Tool = {
     let fileName = 'image'
     let picking = false
 
-    const settings: RemovalSettings = { tolerance: 12, feather: 1, despill: 0.5 }
+    const settings: RemovalSettings = { tolerance: 12, drift: 6, feather: 1, despill: 0.5 }
     /** Manual touch-ups, applied on top of the automatic flood fill. */
     const strokes: BrushStroke[] = []
     let brushMode: BrushMode = 'off'
@@ -156,6 +157,13 @@ const tool: Tool = {
       clearButton.disabled = strokes.length === 0
     }
 
+    function setSliderValue(node: HTMLElement, value: number, format: (v: number) => string) {
+      const input = node.querySelector<HTMLInputElement>('input')
+      const readout = node.querySelector<HTMLElement>('.ts-k-slider__value')
+      if (input) input.value = String(value)
+      if (readout) readout.textContent = format(value)
+    }
+
     function load(file: File) {
       warning.hidden = true
       if (objectUrl) URL.revokeObjectURL(objectUrl)
@@ -174,6 +182,12 @@ const tool: Tool = {
         source = context.getImageData(0, 0, image.naturalWidth, image.naturalHeight)
         backdrop = estimateBackground(source.data, source.width, source.height)
         strokes.length = 0
+        // A soft or gradient backdrop spreads the border colours out; start the
+        // continuity allowance in step with that spread so the walk can reach
+        // the far end. A near-flat backdrop leaves it small.
+        const spread = borderSpread(source.data, source.width, source.height)
+        settings.drift = Math.max(4, Math.min(60, Math.round(spread * 1.1)))
+        setSliderValue(driftSlider, settings.drift, (v) => String(v))
         status.textContent = `${file.name} — ${image.naturalWidth}×${image.naturalHeight}`
         updateBackdrop()
         render()
@@ -444,6 +458,18 @@ const tool: Tool = {
     })
     brushSizeWrap.hidden = true
 
+    const driftSlider = slider({
+      label: 'Backdrop continuity',
+      min: 0,
+      max: 100,
+      value: settings.drift,
+      format: (value) => (value === 0 ? 'off' : String(value)),
+      onInput: (value) => {
+        settings.drift = value
+        render()
+      },
+    })
+
     function exportPng() {
       if (!resultCanvas.width) return
       const opaque = fill.kind !== 'transparent'
@@ -499,6 +525,7 @@ const tool: Tool = {
               render()
             },
           }),
+          driftSlider,
           slider({
             label: 'Edge feather',
             min: 0,
