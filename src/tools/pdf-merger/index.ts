@@ -1,3 +1,15 @@
+import {
+  actions,
+  button,
+  copyRow,
+  dropzone,
+  iconButton,
+  note,
+  panel,
+  stat,
+  stats,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
 import { download, readFileAsArrayBuffer } from '../../core/ui'
 import type { Tool } from '../../core/types'
@@ -22,47 +34,32 @@ const tool: Tool = {
     const entries: Entry[] = []
     let result: { blob: Blob; pages: number } | null = null
 
-    const fileInput = el('input', { type: 'file', accept: 'application/pdf', multiple: true, class: 'ts-pdf-file' }) as HTMLInputElement
-    const dropZone = el('div', { class: 'ts-pdf-drop' }, 'Drop PDFs here, or use the button above.')
     const list = el('div', { class: 'ts-pdf-list' })
-    const warning = el('p', { class: 'ts-error', hidden: true })
-    const summary = el('p', { class: 'ts-muted' }, 'No files yet.')
-    const resultInfo = el('div', { class: 'ts-copy-list' })
-
-    const downloadButton = el(
-      'button',
-      {
-        type: 'button',
-        class: 'ts-button ts-primary',
-        disabled: true,
-        onclick: () => {
-          if (!result) return
-          download('merged.pdf', result.blob)
-        },
-      },
-      'Download merged PDF',
-    ) as HTMLButtonElement
+    const warning = note('', 'danger')
+    warning.hidden = true
+    const summary = stats()
+    const resultRow = el('div', { class: 'ts-k-kvlist' })
+    const downloadButton = button('Download merged PDF', { variant: 'primary', icon: 'download', disabled: true })
 
     function fail(message: string) {
       warning.textContent = message
       warning.hidden = false
     }
 
-    function clearWarning() {
-      warning.hidden = true
-    }
-
     /** Recompute the merged file so the download always matches the list. */
     function rebuild() {
       result = null
       downloadButton.disabled = true
-      resultInfo.replaceChildren()
-      summary.textContent =
-        entries.length === 0
-          ? 'No files yet.'
-          : `${entries.length} ${entries.length === 1 ? 'file' : 'files'} · ${entries.reduce((sum, entry) => sum + entry.pageCount, 0)} pages in total.`
+      resultRow.replaceChildren()
 
-      if (entries.length === 0) return
+      if (entries.length === 0) {
+        summary.replaceChildren(
+          stat({ label: 'Files', value: '0' }),
+          stat({ label: 'Pages in', value: '0' }),
+          stat({ label: 'Merged pages', value: '—' }),
+        )
+        return
+      }
       try {
         const merged = mergePdfs(
           entries.map((entry) => ({
@@ -73,8 +70,13 @@ const tool: Tool = {
         const pages = pdfInfo(merged).pageCount
         result = { blob: new Blob([merged], { type: 'application/pdf' }), pages }
         downloadButton.disabled = false
-        resultInfo.append(
-          el('div', { class: 'ts-copy-row' }, el('span', { class: 'ts-muted' }, 'Merged'), el('span', { class: 'ts-value' }, `${pages} ${pages === 1 ? 'page' : 'pages'} · ${formatBytes(merged.length)}`)),
+        resultRow.replaceChildren(
+          copyRow('Result', `${pages} ${pages === 1 ? 'page' : 'pages'} · ${formatBytes(merged.length)}`, { copy: false }),
+        )
+        summary.replaceChildren(
+          stat({ label: 'Files', value: String(entries.length) }),
+          stat({ label: 'Pages in', value: String(entries.reduce((sum, entry) => sum + entry.pageCount, 0)) }),
+          stat({ label: 'Merged pages', value: String(pages) }),
         )
       } catch (error) {
         fail(error instanceof PdfError ? error.message : 'These files could not be merged.')
@@ -92,47 +94,44 @@ const tool: Tool = {
 
     function renderList() {
       list.replaceChildren()
+      if (entries.length === 0) {
+        list.append(el('p', { class: 'ts-k-hint' }, 'No files yet. Add two or more PDFs to combine them.'))
+        return
+      }
       entries.forEach((entry, index) => {
         const pageChips = el('div', { class: 'ts-pdf-pages' })
         const allOn = entry.selected.length === 0
         pageChips.append(
-          el(
-            'button',
-            {
-              type: 'button',
-              class: `ts-pdf-page${allOn ? ' is-on' : ''}`,
-              onclick: () => {
-                entry.selected = []
-                renderList()
-                rebuild()
-              },
+          button('All', {
+            size: 'sm',
+            variant: allOn ? 'primary' : 'default',
+            title: 'Include every page',
+            onClick: () => {
+              entry.selected = []
+              renderList()
+              rebuild()
             },
-            'All',
-          ),
+          }),
         )
         for (let page = 0; page < entry.pageCount; page += 1) {
           const on = entry.selected.includes(page)
           pageChips.append(
-            el(
-              'button',
-              {
-                type: 'button',
-                class: `ts-pdf-page${on ? ' is-on' : ''}`,
-                title: `Toggle page ${page + 1}`,
-                onclick: () => {
-                  // Coming from "All", the first pick starts a fresh selection
-                  // containing just that page rather than everything.
-                  const base = allOn ? [] : entry.selected
-                  entry.selected = base.includes(page)
-                    ? base.filter((value) => value !== page)
-                    : [...base, page].sort((a, b) => a - b)
-                  if (entry.selected.length === entry.pageCount) entry.selected = []
-                  renderList()
-                  rebuild()
-                },
+            button(String(page + 1), {
+              size: 'sm',
+              variant: on ? 'primary' : 'default',
+              title: `Toggle page ${page + 1}`,
+              onClick: () => {
+                // Coming from "All", the first pick starts a fresh selection
+                // containing just that page rather than everything.
+                const base = allOn ? [] : entry.selected
+                entry.selected = base.includes(page)
+                  ? base.filter((value) => value !== page)
+                  : [...base, page].sort((a, b) => a - b)
+                if (entry.selected.length === entry.pageCount) entry.selected = []
+                renderList()
+                rebuild()
               },
-              String(page + 1),
-            ),
+            }),
           )
         }
 
@@ -153,22 +152,17 @@ const tool: Tool = {
               el(
                 'span',
                 { class: 'ts-pdf-item-actions' },
-                el('button', { type: 'button', class: 'ts-icon-btn', title: 'Move up', disabled: index === 0, onclick: () => move(index, -1) }, '↑'),
-                el('button', { type: 'button', class: 'ts-icon-btn', title: 'Move down', disabled: index === entries.length - 1, onclick: () => move(index, 1) }, '↓'),
-                el(
-                  'button',
-                  {
-                    type: 'button',
-                    class: 'ts-icon-btn',
-                    title: 'Remove',
-                    onclick: () => {
-                      entries.splice(index, 1)
-                      renderList()
-                      rebuild()
-                    },
+                iconButton('arrowUp', { label: 'Move up', size: 'sm', onClick: () => move(index, -1) }),
+                iconButton('arrowDown', { label: 'Move down', size: 'sm', onClick: () => move(index, 1) }),
+                iconButton('close', {
+                  label: 'Remove',
+                  size: 'sm',
+                  onClick: () => {
+                    entries.splice(index, 1)
+                    renderList()
+                    rebuild()
                   },
-                  '✕',
-                ),
+                }),
               ),
             ),
             pageChips,
@@ -178,7 +172,7 @@ const tool: Tool = {
     }
 
     function addFiles(files: FileList | File[]) {
-      clearWarning()
+      warning.hidden = true
       const incoming = [...files]
       void (async () => {
         for (const file of incoming) {
@@ -211,39 +205,33 @@ const tool: Tool = {
       })()
     }
 
-    fileInput.addEventListener('change', () => {
-      if (fileInput.files) addFiles(fileInput.files)
-      fileInput.value = ''
+    const drop = dropzone({
+      label: 'Drop PDFs here',
+      hint: 'two or more files',
+      accept: 'application/pdf',
+      multiple: true,
+      icon: 'file',
+      onFiles: (files) => addFiles(files),
     })
-    dropZone.addEventListener('dragover', (event) => {
-      event.preventDefault()
-      dropZone.classList.add('is-dragging')
-    })
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('is-dragging'))
-    dropZone.addEventListener('drop', (event) => {
-      event.preventDefault()
-      dropZone.classList.remove('is-dragging')
-      if (event.dataTransfer?.files) addFiles(event.dataTransfer.files)
+
+    downloadButton.addEventListener('click', () => {
+      if (result) download('merged.pdf', result.blob)
     })
 
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'PDF files'), el('div', { class: 'ts-tool-actions' }, fileInput)),
-        dropZone,
-        warning,
-        list,
-        summary,
-        resultInfo,
-        el('div', { class: 'ts-tool-actions' }, downloadButton),
-        el(
-          'p',
-          { class: 'ts-note' },
+      toolLayout(
+        { wide: true },
+        panel({ title: 'Add PDFs', icon: 'uploadCloud' }, drop.root, warning),
+        panel({ title: 'Order and pages', icon: 'list' }, list),
+        panel({ title: 'Result', icon: 'info' }, summary, resultRow, actions(downloadButton)),
+        note(
           'Files are parsed and rewritten in this tab. Nothing is uploaded. Encrypted PDFs and files that use cross-reference streams are reported rather than merged.',
         ),
       ),
     )
+
+    renderList()
+    rebuild()
   },
 }
 
