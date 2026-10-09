@@ -22,6 +22,12 @@ export function el<K extends keyof HTMLElementTagNameMap>(
 
     if (key.startsWith('on') && typeof value === 'function') {
       node.addEventListener(key.slice(2).toLowerCase(), value as EventListener)
+    } else if (key === 'style') {
+      // `style` is a read-only CSSStyleDeclaration, so `node.style = '…'`
+      // silently does nothing; go through cssText. setAttribute('style') would
+      // work too, but the production CSP is `style-src 'self'`, which blocks
+      // style attributes — cssText is not covered by that directive.
+      ;(node as HTMLElement).style.cssText = String(value)
     } else if (key in node) {
       ;(node as unknown as Record<string, unknown>)[key] = value
     } else {

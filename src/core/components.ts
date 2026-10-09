@@ -794,14 +794,8 @@ export interface MediaFrame {
  */
 export function mediaFrame(options: MediaFrameOptions = {}): MediaFrame {
   const image = el('img', { class: 'ts-k-media__img', alt: options.alt ?? '' }) as HTMLImageElement
-  const root = el(
-    'div',
-    {
-      class: `ts-k-media${options.checker ? ' ts-k-media--checker' : ''}`,
-      style: options.maxHeight ? `--ts-k-media-h:${options.maxHeight}px` : undefined,
-    },
-    image,
-  )
+  const root = el('div', { class: `ts-k-media${options.checker ? ' ts-k-media--checker' : ''}` }, image)
+  if (options.maxHeight) root.style.setProperty('--ts-k-media-h', `${options.maxHeight}px`)
 
   // Skeleton while a preview decodes. Tools set `image.src` themselves, so we
   // watch for the attribute rather than changing the API: the moment a source
