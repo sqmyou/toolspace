@@ -1,5 +1,14 @@
-import { el } from '../../core/dom'
-import { copyChip } from '../../core/ui'
+import {
+  actions,
+  button,
+  copyRow,
+  field,
+  kvList,
+  note,
+  panel,
+  textarea,
+  toolLayout,
+} from '../../core/components'
 import type { Tool } from '../../core/types'
 import { parseUserAgent, SAMPLES } from './useragent'
 
@@ -10,14 +19,12 @@ const tool: Tool = {
   category: 'Web',
   keywords: ['user agent', 'ua', 'browser', 'detect', 'device', 'parse'],
   render(root) {
-    const input = el('textarea', {
-      class: 'ts-textarea ts-mono',
+    const input = textarea({
       rows: 3,
       value: typeof navigator !== 'undefined' ? navigator.userAgent : '',
-      'aria-label': 'User-Agent string',
-    }) as HTMLTextAreaElement
-
-    const list = el('div', { class: 'ts-copy-list' })
+      onInput: () => run(),
+    })
+    const list = kvList()
 
     function run() {
       const info = parseUserAgent(input.value)
@@ -30,53 +37,29 @@ const tool: Tool = {
         ['Device', info.device],
         ['Bot', info.bot ? 'Yes' : 'No'],
       ]
-      list.replaceChildren(
-        ...entries.map(([label, value]) =>
-          el(
-            'div',
-            { class: 'ts-copy-row' },
-            el('span', { class: 'ts-muted' }, label),
-            el('span', { class: 'ts-value' }, value),
-            copyChip(() => value),
-          ),
-        ),
-      )
-    }
-
-    input.addEventListener('input', run)
-
-    const samples = el('div', { class: 'ts-row ts-wrap' })
-    for (const sample of SAMPLES) {
-      samples.append(
-        el('button', {
-          class: 'ts-button',
-          type: 'button',
-          onclick: () => {
-            input.value = sample.ua
-            run()
-          },
-        }, sample.label),
-      )
+      list.replaceChildren(...entries.map(([label, value]) => copyRow(label, value)))
     }
 
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool' },
-        el('div', { class: 'ts-row ts-wrap' }, el('button', {
-          class: 'ts-button',
-          type: 'button',
-          onclick: () => {
+      toolLayout(
+        {},
+        panel(
+          { title: 'User-Agent', icon: 'globe' },
+          field(input, { label: 'User-Agent' }),
+          actions(button('Use my browser’s UA', { icon: 'refresh', onClick: () => {
             input.value = typeof navigator !== 'undefined' ? navigator.userAgent : ''
             run()
-          },
-        }, 'Use my browser’s UA')),
-        el('div', { class: 'ts-field' }, el('label', {}, 'User-Agent'), input),
-        el('h3', { class: 'ts-subhead' }, 'Samples'),
-        samples,
-        el('h3', { class: 'ts-subhead' }, 'Parsed'),
-        list,
-        el('p', { class: 'ts-note' }, 'Parsing is heuristic and runs locally; nothing is sent anywhere.'),
+          } })),
+        ),
+        panel(
+          { title: 'Samples', icon: 'list' },
+          actions(...SAMPLES.map((sample) => button(sample.label, { onClick: () => {
+            input.value = sample.ua
+            run()
+          } }))),
+        ),
+        panel({ title: 'Parsed', icon: 'check' }, list),
+        note('Parsing is heuristic and runs locally; nothing is sent anywhere.'),
       ),
     )
 

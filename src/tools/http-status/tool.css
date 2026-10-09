@@ -1,16 +1,4 @@
-.ts-status-list { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
-
-.ts-status-card { display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-left-width: 3px; border-radius: var(--radius); background: var(--bg-input); }
-.ts-status-big { padding: 16px; }
-.ts-status-code { font-family: var(--mono); font-size: 18px; font-weight: 700; flex: none; width: 44px; }
-.ts-status-body { flex: 1; }
+/* The lookup card is the only one that gets extra breathing room. */
+.ts-status-big { padding: 4px 0; }
 .ts-status-body strong { display: block; margin-bottom: 2px; }
 .ts-status-desc { margin: 0; font-size: 13px; color: var(--muted); }
-
-.ts-status-informational { border-left-color: #6b7280; }
-.ts-status-success { border-left-color: #16a34a; }
-.ts-status-redirect { border-left-color: #ca8a04; }
-.ts-status-client-error { border-left-color: #dc2626; }
-.ts-status-server-error { border-left-color: #9333ea; }
-
-.ts-status-lookup { margin: 12px 0; }

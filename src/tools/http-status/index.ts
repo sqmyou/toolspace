@@ -1,9 +1,30 @@
+import {
+  actions,
+  card,
+  cards,
+  chips,
+  copyButton,
+  field,
+  note,
+  panel,
+  textField,
+  toolLayout,
+  type Tone,
+} from '../../core/components'
 import { el } from '../../core/dom'
-import { copyChip } from '../../core/ui'
 import type { Tool } from '../../core/types'
 import { CATEGORY_LABELS, lookupStatus, parseStatus, searchStatuses, type HttpStatus, type StatusCategory } from './status'
 
 const ORDER: StatusCategory[] = ['informational', 'success', 'redirect', 'client-error', 'server-error']
+
+const CATEGORY_TONES: Record<StatusCategory, Tone> = {
+  informational: 'neutral',
+  success: 'ok',
+  redirect: 'warn',
+  'client-error': 'danger',
+  'server-error': 'accent',
+  unknown: 'neutral',
+}
 
 const tool: Tool = {
   slug: 'http-status',
@@ -12,75 +33,65 @@ const tool: Tool = {
   category: 'Web',
   keywords: ['http', 'status', 'code', '404', '500', 'redirect', 'rest', 'api'],
   render(root) {
-    const query = el('input', { class: 'ts-input', placeholder: 'Search by code or meaning, e.g. 404 or timeout' }) as HTMLInputElement
-    const lookupInput = el('input', { class: 'ts-input ts-mono', placeholder: 'Code', maxlength: 3 }) as HTMLInputElement
-    const lookupOut = el('div', { class: 'ts-status-lookup' })
-    const list = el('div', { class: 'ts-status-list' })
-    const count = el('p', { class: 'ts-muted' })
+    const query = textField({ placeholder: 'Search by code or meaning, e.g. 404 or timeout', onInput: () => render() })
+    const lookup = textField({ placeholder: 'Code', mono: true, onInput: () => renderLookup() })
+    lookup.maxLength = 3
+    const lookupOut = cards()
+    const list = cards()
     let category: StatusCategory | 'all' = 'all'
 
-    function renderLookup() {
-      lookupOut.replaceChildren()
-      if (!lookupInput.value.trim()) return
-      try {
-        const code = parseStatus(lookupInput.value)
-        const status = lookupStatus(code)
-        if (!status) {
-          lookupOut.append(el('p', { class: 'ts-muted' }, `No standard entry for ${code}.`))
-          return
-        }
-        lookupOut.append(statusCard(status, true))
-      } catch (err) {
-        lookupOut.append(el('p', { class: 'ts-error' }, err instanceof Error ? err.message : 'Bad code'))
-      }
-    }
-
     function statusCard(status: HttpStatus, big = false) {
-      return el(
-        'div',
-        { class: `ts-status-card ts-status-${status.category}${big ? ' ts-status-big' : ''}` },
-        el('code', { class: 'ts-status-code' }, String(status.code)),
-        el('div', { class: 'ts-status-body' }, el('strong', {}, status.name), el('p', { class: 'ts-status-desc' }, status.description)),
-        copyChip(String(status.code), 'Copy'),
+      return card(
+        { title: String(status.code), meta: CATEGORY_LABELS[status.category], metaTone: CATEGORY_TONES[status.category] },
+        el(
+          'div',
+          { class: big ? 'ts-status-big' : 'ts-status-body' },
+          el('strong', {}, status.name),
+          el('p', { class: 'ts-status-desc' }, status.description),
+        ),
+        actions(copyButton(String(status.code), { label: 'Copy code', size: 'sm' })),
       )
     }
 
-    function render() {
-      list.replaceChildren()
-      const results = searchStatuses(query.value).filter((status) => category === 'all' || status.category === category)
-      count.textContent = `${results.length} of ${searchStatuses('').length} codes`
-      if (results.length === 0) list.append(el('p', { class: 'ts-muted' }, 'Nothing matched.'))
-      for (const status of results) list.append(statusCard(status))
+    function renderLookup() {
+      lookupOut.replaceChildren()
+      if (!lookup.value.trim()) return
+      try {
+        const status = lookupStatus(parseStatus(lookup.value))
+        lookupOut.append(status ? statusCard(status, true) : note(`No standard entry for ${lookup.value.trim()}.`))
+      } catch (err) {
+        lookupOut.append(note(err instanceof Error ? err.message : 'Bad code', 'danger'))
+      }
     }
 
-    query.addEventListener('input', render)
-    lookupInput.addEventListener('input', renderLookup)
+    function render() {
+      const results = searchStatuses(query.value).filter((status) => category === 'all' || status.category === category)
+      list.replaceChildren(...(results.length ? results.map((status) => statusCard(status)) : [note('Nothing matched.')]))
+    }
 
-    const filters = el(
-      'div',
-      { class: 'ts-row ts-wrap' },
-      el('button', { class: `ts-chip${category === 'all' ? ' ts-chip-active' : ''}`, type: 'button', onclick: () => setCategory('all') }, 'All'),
-      ...ORDER.map((name) => el('button', { class: 'ts-chip', type: 'button', onclick: () => setCategory(name) }, CATEGORY_LABELS[name])),
+    const filterItems = [
+      { label: 'All', value: 'all' as StatusCategory | 'all' },
+      ...ORDER.map((name) => ({ label: CATEGORY_LABELS[name], value: name as StatusCategory | 'all' })),
+    ]
+    const filters = chips(
+      filterItems.map((item) => ({
+        label: item.label,
+        value: item.value,
+        onClick: (value: string) => {
+          category = value as StatusCategory | 'all'
+          render()
+        },
+      })),
+      { selected: 'all' },
     )
 
-    function setCategory(next: StatusCategory | 'all') {
-      category = next
-      for (const [index, button] of [...filters.children].entries()) {
-        button.classList.toggle('ts-chip-active', index === 0 ? category === 'all' : ORDER[index - 1] === category)
-      }
-      render()
-    }
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el('div', { class: 'ts-row ts-wrap' }, el('div', { class: 'ts-inline-field' }, el('label', {}, 'Look up a code'), lookupInput), el('div', { class: 'ts-inline-field ts-grow' }, el('label', {}, 'Search'), query)),
+      toolLayout(
+        { wide: true },
+        panel({ title: 'Look up', icon: 'search' }, actions(field(lookup, { label: 'Code' }), field(query, { label: 'Search' }))),
         lookupOut,
-        filters,
-        count,
-        list,
-        el('p', { class: 'ts-note' }, 'Codes outside the standard table are still classified by their hundreds digit.'),
+        panel({ title: 'All codes', icon: 'list' }, filters, list),
+        note('Codes outside the standard table are still classified by their hundreds digit.'),
       ),
     )
 
