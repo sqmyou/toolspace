@@ -460,6 +460,60 @@ function navCard(direction: 'prev' | 'next', tool: Tool): HTMLElement {
   )
 }
 
+/** The narrow info rail beside a tool body: facts, the network note, a link. */
+function toolRail(tool: Tool): HTMLElement {
+  const external = tool.slug === 'youtube-thumbnail'
+  const facts = el(
+    'div',
+    { class: 'ts-rail-facts' },
+    el(
+      'div',
+      { class: 'ts-rail-fact' },
+      el('span', { class: 'ts-rail-fact__label' }, 'Category'),
+      el('span', { class: 'ts-rail-fact__value is-hue' }, tool.category),
+    ),
+    el(
+      'div',
+      { class: 'ts-rail-fact' },
+      el('span', { class: 'ts-rail-fact__label' }, 'Runs'),
+      el('span', { class: 'ts-rail-fact__value' }, 'Entirely in your browser'),
+    ),
+    el(
+      'div',
+      { class: 'ts-rail-fact' },
+      el('span', { class: 'ts-rail-fact__label' }, 'Network'),
+      el(
+        'span',
+        { class: 'ts-rail-fact__value' },
+        external ? 'One request to i.ytimg.com' : 'None — nothing is uploaded',
+      ),
+    ),
+  )
+
+  return el(
+    'aside',
+    { class: 'ts-tool-rail', 'aria-label': 'Tool details' },
+    facts,
+    external
+      ? el(
+          'p',
+          { class: 'ts-rail-note' },
+          'This is the one tool that touches the network: it asks i.ytimg.com for the public thumbnail image you linked. Nothing you type is sent anywhere.',
+        )
+      : el(
+          'p',
+          { class: 'ts-rail-note' },
+          'There is no backend and no analytics. Everything you paste stays on this device.',
+        ),
+    el(
+      'a',
+      { class: 'ts-rail-link', href: '#/' },
+      iconEl('layers', 14),
+      el('span', {}, 'Back to all tools'),
+    ),
+  )
+}
+
 function toolPage(tool: Tool, palette: Palette): HTMLElement {
   const index = tools.findIndex((entry) => entry.slug === tool.slug)
   const previous = index > 0 ? tools[index - 1] : undefined
@@ -489,6 +543,16 @@ function toolPage(tool: Tool, palette: Palette): HTMLElement {
     el('span', {}, 'Find a tool'),
   )
 
+  // Body on the left, an info rail on the right. The rail carries the one
+  // thing every tool page has in common — its category and the privacy fact —
+  // so individual bodies are not forced to repeat it as a stacked panel.
+  const layout = el(
+    'div',
+    { class: 'ts-tool-layout' },
+    el('div', { class: 'ts-tool-layout__main' }, body),
+    toolRail(tool),
+  )
+
   const section = el(
     'section',
     { class: 'ts-toolpage', style: `--h:${hue}` },
@@ -510,7 +574,7 @@ function toolPage(tool: Tool, palette: Palette): HTMLElement {
       ),
       el('div', { class: 'ts-tool-actions' }, findButton, starButton(tool.slug, tool.name)),
     ),
-    body,
+    layout,
     nav,
   )
 

@@ -113,7 +113,14 @@
   --text-lg: clamp(16px, 1.4vw, 18px);
   --text-xl: clamp(20px, 2.4vw, 24px);
   --text-2xl: clamp(23px, 3.2vw, 31px);
+  --text-3xl: clamp(27px, 3.8vw, 39px);
   --text-display: clamp(34px, 6.4vw, 64px);
+
+  /* Layout widths: one shell container, plus a readable measure for prose.
+     The container is generous so the tool body keeps its full reading column
+     even after the info rail takes its ~280px slice. */
+  --container: 1320px;
+  --read: 68ch;
 
   /* Tight tracking for display/headings, open tracking for mono eyebrows. */
   --tracking-display: -0.045em;
@@ -338,7 +345,7 @@ a { color: inherit; }
 .ts-main {
   flex: 1;
   width: 100%;
-  max-width: 1100px;
+  max-width: var(--container);
   margin: 0 auto;
   padding: clamp(22px, 4vw, 44px) clamp(14px, 4vw, 32px) 72px;
 }
@@ -655,9 +662,14 @@ a { color: inherit; }
 }
 
 /* --- Tool page ------------------------------------------------------------
-   The header is a bounded band tinted with the tool's own category hue, so
-   opening a tool feels like arriving somewhere rather than scrolling into
-   more form. The hue arrives as `--h` from the page wrapper. */
+   Tools are wide. A 680px column left the kit's split()/grid() panels no room
+   to sit side by side, so every page collapsed to one vertical stack of
+   bordered boxes — the "flat document flow" problem. The shell now runs the
+   full container: the body gets a wide main column plus a narrow info rail,
+   so panels have space to arrange themselves and the page has more than one
+   axis. `toolLayout` may go `--wide` for tools whose own composition needs
+   the full two-up width; the rail keeps the longest lines readable either
+   way, and the whole thing collapses to one column under 1000px. */
 .ts-toolpage { display: block; }
 .ts-tool-header {
   position: relative;
@@ -679,12 +691,12 @@ a { color: inherit; }
   background: hsl(var(--h, 205) 72% 60%);
 }
 .ts-tool-header__main { display: flex; flex-direction: column; gap: 9px; }
-.ts-tool-header__title { display: flex; align-items: center; gap: 13px; min-width: 0; }
+.ts-tool-header__title { display: flex; align-items: center; gap: 15px; min-width: 0; }
 .ts-tool-header h1 {
   margin: 0;
   font-size: var(--text-2xl);
   letter-spacing: var(--tracking-tight);
-  line-height: 1.15;
+  line-height: 1.1;
 }
 .ts-tool-header h1 .ts-sigil { transform: translateY(-1px); }
 
@@ -700,11 +712,71 @@ a { color: inherit; }
 .ts-breadcrumb a { text-decoration: none; }
 .ts-breadcrumb a:hover { color: hsl(var(--h, 205) 65% 68%); }
 .ts-breadcrumb__sep { color: var(--faint); }
-.ts-tool-desc { color: var(--muted); margin: 0; max-width: 68ch; font-size: var(--text-md); line-height: 1.55; }
+.ts-tool-desc { color: var(--muted); margin: 0; max-width: var(--read); font-size: var(--text-lg); line-height: 1.5; }
 
 .ts-tool-actions { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; align-items: center; }
 
+/* The body column and its info rail. Under 1000px the rail drops below the
+   body and becomes a two-up strip, so the reading order stays body-first. */
 .ts-tool-body { display: block; }
+.ts-tool-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 26px;
+  align-items: start;
+}
+.ts-tool-layout__main { min-width: 0; }
+.ts-tool-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: sticky;
+  top: calc(var(--header-h) + 16px);
+  min-width: 0;
+}
+.ts-rail-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  padding: 15px 16px;
+}
+.ts-rail-fact { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ts-rail-fact__label {
+  font-family: var(--mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.ts-rail-fact__value { font-size: var(--text-base); color: var(--fg); }
+.ts-rail-fact__value.is-hue { color: hsl(var(--h, 205) 68% 68%); }
+.ts-rail-note { color: var(--muted); font-size: var(--text-base); line-height: 1.55; margin: 0; }
+.ts-rail-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+  color: var(--muted);
+  text-decoration: none;
+  font-size: var(--text-base);
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.ts-rail-link:hover { border-color: var(--border-strong); color: var(--accent); }
+@media (max-width: 1000px) {
+  .ts-tool-layout { grid-template-columns: 1fr; gap: 20px; }
+  .ts-tool-rail {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+}
 
 .ts-tool-nav {
   display: grid;
@@ -1213,8 +1285,11 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
    ============================================================================ */
 
 /* --- Layout --------------------------------------------------------------- */
-.ts-k-tool { display: flex; flex-direction: column; gap: 18px; max-width: 680px; }
-.ts-k-tool--wide { max-width: 960px; }
+/* The tool shell already reserves a reading column, so these caps only stop
+   lines from running long on very wide screens. The default is wide enough
+   for a two-up `split()`; `--wide` releases it for tools that need the room. */
+.ts-k-tool { display: flex; flex-direction: column; gap: 18px; max-width: 760px; }
+.ts-k-tool--wide { max-width: 1020px; }
 
 .ts-k-panel {
   border: 1px solid var(--border);
