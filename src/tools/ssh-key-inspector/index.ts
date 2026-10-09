@@ -1,5 +1,14 @@
+import {
+  badge,
+  copyRow,
+  field,
+  kvList,
+  note,
+  panel,
+  textarea,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
-import { copyChip } from '../../core/ui'
 import type { Tool } from '../../core/types'
 import { inspectPrivateKey, inspectPublicKey, isPrivateKey, SshError, type SshKey } from './ssh'
 
@@ -10,50 +19,45 @@ const tool: Tool = {
   category: 'Security',
   keywords: ['ssh', 'key', 'fingerprint', 'ed25519', 'rsa', 'ecdsa', 'authorized_keys', 'known_hosts'],
   render(root) {
-    const input = el('textarea', {
-      class: 'ts-textarea ts-mono',
+    const input = textarea({
       rows: 6,
-      spellcheck: false,
       placeholder: 'ssh-ed25519 AAAAC3Nza… user@host\n\nor paste an -----BEGIN OPENSSH PRIVATE KEY----- block',
-    }) as HTMLTextAreaElement
-    const error = el('p', { class: 'ts-error', hidden: true })
-    const output = el('div', { class: 'ts-ssh' })
+      onInput: () => {
+        if (debounce !== undefined) window.clearTimeout(debounce)
+        debounce = window.setTimeout(() => void run(), 150)
+      },
+    })
+    const error = note('', 'danger')
+    error.hidden = true
+    const output = kvList()
+    const badges = el('div', { class: 'ts-k-actions' })
+    let debounce: number | undefined
     let token = 0
 
-    function row(label: string, value: string, copy = true) {
-      return el(
-        'div',
-        { class: 'ts-ssh-row' },
-        el('span', { class: 'ts-muted' }, label),
-        copy ? copyChip(value) : el('code', { class: 'ts-ssh-value' }, value),
-      )
-    }
-
-    async function renderKey(key: SshKey) {
+    function renderKey(key: SshKey) {
       const rows: HTMLElement[] = [
-        row('Kind', key.kind === 'private' ? 'Private key (handle with care)' : 'Public key', false),
-        row('Type', key.type),
-        row('Algorithm', key.label),
+        copyRow('Type', key.type),
+        copyRow('Algorithm', key.label),
       ]
-      if (key.curve) rows.push(row('Curve', key.curve))
-      if (key.bits) rows.push(row('Size', `${key.bits} bits`))
-      if (key.comment) rows.push(row('Comment', key.comment))
-      if (key.kind === 'private') rows.push(row('Encrypted', key.encrypted ? 'yes' : 'no', false))
-      rows.push(row('SHA-256 fingerprint', key.fingerprints.sha256))
-      rows.push(row('MD5 fingerprint', key.fingerprints.md5))
+      if (key.curve) rows.push(copyRow('Curve', key.curve))
+      if (key.bits) rows.push(copyRow('Size', `${key.bits} bits`))
+      if (key.comment) rows.push(copyRow('Comment', key.comment))
+      if (key.kind === 'private') rows.push(copyRow('Encrypted', key.encrypted ? 'yes' : 'no', { copy: false }))
+      rows.push(copyRow('SHA-256 fingerprint', key.fingerprints.sha256))
+      rows.push(copyRow('MD5 fingerprint', key.fingerprints.md5))
 
-      output.replaceChildren(el('section', { class: 'ts-ssh-section' }, ...rows))
-      if (key.warnings.length) {
-        const warnings = el('div', { class: 'ts-ssh-warnings' })
-        for (const warning of key.warnings) warnings.append(el('p', { class: 'ts-ssh-warning' }, `⚠ ${warning}`))
-        output.append(warnings)
-      }
+      badges.replaceChildren(
+        badge(key.kind === 'private' ? 'Private key' : 'Public key', key.kind === 'private' ? 'warn' : 'ok'),
+        badge(key.label, 'neutral'),
+      )
+      output.replaceChildren(...rows)
     }
 
     async function run() {
       const current = ++token
-      const text = input.value.trim()
       output.replaceChildren()
+      badges.replaceChildren()
+      const text = input.value.trim()
       if (!text) {
         error.hidden = true
         return
@@ -61,7 +65,7 @@ const tool: Tool = {
       try {
         const key = isPrivateKey(text) ? await inspectPrivateKey(text) : await inspectPublicKey(text)
         if (current !== token) return
-        await renderKey(key)
+        renderKey(key)
         error.hidden = true
       } catch (err) {
         if (current !== token) return
@@ -70,20 +74,17 @@ const tool: Tool = {
       }
     }
 
-    let debounce: number | undefined
-    input.addEventListener('input', () => {
-      if (debounce !== undefined) window.clearTimeout(debounce)
-      debounce = window.setTimeout(() => void run(), 150)
-    })
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'SSH key'), input),
-        error,
-        output,
-        el('p', { class: 'ts-note' }, 'Keys are parsed in your browser. Fingerprints are computed locally — nothing is uploaded.'),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'SSH key', icon: 'key' },
+          field(input, { label: 'SSH key' }),
+          badges,
+          error,
+        ),
+        panel({ title: 'Details', icon: 'info' }, output),
+        note('Keys are parsed in your browser. Fingerprints are computed locally — nothing is uploaded.'),
       ),
     )
   },

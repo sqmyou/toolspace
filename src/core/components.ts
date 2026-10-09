@@ -668,14 +668,21 @@ export function chips(items: Chip[], options: { selected?: string; multi?: boole
 }
 
 /** A label + value row with a copy button, for key/value result lists. */
-export function copyRow(label: string, value: string | (() => string)): HTMLElement {
-  return el(
+export interface CopyRowOptions {
+  /** Set false for values that make no sense to copy, e.g. "not present". */
+  copy?: boolean
+  tone?: Tone
+}
+
+export function copyRow(label: string, value: string | (() => string), options: CopyRowOptions = {}): HTMLElement {
+  const row = el(
     'div',
-    { class: 'ts-k-kv' },
+    { class: `ts-k-kv${options.tone ? ` ts-k-kv--${options.tone}` : ''}` },
     el('span', { class: 'ts-k-kv__label' }, label),
     el('span', { class: 'ts-k-kv__value ts-k-mono' }, typeof value === 'function' ? value() : value),
-    copyButton(value, { label: 'Copy', size: 'sm' }),
   )
+  if (options.copy !== false) row.append(copyButton(value, { label: 'Copy', size: 'sm' }))
+  return row
 }
 
 export interface StatOptions {

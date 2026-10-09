@@ -1472,6 +1472,10 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 .ts-k-kv:last-child { border-bottom: none; }
 .ts-k-kv__label { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--faint); }
 .ts-k-kv__value { font-size: 13px; overflow-wrap: anywhere; }
+/* Tone only tints the label; the value stays readable monospace. */
+.ts-k-kv--ok .ts-k-kv__label { color: var(--ok, var(--accent-strong)); }
+.ts-k-kv--warn .ts-k-kv__label { color: var(--warn); }
+.ts-k-kv--danger .ts-k-kv__label { color: var(--danger); }
 
 /* --- Stats ---------------------------------------------------------------- */
 .ts-k-stats {

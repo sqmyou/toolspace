@@ -1,5 +1,17 @@
-import { el } from '../../core/dom'
-import { copyChip, download } from '../../core/ui'
+import {
+  actions,
+  badge,
+  button,
+  copyButton,
+  field,
+  note,
+  outputBlock,
+  panel,
+  select,
+  toolLayout,
+  type Tone,
+} from '../../core/components'
+import { download } from '../../core/ui'
 import type { Tool } from '../../core/types'
 import { generateKeyPair, type Algorithm } from './keypair'
 
@@ -12,68 +24,61 @@ const tool: Tool = {
   category: 'Crypto',
   keywords: ['key pair', 'rsa', 'ecdsa', 'ed25519', 'pem', 'public key', 'private key'],
   render(root) {
-    let algorithm: Algorithm = 'ECDSA-P256'
-
-    const select = el('select', { class: 'ts-select' }) as HTMLSelectElement
-    for (const value of ALGORITHMS) select.append(el('option', { value }, value))
-    select.value = algorithm
-    select.addEventListener('change', () => {
-      algorithm = select.value as Algorithm
+    const algorithm = select({
+      value: 'ECDSA-P256',
+      options: ALGORITHMS.map((value) => ({ value, label: value })),
+      onChange: () => void run(),
     })
+    const publicKey = outputBlock('', { label: 'Public key (PEM)', copy: () => publicKey.body.textContent ?? '' })
+    const privateKey = outputBlock('', { label: 'Private key (PEM)', copy: () => privateKey.body.textContent ?? '' })
+    const error = note('', 'danger')
+    error.hidden = true
+    let status = badge('Not generated', 'neutral')
+    const generate = button('Generate key pair', { icon: 'key', variant: 'primary', onClick: () => void run() })
 
-    const publicKey = el('textarea', { class: 'ts-textarea ts-mono', rows: 7, readonly: true, placeholder: 'Public key (PEM)' }) as HTMLTextAreaElement
-    const privateKey = el('textarea', { class: 'ts-textarea ts-mono', rows: 10, readonly: true, placeholder: 'Private key (PEM)' }) as HTMLTextAreaElement
-    const error = el('p', { class: 'ts-error', hidden: true })
-    const status = el('span', { class: 'ts-muted' })
-    const generateButton = el('button', { class: 'ts-button ts-primary', type: 'button' }) as HTMLButtonElement
-    generateButton.textContent = 'Generate key pair'
+    function setStatus(text: string, tone: Tone) {
+      const next = badge(text, tone)
+      status.replaceWith(next)
+      status = next
+    }
 
     async function run() {
-      generateButton.disabled = true
-      status.textContent = 'Generating…'
+      generate.disabled = true
+      setStatus('Generating…', 'warn')
       error.hidden = true
       try {
-        const pair = await generateKeyPair(algorithm)
-        publicKey.value = pair.publicKey
-        privateKey.value = pair.privateKey
-        status.textContent = `Generated ${pair.algorithm}`
+        const pair = await generateKeyPair(algorithm.value as Algorithm)
+        publicKey.body.replaceChildren(pair.publicKey)
+        privateKey.body.replaceChildren(pair.privateKey)
+        setStatus(pair.algorithm, 'ok')
       } catch (err) {
-        status.textContent = ''
-        error.textContent = err instanceof Error ? err.message : `Your browser does not support ${algorithm}`
+        setStatus('Failed', 'danger')
+        error.textContent = err instanceof Error ? err.message : `Your browser does not support ${algorithm.value}`
         error.hidden = false
       } finally {
-        generateButton.disabled = false
+        generate.disabled = false
       }
     }
 
-    generateButton.addEventListener('click', run)
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool' },
-        el(
-          'div',
-          { class: 'ts-row ts-end ts-wrap' },
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Algorithm'), select),
-          generateButton,
-          status,
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Key pair', icon: 'key' },
+          actions(field(algorithm, { label: 'Algorithm' }), generate, status),
+          error,
+          note('The private key is generated in your browser and is never transmitted. Keep it secret.', 'warn'),
         ),
-        error,
-        el('h3', { class: 'ts-subhead' }, 'Public key'),
         publicKey,
-        el('div', { class: 'ts-row ts-wrap' }, copyChip(() => publicKey.value, 'Copy public key')),
-        el('h3', { class: 'ts-subhead' }, 'Private key'),
         privateKey,
-        el('div', { class: 'ts-row ts-wrap' }, copyChip(() => privateKey.value, 'Copy private key'),
-          el('button', {
-            class: 'ts-button',
-            type: 'button',
-            onclick: () => download('private-key.pem', privateKey.value),
-          }, 'Download private key')),
-        el('p', { class: 'ts-warn' }, 'The private key is generated in your browser and is never transmitted. Keep it secret.'),
+        actions(
+          copyButton(() => publicKey.body.textContent ?? '', { label: 'Copy public key', size: 'sm' }),
+          button('Download private key', { icon: 'download', onClick: () => download('private-key.pem', privateKey.body.textContent ?? '') }),
+        ),
       ),
     )
+
+    void run()
   },
 }
 
