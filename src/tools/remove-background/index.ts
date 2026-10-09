@@ -1,3 +1,15 @@
+import {
+  actions,
+  button,
+  dropzone,
+  mediaFrame,
+  note,
+  panel,
+  slider,
+  stat,
+  stats,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
 import { download } from '../../core/ui'
 import type { Tool } from '../../core/types'
@@ -14,56 +26,37 @@ const tool: Tool = {
     let objectUrl = ''
     let backdrop: Rgb | null = null
     let fileName = 'image'
+    let picking = false
 
     const settings: RemovalSettings = { tolerance: 12, feather: 1, despill: 0.5 }
 
-    const fileInput = el('input', { type: 'file', accept: 'image/*', class: 'ts-file-input' }) as HTMLInputElement
-    const status = el('p', { class: 'ts-muted' }, 'Choose an image, or drop one anywhere on this panel.')
-    const warning = el('p', { class: 'ts-error', hidden: true })
+    const status = note('Choose an image, or drop one anywhere on this panel.')
+    const warning = note('', 'danger')
+    warning.hidden = true
+    const readout = stats()
 
-    const stage = el('div', { class: 'ts-cut-stage' })
+    const original = mediaFrame({ alt: 'Original image', maxHeight: 420 })
+    const result = mediaFrame({ alt: 'Image with the background removed', maxHeight: 420, checker: true })
     const originalCanvas = el('canvas', { class: 'ts-cut-canvas' }) as HTMLCanvasElement
-    const resultCanvas = el('canvas', { class: 'ts-cut-canvas ts-cut-result' }) as HTMLCanvasElement
-    const beforePanel = el('figure', { class: 'ts-cut-pane' }, originalCanvas, el('figcaption', {}, 'Original'))
-    const afterPanel = el('figure', { class: 'ts-cut-pane' }, resultCanvas, el('figcaption', {}, 'Cut out'))
+    const resultCanvas = el('canvas', { class: 'ts-cut-canvas' }) as HTMLCanvasElement
+    original.image.hidden = true
+    result.image.hidden = true
 
-    const backdropSwatch = el('span', { class: 'ts-backdrop-chip' })
-    const backdropHex = el('span', { class: 'ts-mono ts-muted' }, '—')
-    const pickButton = el('button', { type: 'button', class: 'ts-button' }, 'Pick from image')
-    const resetButton = el('button', { type: 'button', class: 'ts-button' }, 'Reset to edges')
+    const backdropChip = el('span', { class: 'ts-cut-chip' })
+    const backdropText = el('span', { class: 'ts-k-mono ts-k-hint' }, '—')
+    const backdropRow = el(
+      'div',
+      { class: 'ts-cut-backdrop' },
+      el('span', { class: 'ts-k-label' }, 'Backdrop'),
+      backdropChip,
+      backdropText,
+    )
 
-    const controls = el('div', { class: 'ts-cut-controls' })
-    const actions = el('div', { class: 'ts-tool-actions' })
-    const stats = el('p', { class: 'ts-muted' })
+    const pickButton = button('Pick from image', { icon: 'eye' })
+    const resetButton = button('Reset to edges', { icon: 'refresh' })
 
     const context = originalCanvas.getContext('2d', { willReadFrequently: true })
     const resultContext = resultCanvas.getContext('2d', { willReadFrequently: true })
-
-    let picking = false
-
-    function slider(key: keyof RemovalSettings, label: string, min: number, max: number, step: number, hint: string) {
-      const input = el('input', {
-        class: 'ts-range',
-        type: 'range',
-        min: String(min),
-        max: String(max),
-        step: String(step),
-        value: String(settings[key]),
-      }) as HTMLInputElement
-      const readout = el('span', { class: 'ts-mono ts-muted' }, String(settings[key]))
-      input.addEventListener('input', () => {
-        settings[key] = Number(input.value)
-        readout.textContent = input.value
-        render()
-      })
-      return el(
-        'div',
-        { class: 'ts-cut-control' },
-        el('div', { class: 'ts-cut-control-head' }, el('label', {}, label), readout),
-        input,
-        el('span', { class: 'ts-cut-hint' }, hint),
-      )
-    }
 
     function fail(message: string) {
       warning.textContent = message
@@ -71,28 +64,26 @@ const tool: Tool = {
     }
 
     function updateBackdrop() {
-      backdropSwatch.style.background = backdrop ? `rgb(${backdrop.r} ${backdrop.g} ${backdrop.b})` : 'transparent'
-      backdropHex.textContent = backdrop ? `rgb(${backdrop.r} ${backdrop.g} ${backdrop.b})` : '—'
+      backdropChip.style.background = backdrop ? `rgb(${backdrop.r} ${backdrop.g} ${backdrop.b})` : 'transparent'
+      backdropText.textContent = backdrop ? `rgb(${backdrop.r} ${backdrop.g} ${backdrop.b})` : '—'
     }
 
     /** Redraw the cut-out from the untouched source pixels. */
     function render() {
       if (!source || !resultContext || !backdrop) return
-      const result = removeBackground(source.data, source.width, source.height, settings, backdrop)
+      const cut = removeBackground(source.data, source.width, source.height, settings, backdrop)
       const imageData = resultContext.createImageData(source.width, source.height)
-      imageData.data.set(result)
+      imageData.data.set(cut)
       resultContext.putImageData(imageData, 0, 0)
-      updateStats(result)
-    }
 
-    function updateStats(result: Uint8ClampedArray) {
       let transparent = 0
-      for (let i = 3; i < result.length; i += 4) {
-        if (result[i] < 16) transparent += 1
-      }
-      const total = result.length / 4
+      for (let i = 3; i < cut.length; i += 4) if (cut[i] < 16) transparent += 1
+      const total = cut.length / 4
       const pct = total === 0 ? 0 : Math.round((transparent / total) * 100)
-      stats.textContent = `${pct}% of pixels removed · ${source?.width}×${source?.height}`
+      readout.replaceChildren(
+        stat({ label: 'Removed', value: `${pct}%` }),
+        stat({ label: 'Size', value: `${source.width}×${source.height}` }),
+      )
     }
 
     function load(file: File) {
@@ -134,42 +125,24 @@ const tool: Tool = {
       if (x < 0 || y < 0 || x >= originalCanvas.width || y >= originalCanvas.height) return
       const data = context.getImageData(x, y, 1, 1).data
       backdrop = { r: data[0], g: data[1], b: data[2] }
-      picking = false
-      originalCanvas.classList.remove('is-picking')
-      pickButton.classList.remove('is-active')
+      setPicking(false)
       updateBackdrop()
       render()
     })
 
-    pickButton.addEventListener('click', () => {
-      picking = !picking
-      originalCanvas.classList.toggle('is-picking', picking)
-      pickButton.classList.toggle('is-active', picking)
-    })
+    function setPicking(value: boolean) {
+      picking = value
+      originalCanvas.classList.toggle('is-picking', value)
+      pickButton.classList.toggle('is-on', value)
+    }
+
+    pickButton.addEventListener('click', () => setPicking(!picking))
 
     resetButton.addEventListener('click', () => {
       if (!source) return
       backdrop = estimateBackground(source.data, source.width, source.height)
       updateBackdrop()
       render()
-    })
-
-    fileInput.addEventListener('change', () => {
-      const file = fileInput.files?.[0]
-      if (file) load(file)
-    })
-
-    stage.addEventListener('dragover', (event) => {
-      event.preventDefault()
-      stage.classList.add('is-dragging')
-    })
-    stage.addEventListener('dragleave', () => stage.classList.remove('is-dragging'))
-    stage.addEventListener('drop', (event) => {
-      event.preventDefault()
-      stage.classList.remove('is-dragging')
-      const file = event.dataTransfer?.files?.[0]
-      if (file && file.type.startsWith('image/')) load(file)
-      else if (file) fail('That file is not an image.')
     })
 
     function exportPng() {
@@ -179,55 +152,82 @@ const tool: Tool = {
       }, 'image/png')
     }
 
-    controls.append(
-      slider('tolerance', 'Tolerance', 0, 60, 1, 'How far a pixel may differ from the backdrop and still count as background.'),
-      slider('feather', 'Edge feather', 0, 6, 1, 'Softens the cut edge so it does not look like scissors work.'),
-      slider('despill', 'Backdrop despill', 0, 1, 0.05, 'Removes leftover backdrop tint from the subject edges.'),
-    )
+    const drop = dropzone({
+      label: 'Drop an image here',
+      hint: 'PNG, JPEG or WebP',
+      accept: 'image/*',
+      icon: 'image',
+      onFiles: (files) => {
+        const file = files[0]
+        if (!file) return
+        if (file.type && !file.type.startsWith('image/')) fail('That file is not an image.')
+        else load(file)
+      },
+    })
 
-    actions.append(
-      el('button', { type: 'button', class: 'ts-button ts-button-primary', onclick: exportPng }, 'Download PNG'),
-      pickButton,
-      resetButton,
-    )
+    original.root.append(originalCanvas)
+    result.root.append(resultCanvas)
 
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool' },
-        el(
-          'div',
-          { class: 'ts-field' },
+      toolLayout(
+        { wide: true },
+        panel({ title: 'Image', icon: 'uploadCloud' }, drop.root, status, warning, backdropRow),
+        panel(
+          { title: 'Before and after', icon: 'sliders' },
           el(
             'div',
-            { class: 'ts-row ts-between' },
-            el('label', {}, 'Image'),
-            el('div', { class: 'ts-tool-actions' }, fileInput),
-          ),
-          status,
-          warning,
-          el(
-            'div',
-            { class: 'ts-backdrop-row' },
-            el('span', { class: 'ts-muted' }, 'Backdrop colour'),
-            backdropSwatch,
-            backdropHex,
+            { class: 'ts-cut-stage' },
+            el('figure', { class: 'ts-cut-pane' }, original.root, el('figcaption', {}, 'Original')),
+            el('figure', { class: 'ts-cut-pane' }, result.root, el('figcaption', {}, 'Cut out')),
           ),
         ),
-        stage,
-        el('div', { class: 'ts-subhead' }, 'Adjust'),
-        controls,
-        stats,
-        actions,
-        el(
-          'p',
-          { class: 'ts-cut-note' },
+        panel(
+          { title: 'Adjust', icon: 'sliders' },
+          slider({
+            label: 'Tolerance',
+            min: 0,
+            max: 60,
+            value: settings.tolerance,
+            onInput: (value) => {
+              settings.tolerance = value
+              render()
+            },
+          }),
+          slider({
+            label: 'Edge feather',
+            min: 0,
+            max: 6,
+            value: settings.feather,
+            onInput: (value) => {
+              settings.feather = value
+              render()
+            },
+          }),
+          slider({
+            label: 'Backdrop despill',
+            min: 0,
+            max: 1,
+            step: 0.05,
+            value: settings.despill,
+            format: (value) => value.toFixed(2),
+            onInput: (value) => {
+              settings.despill = value
+              render()
+            },
+          }),
+          readout,
+          actions(
+            button('Download PNG', { variant: 'primary', icon: 'download', onClick: exportPng }),
+            pickButton,
+            resetButton,
+          ),
+        ),
+        note(
           'This works by flood filling inward from the image border, so it is built for flat or near-flat backdrops — logos, icons, screenshots, product shots. A busy photographic background needs a segmentation model, which cannot run here without uploading your image.',
         ),
       ),
     )
 
-    stage.append(beforePanel, afterPanel)
     updateBackdrop()
   },
 }
