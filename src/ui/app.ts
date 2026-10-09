@@ -595,6 +595,81 @@ const MOON =
 const BRAND_MARK =
   '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"><path d="M12 2.6 20.4 7.4v9.2L12 21.4 3.6 16.6V7.4z"/><circle cx="12" cy="12" r="3.1" fill="currentColor" stroke="none"/></svg>'
 
+/** The browser fires this when it is willing to offer an install prompt. */
+interface InstallPromptEvent extends Event {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
+}
+
+/**
+ * The "Install app" button.
+ *
+ * Chromium fires `beforeinstallprompt` when the manifest and service worker
+ * qualify; we intercept it so the offer sits in the header rather than a
+ * browser banner, and hide the button again once the app is installed. Safari
+ * and Firefox never fire it, so there the button simply never appears.
+ */
+function installButton(): HTMLButtonElement {
+  const node = el(
+    'button',
+    { type: 'button', class: 'ts-k-btn ts-k-btn--ghost ts-install', hidden: true },
+    iconEl('download', 15),
+    el('span', { class: 'ts-install-label' }, 'Install app'),
+  )
+  let deferred: InstallPromptEvent | null = null
+
+  const standalone = () =>
+    window.matchMedia?.('(display-mode: standalone)').matches ||
+    (navigator as unknown as { standalone?: boolean }).standalone === true
+
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault()
+    deferred = event as InstallPromptEvent
+    if (!standalone()) node.hidden = false
+  })
+
+  window.addEventListener('appinstalled', () => {
+    deferred = null
+    node.hidden = true
+  })
+
+  node.addEventListener('click', async () => {
+    if (!deferred) {
+      // No prompt is available (iOS, or the criteria are not met): point at the
+      // browser's own menu instead of pretending the click did something.
+      node.querySelector('.ts-install-label')!.textContent = standalone() ? 'Installed' : 'Use the share menu'
+      setTimeout(() => (node.querySelector('.ts-install-label')!.textContent = 'Install app'), 2600)
+      return
+    }
+    await deferred.prompt()
+    await deferred.userChoice
+    deferred = null
+    node.hidden = true
+  })
+
+  return node
+}
+
+/**
+ * A one-line banner for the offline state. Nothing else in the app changes
+ * when the network drops — that is the point of an offline-first toolspace —
+ * so a quiet strip is all the signal that is needed.
+ */
+function offlineBanner(): HTMLElement {
+  const node = el(
+    'div',
+    { class: 'ts-offline', role: 'status', hidden: navigator.onLine },
+    iconEl('info', 14),
+    el('span', {}, 'Offline — every tool still works, nothing here needs a server.'),
+  )
+  const sync = () => {
+    node.hidden = navigator.onLine
+  }
+  window.addEventListener('online', sync)
+  window.addEventListener('offline', sync)
+  return node
+}
+
 /**
  * Reveal sections as they scroll in. The arming class is added from script
  * *after* the observer is attached, so CSS keeps the visible resting state:
@@ -682,6 +757,7 @@ export function mountApp(app: HTMLElement): void {
     ),
     el('span', { class: 'ts-header-spacer' }),
     searchTrigger,
+    installButton(),
     themeBtn,
   )
 
@@ -725,6 +801,6 @@ export function mountApp(app: HTMLElement): void {
   window.addEventListener('scroll', updateToTop, { passive: true })
   window.addEventListener('hashchange', fromHash)
 
-  app.append(header, main, toTop)
+  app.append(offlineBanner(), header, main, toTop)
   fromHash()
 }

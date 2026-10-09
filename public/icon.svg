@@ -9,9 +9,9 @@
   <path
     d="M32 8.5 L51.5 19.5 L51.5 44.5 L32 55.5 L12.5 44.5 L12.5 19.5 Z"
     fill="none"
-    stroke="#f5b64a"
+    stroke="#ccff4d"
     stroke-width="4"
     stroke-linejoin="round"
   />
-  <circle cx="32" cy="32" r="7.5" fill="#ffc763" />
+  <circle cx="32" cy="32" r="7.5" fill="#ccff4d" />
 </svg>

@@ -10,14 +10,26 @@
  *
  * No third-party requests are ever made or cached.
  */
-const CACHE = 'toolspace-v2'
+const CACHE = 'toolspace-v3'
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(CACHE)
       .then((cache) =>
-        cache.addAll(['./', './manifest.webmanifest', './icon.svg', './theme-init.js']),
+        cache.addAll([
+          './',
+          './manifest.webmanifest',
+          './icon.svg',
+          './theme-init.js',
+          // Precache the install icons so the manifest is satisfied offline and
+          // the OS can fetch them when the user adds the app to the home screen.
+          './icon-192.png',
+          './icon-512.png',
+          './icon-maskable-192.png',
+          './icon-maskable-512.png',
+          './apple-touch-icon.png',
+        ]),
       ),
   )
   self.skipWaiting()
