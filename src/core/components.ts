@@ -757,6 +757,32 @@ export function mediaFrame(options: MediaFrameOptions = {}): MediaFrame {
   return { root, image }
 }
 
+export interface ImageBlockOptions extends MediaFrameOptions {
+  title?: string
+  icon?: IconName | string
+}
+
+export interface ImageBlock {
+  /** A panel wrapping the frame, ready to append. */
+  root: HTMLElement
+  frame: HTMLElement
+  image: HTMLImageElement
+  /** Live caption under the frame. */
+  caption: HTMLElement
+}
+
+/**
+ * A captioned media panel. Image tools need the same three things — a title,
+ * a bounded preview and a caption that reports the dimensions — so they get
+ * one component instead of three hand-rolled wrappers.
+ */
+export function imageBlock(options: ImageBlockOptions = {}): ImageBlock {
+  const { root: frame, image } = mediaFrame(options)
+  const caption = el('p', { class: 'ts-k-media__caption' })
+  const root = panel({ title: options.title ?? 'Preview', icon: options.icon ?? 'image' }, frame, caption)
+  return { root, frame, image, caption }
+}
+
 export interface MediaToolbarOptions {
   /** Filename suggested when the download button is pressed. */
   filename: string

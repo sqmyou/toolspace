@@ -1558,6 +1558,8 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
   object-fit: contain;
   border-radius: var(--radius-sm);
 }
+.ts-k-media__caption { margin: 0; font-size: 12px; color: var(--faint); text-align: center; }
+.ts-k-media__caption:empty { display: none; }
 
 /* --- Cards ---------------------------------------------------------------- */
 .ts-k-cards { display: flex; flex-direction: column; gap: 10px; }

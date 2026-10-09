@@ -1,5 +1,17 @@
-import { el } from '../../core/dom'
-import { copyChip } from '../../core/ui'
+import {
+  actions,
+  button,
+  checkbox,
+  field,
+  note,
+  outputBlock,
+  panel,
+  segmented,
+  stat,
+  stats,
+  textarea,
+  toolLayout,
+} from '../../core/components'
 import type { Tool } from '../../core/types'
 import { binaryStats, binaryToText, groupBits, textToBinary } from './binary'
 
@@ -10,72 +22,84 @@ const tool: Tool = {
   category: 'Data',
   keywords: ['binary', 'bits', 'text', 'utf-8', 'encode', 'decode', '0b', 'convert'],
   render(root) {
-    const direction = el(
-      'select',
-      { class: 'ts-select' },
-      el('option', { value: 'encode' }, 'Text → Binary'),
-      el('option', { value: 'decode' }, 'Binary → Text'),
-    ) as HTMLSelectElement
-    const spaced = el('input', { type: 'checkbox', checked: true }) as HTMLInputElement
-    const reversed = el('input', { type: 'checkbox' }) as HTMLInputElement
-    const group = el('input', { type: 'checkbox', checked: true }) as HTMLInputElement
-    const input = el('textarea', { class: 'ts-textarea ts-mono', rows: 8, spellcheck: false }) as HTMLTextAreaElement
-    const output = el('textarea', { class: 'ts-textarea ts-mono', rows: 8, spellcheck: false, readonly: true }) as HTMLTextAreaElement
-    const error = el('p', { class: 'ts-error', hidden: true })
-    const stats = el('p', { class: 'ts-muted' })
+    let direction = 'encode'
+    const spacing = { on: true }
+    const nibbles = { on: true }
+    const reverse = { on: false }
+    const input = textarea({ rows: 8, onInput: () => run() })
     let result = ''
+    const output = outputBlock('', { label: 'Output', copy: () => result })
+    const error = note('', 'danger')
+    error.hidden = true
+    const readout = stats()
+
+    const options = [
+      checkbox({ label: 'Space between bytes', checked: true, onChange: (checked) => { spacing.on = checked; run() } }),
+      checkbox({ label: 'Group in nibbles', checked: true, onChange: (checked) => { nibbles.on = checked; run() } }),
+      checkbox({ label: 'Reverse bits', onChange: (checked) => { reverse.on = checked; run() } }),
+    ]
 
     function run() {
       try {
-        if (direction.value === 'encode') {
-          result = textToBinary(input.value, { spaced: spaced.checked || group.checked, reversed: reversed.checked })
-          if (group.checked) result = groupBits(result, 4)
-          stats.textContent = `${textToBinary(input.value).length} bits · ${new TextEncoder().encode(input.value).length} bytes`
+        if (direction === 'encode') {
+          result = textToBinary(input.value, { spaced: spacing.on || nibbles.on, reversed: reverse.on })
+          if (nibbles.on) result = groupBits(result, 4)
+          readout.replaceChildren(
+            stat({ label: 'Bits', value: String(textToBinary(input.value).length) }),
+            stat({ label: 'Bytes', value: String(new TextEncoder().encode(input.value).length) }),
+          )
         } else {
-          result = binaryToText(input.value, { reversed: reversed.checked })
+          result = binaryToText(input.value, { reversed: reverse.on })
           const info = binaryStats(input.value)
-          stats.textContent = `${info.bits} bits · ${info.bytes} bytes · ${info.ones} ones (${Math.round(info.density * 100)}%)`
+          readout.replaceChildren(
+            stat({ label: 'Bits', value: String(info.bits) }),
+            stat({ label: 'Bytes', value: String(info.bytes) }),
+            stat({ label: 'Ones', value: `${info.ones} (${Math.round(info.density * 100)}%)` }),
+          )
         }
-        output.value = result
+        output.body.replaceChildren(result)
+        output.setMeta('')
         error.hidden = true
       } catch (err) {
         result = ''
-        output.value = ''
-        stats.textContent = ''
+        output.body.replaceChildren('')
+        output.setMeta('')
+        readout.replaceChildren()
         error.textContent = err instanceof Error ? err.message : 'Could not process that input.'
         error.hidden = false
       }
     }
 
     function sample() {
-      input.value = direction.value === 'encode' ? 'Hi' : '01001000 01101001'
+      input.value = direction === 'encode' ? 'Hi' : '01001000 01101001'
       run()
     }
 
-    direction.addEventListener('change', sample)
-    spaced.addEventListener('change', run)
-    reversed.addEventListener('change', run)
-    group.addEventListener('change', run)
-    input.addEventListener('input', run)
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el(
-          'div',
-          { class: 'ts-row ts-wrap' },
-          el('div', { class: 'ts-inline-field' }, el('label', {}, 'Direction'), direction),
-          el('label', { class: 'ts-inline-field' }, spaced, 'Space between bytes'),
-          el('label', { class: 'ts-inline-field' }, group, 'Group in nibbles'),
-          el('label', { class: 'ts-inline-field' }, reversed, 'Reverse bits'),
-          el('button', { class: 'ts-button', type: 'button', onclick: sample }, 'Load sample'),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Input', icon: 'code' },
+          segmented({
+            label: 'Direction',
+            value: 'encode',
+            items: [
+              { label: 'Text → Binary', value: 'encode' },
+              { label: 'Binary → Text', value: 'decode' },
+            ],
+            onChange: (value) => {
+              direction = value
+              sample()
+            },
+          }),
+          field(input, { label: 'Input' }),
+          actions(button('Load sample', { icon: 'refresh', onClick: sample })),
+          error,
         ),
-        el('div', { class: 'ts-field' }, el('label', {}, 'Input'), input),
-        el('div', { class: 'ts-field' }, el('label', {}, 'Output'), output),
-        error,
-        el('div', { class: 'ts-row ts-between' }, stats, copyChip(() => result, 'Copy')),
-        el('p', { class: 'ts-note' }, 'Text is encoded as UTF-8, so a non-ASCII character becomes the two or more bytes you would find in a file.'),
+        panel({ title: 'Options', icon: 'sliders' }, ...options),
+        output,
+        readout,
+        note('Text is encoded as UTF-8, so a non-ASCII character becomes the two or more bytes you would find in a file.'),
       ),
     )
 
