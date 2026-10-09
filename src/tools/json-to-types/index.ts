@@ -1,4 +1,14 @@
-import { el } from '../../core/dom'
+import {
+  actions,
+  button,
+  field,
+  note,
+  outputBlock,
+  panel,
+  textarea,
+  textField,
+  toolLayout,
+} from '../../core/components'
 import type { Tool } from '../../core/types'
 import { inferTypes, JsonTypeError } from './infer'
 
@@ -17,75 +27,40 @@ const tool: Tool = {
   category: 'Data',
   keywords: ['json', 'typescript', 'types', 'interface', 'schema', 'infer', 'convert'],
   render(root) {
-    const input = el('textarea', {
-      class: 'ts-output ts-textarea',
-      rows: 12,
-      spellcheck: false,
-      placeholder: 'Paste JSON here…',
-      value: SAMPLE,
-    }) as HTMLTextAreaElement
-
-    const rootName = el('input', {
-      class: 'ts-input ts-mono',
-      value: 'Root',
-      spellcheck: false,
-      'aria-label': 'Root type name',
-    }) as HTMLInputElement
-
-    const output = el('textarea', { class: 'ts-output ts-textarea', rows: 14, readonly: true }) as HTMLTextAreaElement
-    const error = el('p', { class: 'ts-error', hidden: true })
+    const input = textarea({ rows: 12, value: SAMPLE, placeholder: 'Paste JSON here…', onInput: () => run() })
+    const rootName = textField({ value: 'Root', mono: true, onInput: () => run() })
+    const error = note('', 'danger')
+    error.hidden = true
+    const output = outputBlock('', { label: 'TypeScript', copy: () => output.body.textContent ?? '' })
 
     function run() {
       try {
         const { code } = inferTypes(input.value, { rootName: rootName.value.trim() || 'Root' })
-        output.value = code
+        output.body.replaceChildren(code)
+        output.setMeta('')
         error.hidden = true
       } catch (err) {
-        output.value = ''
+        output.body.replaceChildren('')
+        output.setMeta('')
         error.textContent = err instanceof JsonTypeError ? err.message : 'Could not parse this JSON.'
         error.hidden = false
       }
     }
 
-    async function copy() {
-      if (!output.value) return
-      try {
-        await navigator.clipboard.writeText(output.value)
-        copyButton.textContent = 'Copied'
-        setTimeout(() => (copyButton.textContent = 'Copy'), 900)
-      } catch {
-        /* clipboard blocked; the output is still selectable */
-      }
-    }
-
-    const copyButton = el('button', { class: 'ts-button ts-primary', onclick: copy }, 'Copy')
-
-    const loadExample = el(
-      'button',
-      {
-        class: 'ts-button',
-        onclick: () => {
-          input.value = SAMPLE
-          run()
-        },
-      },
-      'Load example',
-    )
-
-    input.addEventListener('input', run)
-    rootName.addEventListener('input', run)
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'JSON'), input),
-        el('div', { class: 'ts-row ts-between' }, el('div', { class: 'ts-row' }, el('label', { class: 'ts-inline-field' }, el('span', {}, 'Root name'), rootName)), loadExample),
-        error,
-        el('h3', { class: 'ts-subhead' }, 'TypeScript'),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'JSON', icon: 'code' },
+          field(input, { label: 'JSON' }),
+          actions(field(rootName, { label: 'Root name' }), button('Load example', { icon: 'refresh', onClick: () => {
+            input.value = SAMPLE
+            run()
+          } })),
+          error,
+        ),
         output,
-        el('div', { class: 'ts-row' }, copyButton),
-        el('p', { class: 'ts-note' }, 'Inference runs locally. Your JSON never leaves the browser.'),
+        note('Inference runs locally. Your JSON never leaves the browser.'),
       ),
     )
 

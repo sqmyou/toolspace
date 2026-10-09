@@ -1,5 +1,15 @@
-import { el } from '../../core/dom'
-import { copyChip } from '../../core/ui'
+import {
+  actions,
+  chips,
+  copyButton,
+  field,
+  note,
+  outputBlock,
+  panel,
+  textarea,
+  textField,
+  toolLayout,
+} from '../../core/components'
 import type { Tool } from '../../core/types'
 import { query, type JsonValue } from './jsonpath'
 
@@ -28,54 +38,52 @@ const tool: Tool = {
   category: 'Data',
   keywords: ['jsonpath', 'json', 'query', 'filter', 'select', 'jmespath', 'extract'],
   render(root) {
-    const docInput = el('textarea', { class: 'ts-textarea ts-mono', rows: 14, spellcheck: false }) as HTMLTextAreaElement
-    docInput.value = SAMPLE
-    const pathInput = el('input', { class: 'ts-input ts-mono', value: '$.store.book[*].title', 'aria-label': 'JSONPath' }) as HTMLInputElement
-    const result = el('pre', { class: 'ts-pre ts-jsonpath-out' })
-    const error = el('p', { class: 'ts-error', hidden: true })
-    const summary = el('p', { class: 'ts-muted' })
-    const examples = el('div', { class: 'ts-jsonpath-examples' })
+    const docInput = textarea({ rows: 14, value: SAMPLE, onInput: () => run() })
+    const path = textField({ value: '$.store.book[*].title', mono: true, onInput: () => run() })
+    const error = note('', 'danger')
+    error.hidden = true
+    const summary = note('')
     let output = ''
+    const result = outputBlock('(no matches)', { label: 'Matches', copy: () => output })
 
     function run() {
       try {
         const document = JSON.parse(docInput.value) as JsonValue
-        const matches = query(document, pathInput.value)
-        output = JSON.stringify(
-          matches.map((match) => ({ path: match.path, value: match.value })),
-          null,
-          2,
-        )
-        result.textContent = matches.length ? output : '(no matches)'
-        summary.textContent = `${matches.length} ${matches.length === 1 ? 'match' : 'matches'}`
+        const matches = query(document, path.value)
+        output = matches.length ? JSON.stringify(matches.map((match) => ({ path: match.path, value: match.value })), null, 2) : ''
+        result.body.replaceChildren(matches.length ? output : '(no matches)')
+        result.setMeta(`${matches.length} ${matches.length === 1 ? 'match' : 'matches'}`)
+        summary.textContent = ''
         error.hidden = true
       } catch (err) {
         output = ''
-        result.textContent = ''
-        summary.textContent = ''
+        result.body.replaceChildren('')
+        result.setMeta('')
         error.textContent = err instanceof Error ? err.message : 'Could not run that query.'
         error.hidden = false
       }
     }
 
-    for (const example of EXAMPLES) {
-      examples.append(el('button', { class: 'ts-button ts-jsonpath-example', type: 'button', onclick: () => { pathInput.value = example; run() } }, example))
-    }
-
-    docInput.addEventListener('input', run)
-    pathInput.addEventListener('input', run)
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'Document'), docInput),
-        el('div', { class: 'ts-row ts-wrap' }, el('div', { class: 'ts-inline-field ts-grow' }, el('label', {}, 'JSONPath'), pathInput), el('div', { class: 'ts-inline-field' }, el('label', {}, ' '), copyChip(() => output, 'Copy results'))),
-        el('div', { class: 'ts-row ts-wrap' }, el('span', { class: 'ts-muted' }, 'Examples:'), examples),
-        error,
-        summary,
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Document', icon: 'code' },
+          field(docInput, { label: 'JSON document' }),
+        ),
+        panel(
+          { title: 'Query', icon: 'search' },
+          field(path, { label: 'JSONPath' }),
+          chips(EXAMPLES.map((example) => ({ label: example, onClick: () => {
+            path.value = example
+            run()
+          } }))),
+          actions(copyButton(() => output, { label: 'Copy results', size: 'sm' })),
+          error,
+          summary,
+        ),
         result,
-        el('p', { class: 'ts-note' }, 'Supports child, wildcard, recursive descent, slices and filters. Filters use a fixed comparison grammar and never execute code.'),
+        note('Supports child, wildcard, recursive descent, slices and filters. Filters use a fixed comparison grammar and never execute code.'),
       ),
     )
 
