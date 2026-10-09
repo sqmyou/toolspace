@@ -16,7 +16,7 @@ const tool: Tool = {
   slug: 'countdown',
   name: 'Countdown Timer',
   description: 'A precise countdown with presets, a progress ring and an optional chime — it keeps time even if the tab is throttled.',
-  category: 'Time',
+  category: 'Numbers',
   keywords: ['countdown', 'timer', 'pomodoro', 'alarm', 'interval', 'stopwatch', 'focus', 'egg timer'],
   render(root) {
     const input = textField({ value: '5m', mono: true, onInput: () => {} })

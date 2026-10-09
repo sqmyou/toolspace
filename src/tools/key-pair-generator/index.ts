@@ -21,7 +21,7 @@ const tool: Tool = {
   slug: 'key-pair-generator',
   name: 'Key Pair Generator',
   description: 'Generate RSA, ECDSA or Ed25519 key pairs and export them as PEM.',
-  category: 'Crypto',
+  category: 'Security',
   keywords: ['key pair', 'rsa', 'ecdsa', 'ed25519', 'pem', 'public key', 'private key'],
   render(root) {
     const algorithm = select({

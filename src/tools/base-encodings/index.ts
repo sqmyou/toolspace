@@ -22,7 +22,7 @@ const tool: Tool = {
   slug: 'base-encodings',
   name: 'Base32 / Base58 / Hex / Binary Codec',
   description: 'Convert text to and from Base32, Base58, Base58Check, hex and binary.',
-  category: 'Encoding',
+  category: 'Data',
   keywords: ['base32', 'base58', 'base58check', 'hex', 'binary', 'encode', 'decode'],
   render(root) {
     let format: Format = 'base32'

@@ -29,7 +29,7 @@ const tool: Tool = {
   slug: 'npm-package',
   name: 'npm Package',
   description: 'Look up any npm package: latest version, license, size, dependencies and weekly downloads.',
-  category: 'Developer',
+  category: 'Code',
   keywords: ['npm', 'package', 'registry', 'node', 'version', 'downloads', 'dependency', 'nodejs', 'module'],
   remote: {
     host: 'registry.npmjs.org',

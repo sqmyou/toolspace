@@ -636,70 +636,6 @@ const MOON =
 const BRAND_MARK =
   '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"><path d="M12 2.6 20.4 7.4v9.2L12 21.4 3.6 16.6V7.4z"/><circle cx="12" cy="12" r="3.1" fill="currentColor" stroke="none"/></svg>'
 
-/** The browser fires this when it is willing to offer an install prompt. */
-interface InstallPromptEvent extends Event {
-  prompt: () => Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
-}
-
-/**
- * The "Install app" button.
- *
- * Chromium fires `beforeinstallprompt` when the manifest and service worker
- * qualify; we intercept it so the offer sits in the header rather than a
- * browser banner, and hide the button again once the app is installed. Safari
- * and Firefox never fire it, so there the button simply never appears.
- */
-function installButton(): HTMLButtonElement {
-  const standalone = () =>
-    window.matchMedia?.('(display-mode: standalone)').matches ||
-    (navigator as unknown as { standalone?: boolean }).standalone === true
-
-  // Only hide when the app is already installed. Chrome fires
-  // `beforeinstallprompt` for the native prompt, but Safari and Firefox never
-  // do, so gating visibility on that event would hide the button — and its
-  // instructions — on exactly the browsers that need them most.
-  const node = el(
-    'button',
-    { type: 'button', class: 'ts-k-btn ts-k-btn--ghost ts-install', hidden: standalone() },
-    iconEl('download', 15),
-    el('span', { class: 'ts-install-label' }, 'Install app'),
-  )
-  let deferred: InstallPromptEvent | null = null
-
-  const isIos = () =>
-    /iphone|ipad|ipod/i.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-
-  window.addEventListener('beforeinstallprompt', (event) => {
-    event.preventDefault()
-    deferred = event as InstallPromptEvent
-    if (!standalone()) node.hidden = false
-  })
-
-  window.addEventListener('appinstalled', () => {
-    deferred = null
-    node.hidden = true
-  })
-
-  node.addEventListener('click', async () => {
-    if (deferred) {
-      await deferred.prompt()
-      await deferred.userChoice
-      deferred = null
-      node.hidden = true
-      return
-    }
-    // No native prompt available (or not yet fired): tell the user where the
-    // control actually lives instead of a button that looks inert.
-    const label = node.querySelector('.ts-install-label')!
-    label.textContent = standalone() ? 'Installed' : isIos() ? 'Share → Add to Home Screen' : 'Browser menu → Install'
-    setTimeout(() => (label.textContent = 'Install app'), 3400)
-  })
-
-  return node
-}
-
 /**
  * A one-line banner for the offline state. Nothing else in the app changes
  * when the network drops — that is the point of an offline-first toolspace —
@@ -807,7 +743,6 @@ export function mountApp(app: HTMLElement): void {
     ),
     el('span', { class: 'ts-header-spacer' }),
     searchTrigger,
-    installButton(),
     themeBtn,
   )
 

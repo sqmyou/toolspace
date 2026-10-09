@@ -20,7 +20,7 @@ const tool: Tool = {
   slug: 'url-editor',
   name: 'URL & Query String Editor',
   description: 'Decode, edit and rebuild URLs with a table of query parameters.',
-  category: 'Encoding',
+  category: 'Data',
   keywords: ['url', 'query string', 'percent encoding', 'uri', 'params', 'decode'],
   render(root) {
     const input = textarea({ rows: 3, placeholder: 'https://example.com/path?a=1&b=2#top', onInput: () => parseInput() })

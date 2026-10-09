@@ -342,7 +342,6 @@ a { color: inherit; }
 .ts-icon-btn:hover { border-color: var(--border-strong); color: var(--accent); }
 
 /* Install affordance: hires, and collapses to just its icon on small screens. */
-.ts-install { flex: none; padding: 8px 13px; }
 
 /* Offline strip — a quiet, non-blocking status line above the header. */
 .ts-offline {
@@ -1124,8 +1123,6 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
   .ts-search-trigger span.ts-search-trigger-label { display: none; }
   .ts-search-trigger kbd { display: none; }
   /* The install button sheds its label before the header can wrap. */
-  .ts-install .ts-install-label { display: none; }
-  .ts-install { padding: 8px 10px; }
   .ts-tool-nav { grid-template-columns: 1fr; }
   .ts-tool-nav__link.is-next { grid-column: 1; text-align: left; align-items: flex-start; }
   .ts-tool-header { padding: 18px 16px 16px; }

@@ -83,7 +83,7 @@ const tool: Tool = {
   slug: 'calculator',
   name: 'Calculator',
   description: 'Expression evaluation, unit conversion and bitwise work, with history.',
-  category: 'Math',
+  category: 'Numbers',
   keywords: [
     'calculator', 'math', 'arithmetic', 'expression', 'evaluate', 'scientific',
     'sin', 'cos', 'log', 'angle', 'degrees', 'radians', 'bitwise', 'hex', 'binary',

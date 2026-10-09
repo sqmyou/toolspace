@@ -34,7 +34,7 @@ const tool: Tool = {
   slug: 'timezone-planner',
   name: 'Timezone Meeting Planner',
   description: 'Find a meeting time that works across timezones, with working-hour and awake-hour overlap.',
-  category: 'Time',
+  category: 'Numbers',
   keywords: ['timezone', 'meeting', 'planner', 'overlap', 'utc', 'scheduling', 'world clock'],
   render(root) {
     const baseZone = COMMON_ZONES[0]

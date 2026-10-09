@@ -17,25 +17,16 @@ import { el } from './dom'
  * caps, so they read as one family rather than borrowed glyphs.
  */
 
-/** One hue per category, spread around the wheel so families stay legible. */
+/** One hue per family, spread around the wheel so families stay legible. */
 const CATEGORY_HUES: Record<string, number> = {
-  Code: 205,
-  Crypto: 275,
-  Data: 185,
-  Design: 330,
-  DevOps: 30,
-  Documents: 96,
-  Encoding: 158,
-  Gaming: 262,
-  Math: 292,
-  Media: 315,
-  Network: 225,
+  Data: 186,
+  Text: 132,
   Numbers: 48,
-  Regex: 350,
-  Security: 3,
-  Text: 130,
-  Time: 246,
-  Web: 172,
+  Security: 5,
+  Web: 224,
+  Code: 266,
+  Media: 302,
+  Design: 340,
 }
 
 const FALLBACK_HUE = 205

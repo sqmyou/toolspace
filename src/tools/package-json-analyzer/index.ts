@@ -37,7 +37,7 @@ const tool: Tool = {
   slug: 'package-json-analyzer',
   name: 'package.json Analyzer',
   description: 'Review dependency ranges, scripts and metadata for a package.json.',
-  category: 'DevOps',
+  category: 'Code',
   keywords: ['npm', 'package.json', 'dependencies', 'semver', 'scripts', 'node', 'audit'],
   render(root) {
     const input = textarea({ rows: 16, value: SAMPLE, onInput: () => run() })

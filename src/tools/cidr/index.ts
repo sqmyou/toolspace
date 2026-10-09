@@ -16,7 +16,7 @@ const tool: Tool = {
   slug: 'cidr',
   name: 'CIDR / Subnet Calculator',
   description: 'Work out network, broadcast, host range and netmask for IPv4 or IPv6 CIDR blocks.',
-  category: 'Network',
+  category: 'Web',
   keywords: ['cidr', 'subnet', 'netmask', 'ipv4', 'ipv6', 'broadcast', 'network', 'networking'],
   render(root) {
     const input = textField({

@@ -17,7 +17,7 @@ const tool: Tool = {
   slug: 'base64',
   name: 'Base64 / Base64URL Codec',
   description: 'Encode and decode Base64 text or files, including the URL-safe variant.',
-  category: 'Encoding',
+  category: 'Data',
   keywords: ['base64', 'base64url', 'encode', 'decode', 'data uri', 'atob', 'btoa'],
   render(root) {
     const input = textarea({ placeholder: 'Text to encode, or paste Base64 to decode…', rows: 6 })

@@ -21,7 +21,7 @@ const tool: Tool = {
   slug: 'file-checksum',
   name: 'File & Text Checksum',
   description: 'Compute CRC-32, SHA-1, SHA-256, SHA-384 and SHA-512 hashes of text or files.',
-  category: 'Crypto',
+  category: 'Security',
   keywords: ['checksum', 'hash', 'sha256', 'sha1', 'sha512', 'crc32', 'digest', 'verify'],
   render(root) {
     const text = textarea({ rows: 4, placeholder: 'Text to hash…', onInput: () => void hashText() })

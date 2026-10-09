@@ -28,7 +28,7 @@ const tool: Tool = {
   slug: 'pdf-merger',
   name: 'PDF Merger',
   description: 'Combine several PDFs into one, reorder them and drop pages.',
-  category: 'Documents',
+  category: 'Text',
   keywords: ['pdf', 'merge', 'combine', 'join', 'append', 'documents', 'pages'],
   render(root) {
     const entries: Entry[] = []

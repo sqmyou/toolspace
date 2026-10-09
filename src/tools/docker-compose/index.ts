@@ -41,7 +41,7 @@ const tool: Tool = {
   slug: 'docker-compose',
   name: 'docker-compose Checker',
   description: 'Validate a Compose file and catch ports, volumes, keys and references that will not work.',
-  category: 'DevOps',
+  category: 'Code',
   keywords: ['docker', 'compose', 'yaml', 'containers', 'validate', 'services', 'ports', 'volumes'],
   render(root) {
     const input = textarea({ rows: 18, value: SAMPLE, onInput: () => run() })

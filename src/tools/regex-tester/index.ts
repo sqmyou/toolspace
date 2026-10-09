@@ -21,7 +21,7 @@ const tool: Tool = {
   slug: 'regex-tester',
   name: 'Regex Tester & Explainer',
   description: 'Test a regular expression against text and read a plain-English breakdown.',
-  category: 'Regex',
+  category: 'Text',
   keywords: ['regex', 'regexp', 'regular expression', 'match', 'capture group', 'pattern'],
   render(root) {
     const pattern = textField({ value: '\\b\\w+@\\w+\\.\\w+\\b', mono: true, onInput: () => render() })

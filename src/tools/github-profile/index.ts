@@ -31,7 +31,7 @@ const tool: Tool = {
   slug: 'github-profile',
   name: 'GitHub Profile Lookup',
   description: 'Look up any public GitHub profile — repos, stars, languages and join date — straight from the public API.',
-  category: 'Network',
+  category: 'Web',
   keywords: ['github', 'profile', 'user', 'repos', 'repositories', 'stars', 'developer', 'api', 'avatar'],
   remote: {
     host: 'api.github.com',

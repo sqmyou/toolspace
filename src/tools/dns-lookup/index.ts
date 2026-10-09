@@ -22,7 +22,7 @@ const tool: Tool = {
   slug: 'dns-lookup',
   name: 'DNS Lookup',
   description: 'Resolve A, MX, TXT and other records for any domain, with TTLs and a plain-language status.',
-  category: 'Network',
+  category: 'Web',
   keywords: ['dns', 'domain', 'resolve', 'dig', 'nslookup', 'mx', 'txt', 'a record', 'nameserver', 'record'],
   remote: {
     host: 'dns.google',

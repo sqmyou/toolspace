@@ -17,7 +17,7 @@ const tool: Tool = {
   slug: 'weather-forecast',
   name: 'Weather',
   description: 'A seven-day forecast for any city, from Open-Meteo. No API key, no account, no tracking.',
-  category: 'Network',
+  category: 'Web',
   keywords: ['weather', 'forecast', 'temperature', 'rain', 'snow', 'city', 'meteo', 'climate', 'rain'],
   remote: {
     host: 'api.open-meteo.com',

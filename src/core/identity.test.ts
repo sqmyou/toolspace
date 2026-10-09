@@ -18,7 +18,7 @@ const SLUGS = [
 
 describe('categoryHue', () => {
   it('returns a distinct hue per category across the wheel', () => {
-    const hues = ['Code', 'Crypto', 'Data', 'Design', 'DevOps', 'Media', 'Text'].map(categoryHue)
+    const hues = ['Code', 'Data', 'Design', 'Media', 'Numbers', 'Security', 'Text', 'Web'].map(categoryHue)
     expect(new Set(hues).size).toBe(hues.length)
     expect(hues.every((h) => h >= 0 && h < 360)).toBe(true)
   })

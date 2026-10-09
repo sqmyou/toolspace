@@ -21,7 +21,7 @@ const tool: Tool = {
   slug: 'bluesky-profile',
   name: 'Bluesky Profile',
   description: 'Look up a public Bluesky profile: display name, bio, banner, avatar and follower counts.',
-  category: 'Network',
+  category: 'Web',
   keywords: ['bluesky', 'bsky', 'atproto', 'social', 'profile', 'handle', 'followers', 'did', 'decentralized'],
   remote: {
     host: 'public.api.bsky.app',

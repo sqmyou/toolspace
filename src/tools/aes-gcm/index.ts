@@ -19,7 +19,7 @@ const tool: Tool = {
   slug: 'aes-gcm',
   name: 'AES-GCM Encryptor / Decryptor',
   description: 'Encrypt and decrypt text with a passphrase using AES-256-GCM.',
-  category: 'Crypto',
+  category: 'Security',
   keywords: ['aes', 'gcm', 'encrypt', 'decrypt', 'pbkdf2', 'cipher', 'webcrypto'],
   render(root) {
     const passphrase = textField({ type: 'password', placeholder: 'Passphrase', onInput: () => refreshHint() })

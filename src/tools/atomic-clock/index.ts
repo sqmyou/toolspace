@@ -20,7 +20,7 @@ const tool: Tool = {
   slug: 'atomic-clock',
   name: 'Atomic Clock',
   description: 'A millisecond-precision clock with UTC, ISO timestamps, week numbers and a world-time board — all read locally.',
-  category: 'Time',
+  category: 'Numbers',
   keywords: ['clock', 'time', 'atomic', 'utc', 'iso 8601', 'timestamp', 'timezone', 'world clock', 'week number'],
   render(root) {
     const big = el('div', { class: 'ts-clock-face' }, '--:--:--')
