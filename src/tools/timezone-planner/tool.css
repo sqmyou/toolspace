@@ -1,5 +1,12 @@
-.ts-grid-wrap { margin-top: 4px; }
-.ts-tz-work { color: #34d399; }
-.ts-tz-weekend { color: #fbbf24; }
-.ts-tz-night { color: var(--muted); opacity: 0.55; }
-.ts-tz-best { background: rgba(52, 211, 153, 0.08); }
+.ts-tz-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.ts-tz-bases { margin-top: 4px; }
+.ts-tz-presets { margin-bottom: 12px; }
+.ts-tz-zones { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 14px; }
+
+.ts-tz-base { font-weight: 600; }
+.ts-tz-work { color: var(--ok); font-weight: 600; }
+.ts-tz-awake { color: var(--fg); }
+.ts-tz-weekend { color: var(--warn); }
+.ts-tz-night { color: var(--faint); opacity: 0.6; }
+
+.ts-k-table tbody tr:has(.ts-tz-work) { background: color-mix(in srgb, var(--ok) 7%, transparent); }
