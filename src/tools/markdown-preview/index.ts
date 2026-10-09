@@ -1,5 +1,17 @@
+import {
+  actions,
+  button,
+  copyButton,
+  field,
+  note,
+  panel,
+  stats,
+  stat,
+  textarea,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
-import { copyChip, download } from '../../core/ui'
+import { download } from '../../core/ui'
 import type { Tool } from '../../core/types'
 import { markdownStats, outline, renderMarkdown } from './markdown'
 
@@ -32,44 +44,41 @@ const tool: Tool = {
   category: 'Text',
   keywords: ['markdown', 'md', 'preview', 'render', 'html', 'readme', 'commonmark'],
   render(root) {
-    const input = el('textarea', { class: 'ts-textarea ts-mono', rows: 16, spellcheck: false }) as HTMLTextAreaElement
-    input.value = SAMPLE
+    const input = textarea({ rows: 16, value: SAMPLE, onInput: () => render() })
     const preview = el('div', { class: 'ts-md-preview' })
     const outlineList = el('ol', { class: 'ts-md-outline' })
-    const statsLine = el('p', { class: 'ts-muted' })
+    const readout = stats()
     let html = ''
 
     function render() {
       html = renderMarkdown(input.value)
       // The renderer escapes text before adding any tags, so this is safe.
       preview.innerHTML = html
-      const stats = markdownStats(input.value)
-      statsLine.textContent = `${stats.words} words · ${stats.characters} characters · ${stats.headings} headings · ${stats.links} links · ${stats.codeBlocks} code blocks`
-
-      outlineList.replaceChildren()
-      for (const heading of outline(input.value)) {
-        outlineList.append(el('li', { class: `ts-md-h${heading.level}` }, heading.text))
-      }
+      const info = markdownStats(input.value)
+      readout.replaceChildren(
+        stat({ label: 'Words', value: String(info.words) }),
+        stat({ label: 'Characters', value: String(info.characters) }),
+        stat({ label: 'Headings', value: String(info.headings) }),
+        stat({ label: 'Links', value: String(info.links) }),
+        stat({ label: 'Code blocks', value: String(info.codeBlocks) }),
+      )
+      outlineList.replaceChildren(...outline(input.value).map((heading) => el('li', { class: `ts-md-h${heading.level}` }, heading.text)))
     }
 
-    input.addEventListener('input', render)
-
-    const output = el(
-      'div',
-      { class: 'ts-md-out' },
-      el('div', { class: 'ts-md-out-head' }, el('span', { class: 'ts-muted' }, 'Rendered HTML'), copyChip(() => html, 'Copy HTML'), el('button', { class: 'ts-button', type: 'button', onclick: () => download('markdown.html', html, 'text/html') }, 'Download')),
+    const source = panel({ title: 'Markdown', icon: 'code' }, field(input, { label: 'Markdown' }))
+    const rendered = panel(
+      { title: 'Rendered', icon: 'eye' },
+      actions(copyButton(() => html, { label: 'Copy HTML', size: 'sm' }), button('Download', { icon: 'download', onClick: () => download('markdown.html', html, 'text/html') })),
       preview,
     )
 
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el('div', { class: 'ts-md-grid' }, el('div', { class: 'ts-field' }, el('label', {}, 'Markdown'), input), el('div', { class: 'ts-field' }, el('label', {}, 'Preview'), output)),
-        statsLine,
-        el('h3', { class: 'ts-subhead' }, 'Outline'),
-        outlineList,
-        el('p', { class: 'ts-note' }, 'Markdown is parsed and rendered entirely in your browser. Raw HTML in the source is escaped, never executed.'),
+      toolLayout(
+        { wide: true },
+        el('div', { class: 'ts-k-split' }, source, rendered),
+        readout,
+        panel({ title: 'Outline', icon: 'list' }, outlineList),
+        note('Markdown is parsed and rendered entirely in your browser. Raw HTML in the source is escaped, never executed.'),
       ),
     )
 

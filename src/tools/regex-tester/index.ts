@@ -1,3 +1,16 @@
+import {
+  card,
+  cards,
+  checkbox,
+  copyRow,
+  field,
+  kvList,
+  note,
+  panel,
+  textarea,
+  textField,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
 import type { Tool } from '../../core/types'
 import { explain, highlight, runRegex } from './regex'
@@ -11,88 +24,61 @@ const tool: Tool = {
   category: 'Regex',
   keywords: ['regex', 'regexp', 'regular expression', 'match', 'capture group', 'pattern'],
   render(root) {
-    const pattern = el('input', {
-      class: 'ts-input ts-mono',
-      value: '\\b\\w+@\\w+\\.\\w+\\b',
-      spellcheck: false,
-      'aria-label': 'Pattern',
-    }) as HTMLInputElement
-    const sample = el('textarea', {
-      class: 'ts-textarea',
-      rows: 6,
-      value: 'Contact dev@example.com or ops@team.io today.',
-      'aria-label': 'Test text',
-    }) as HTMLTextAreaElement
+    const pattern = textField({ value: '\\b\\w+@\\w+\\.\\w+\\b', mono: true, onInput: () => render() })
+    const sample = textarea({ rows: 6, value: 'Contact dev@example.com or ops@team.io today.', onInput: () => render() })
 
     const flags = new Set<string>(['g'])
-    const flagRow = el('div', { class: 'ts-row ts-wrap' })
-    for (const flag of FLAGS) {
-      const box = el('input', { type: 'checkbox', checked: flags.has(flag) }) as HTMLInputElement
-      box.addEventListener('change', () => {
-        if (box.checked) flags.add(flag)
-        else flags.delete(flag)
-        render()
-      })
-      flagRow.append(el('label', { class: 'ts-inline-field' }, box, flag))
-    }
+    const flagBoxes = FLAGS.map((flag) =>
+      checkbox({
+        label: flag,
+        checked: flags.has(flag),
+        onChange: (checked) => {
+          if (checked) flags.add(flag)
+          else flags.delete(flag)
+          render()
+        },
+      }),
+    )
 
-    const error = el('p', { class: 'ts-error', hidden: true })
+    const error = note('', 'danger')
+    error.hidden = true
     const preview = el('div', { class: 'ts-regex-preview' })
-    const matchList = el('div', { class: 'ts-copy-list' })
-    const explanation = el('div', { class: 'ts-explain-list' })
+    const matches = kvList()
+    const explanation = cards()
 
     function render() {
-      const flagString = FLAGS.filter((f) => flags.has(f)).join('')
-      const { matches, error: err } = runRegex(pattern.value, flagString, sample.value)
-      error.hidden = !err
-      if (err) error.textContent = err
+      const flagString = FLAGS.filter((flag) => flags.has(flag)).join('')
+      const result = runRegex(pattern.value, flagString, sample.value)
+      error.hidden = !result.error
+      if (result.error) error.textContent = result.error
 
-      const parts = highlight(sample.value, matches)
       preview.replaceChildren(
-        ...parts.map((part) => el('span', part.match ? { class: 'ts-regex-hit' } : {}, part.text)),
+        ...highlight(sample.value, result.matches).map((part) => el('span', part.match ? { class: 'ts-regex-hit' } : {}, part.text)),
       )
 
-      matchList.replaceChildren(
-        el('p', { class: 'ts-muted' }, `${matches.length} match${matches.length === 1 ? '' : 'es'}`),
-        ...matches.slice(0, 100).map((match, index) =>
-          el(
-            'div',
-            { class: 'ts-copy-row' },
-            el('span', { class: 'ts-muted' }, `#${index + 1} @${match.index}`),
-            el('span', { class: 'ts-value ts-mono' }, match.value || '(empty)'),
-          ),
-        ),
+      const found = result.matches.slice(0, 100)
+      matches.replaceChildren(
+        ...(found.length
+          ? found.map((match, index) => copyRow(`#${index + 1} @${match.index}`, match.value || '(empty)', { copy: false }))
+          : [note('No matches.')]),
       )
 
-      explanation.replaceChildren(
-        ...explain(pattern.value).map((item) =>
-          el(
-            'div',
-            { class: 'ts-explain-row' },
-            el('code', { class: 'ts-mono ts-value' }, item.token),
-            el('span', { class: 'ts-muted' }, item.meaning),
-          ),
-        ),
-      )
+      explanation.replaceChildren(...explain(pattern.value).map((item) => card({ title: item.token }, item.meaning)))
     }
 
-    pattern.addEventListener('input', render)
-    sample.addEventListener('input', render)
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'Pattern'), pattern),
-        flagRow,
-        error,
-        el('div', { class: 'ts-field' }, el('label', {}, 'Test text'), sample),
-        el('h3', { class: 'ts-subhead' }, 'Matches'),
-        preview,
-        matchList,
-        el('h3', { class: 'ts-subhead' }, 'Explanation'),
-        explanation,
-        el('p', { class: 'ts-note' }, 'The expression runs in your browser against your text only.'),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Pattern', icon: 'search' },
+          field(pattern, { label: 'Pattern' }),
+          el('div', { class: 'ts-k-actions' }, ...flagBoxes),
+          error,
+        ),
+        panel({ title: 'Test text', icon: 'text' }, field(sample, { label: 'Test text' }), preview),
+        panel({ title: 'Matches', icon: 'list' }, matches),
+        panel({ title: 'Explanation', icon: 'info' }, explanation),
+        note('The expression runs in your browser against your text only.'),
       ),
     )
 

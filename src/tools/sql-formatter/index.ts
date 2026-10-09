@@ -1,4 +1,13 @@
-import { el } from '../../core/dom'
+import {
+  actions,
+  field,
+  note,
+  outputBlock,
+  panel,
+  select,
+  textarea,
+  toolLayout,
+} from '../../core/components'
 import type { Tool } from '../../core/types'
 import { DEFAULT_FORMAT_OPTIONS, DIALECTS, formatSql, SqlFormatError, type Dialect, type FormatOptions } from './sql'
 
@@ -13,34 +22,10 @@ const tool: Tool = {
   render(root) {
     const options: FormatOptions = { ...DEFAULT_FORMAT_OPTIONS }
 
-    const input = el('textarea', {
-      class: 'ts-output ts-textarea',
-      rows: 8,
-      spellcheck: false,
-      placeholder: 'Paste SQL here…',
-      value: EXAMPLE,
-    }) as HTMLTextAreaElement
-
-    const output = el('textarea', {
-      class: 'ts-output ts-textarea',
-      rows: 12,
-      readonly: true,
-      spellcheck: false,
-      'aria-label': 'Formatted SQL',
-    }) as HTMLTextAreaElement
-
-    const status = el('p', { class: 'ts-error', hidden: true })
-
-    function select(label: string, values: readonly string[], current: string, onChange: (v: string) => void) {
-      const node = el('select', {
-        class: 'ts-select',
-        onchange: (e: Event) => onChange((e.target as HTMLSelectElement).value),
-      }) as HTMLSelectElement
-      for (const value of values) {
-        node.append(el('option', { value, selected: value === current }, value))
-      }
-      return el('label', { class: 'ts-inline-field' }, el('span', {}, label), node)
-    }
+    const input = textarea({ rows: 8, value: EXAMPLE, placeholder: 'Paste SQL here…', onInput: () => run() })
+    const error = note('', 'danger')
+    error.hidden = true
+    const output = outputBlock('', { label: 'Formatted SQL', copy: () => output.body.textContent ?? '' })
 
     function run() {
       const sql = input.value
@@ -48,53 +33,53 @@ const tool: Tool = {
         .then((formatted) => {
           // Ignore stale results if the user kept typing while the library loaded.
           if (input.value !== sql) return
-          output.value = formatted
-          status.hidden = true
+          output.body.replaceChildren(formatted)
+          output.setMeta('')
+          error.hidden = true
         })
-        .catch((error) => {
+        .catch((err) => {
           if (input.value !== sql) return
-          output.value = ''
-          status.textContent = error instanceof SqlFormatError ? error.message : 'Could not format this SQL.'
-          status.hidden = false
+          output.body.replaceChildren('')
+          output.setMeta('')
+          error.textContent = err instanceof SqlFormatError ? err.message : 'Could not format this SQL.'
+          error.hidden = false
         })
     }
-
-    async function copy() {
-      if (!output.value) return
-      try {
-        await navigator.clipboard.writeText(output.value)
-        copyButton.textContent = 'Copied'
-        setTimeout(() => (copyButton.textContent = 'Copy'), 1200)
-      } catch {
-        output.select()
-      }
-    }
-
-    const copyButton = el('button', { class: 'ts-button', onclick: copy }, 'Copy')
-
-    input.addEventListener('input', run)
 
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el(
-          'div',
-          { class: 'ts-row ts-wrap' },
-          select('Dialect', DIALECTS, options.dialect, (v) => {
-            options.dialect = v as Dialect
-            run()
-          }),
-          select('Keywords', ['upper', 'lower', 'preserve'], options.keywordCase, (v) => {
-            options.keywordCase = v as FormatOptions['keywordCase']
-            run()
-          }),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Query', icon: 'code' },
+          actions(
+            field(
+              select({
+                value: options.dialect,
+                options: DIALECTS.map((value) => ({ value, label: value })),
+                onChange: (value) => {
+                  options.dialect = value as Dialect
+                  run()
+                },
+              }),
+              { label: 'Dialect' },
+            ),
+            field(
+              select({
+                value: options.keywordCase,
+                options: ['upper', 'lower', 'preserve'].map((value) => ({ value, label: value })),
+                onChange: (value) => {
+                  options.keywordCase = value as FormatOptions['keywordCase']
+                  run()
+                },
+              }),
+              { label: 'Keywords' },
+            ),
+          ),
+          field(input, { label: 'Input' }),
+          error,
         ),
-        el('div', { class: 'ts-field' }, el('label', {}, 'Input'), input),
-        el('div', { class: 'ts-row ts-between' }, el('label', { class: 'ts-muted' }, 'Formatted'), copyButton),
         output,
-        status,
-        el('p', { class: 'ts-note' }, 'Formatting happens entirely in your browser. Your queries are never uploaded.'),
+        note('Formatting happens entirely in your browser. Your queries are never uploaded.'),
       ),
     )
 
