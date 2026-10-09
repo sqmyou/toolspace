@@ -1,146 +1,248 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
+  PALETTE_KEYS,
   PRESETS,
   activeTheme,
+  applyThemeToDocument,
+  basePalette,
+  customFrom,
   inkFor,
-  luminance,
+  isHex,
   onThemeChange,
-  parseHex,
   presetById,
+  resolvePalette,
   strongFor,
-  toHex,
   useCustom,
   usePreset,
 } from './theme'
+import type { CustomTheme } from './theme'
 
-/** A stand-in for the browser's localStorage, which node does not provide. */
-function installStorage() {
+function installStorage(): Map<string, string> {
   const store = new Map<string, string>()
-  const fake = {
-    getItem: (key: string) => store.get(key) ?? null,
-    setItem: (key: string, value: string) => void store.set(key, value),
-    removeItem: (key: string) => void store.delete(key),
-    clear: () => store.clear(),
-    key: () => null,
-    length: 0,
-  }
-  Object.defineProperty(globalThis, 'localStorage', { value: fake, configurable: true })
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => void store.set(key, value),
+      removeItem: (key: string) => void store.delete(key),
+    },
+  })
   return store
 }
 
+/** A document stub: one element with a dataset and inline style map. */
+function installDocument() {
+  const props: Record<string, string> = {}
+  const dataset: Record<string, string> = {}
+  const meta = { attrs: {} as Record<string, string>, setAttribute(k: string, v: string) { this.attrs[k] = v } }
+  const root = {
+    dataset,
+    style: {
+      setProperty: (name: string, value: string) => void (props[name] = value),
+      getPropertyValue: (name: string) => props[name] ?? '',
+    },
+  }
+  Object.defineProperty(globalThis, 'document', {
+    configurable: true,
+    value: {
+      documentElement: root,
+      querySelector: (selector: string) => (selector.includes('theme-color') ? meta : null),
+    },
+  })
+  return { props, dataset, meta }
+}
+
 describe('theme presets', () => {
-  it('ships at least five and has a unique id and accent each', () => {
-    expect(PRESETS.length).toBeGreaterThanOrEqual(5)
-    expect(new Set(PRESETS.map((p) => p.id)).size).toBe(PRESETS.length)
-    expect(new Set(PRESETS.map((p) => p.accent.toLowerCase())).size).toBe(PRESETS.length)
-    expect(PRESETS.every((p) => parseHex(p.accent) !== null)).toBe(true)
+  it('ships a spread of presets with unique ids', () => {
+    expect(PRESETS.length).toBeGreaterThanOrEqual(10)
+    const ids = new Set(PRESETS.map((p) => p.id))
+    expect(ids.size).toBe(PRESETS.length)
   })
 
-  it('has both dark and light options', () => {
+  it('has both dark and light presets', () => {
     expect(PRESETS.some((p) => p.dark)).toBe(true)
     expect(PRESETS.some((p) => !p.dark)).toBe(true)
   })
 
-  it('defaults to the first preset', () => {
-    installStorage()
-    const theme = activeTheme()
-    expect(theme.presetId).toBe(PRESETS[0].id)
-    expect(theme.accent).toBe(PRESETS[0].accent)
-    expect(theme.custom).toBeNull()
+  it('gives every preset a full, valid palette', () => {
+    for (const preset of PRESETS) {
+      for (const key of PALETTE_KEYS) {
+        expect(isHex(preset.palette[key]), `${preset.id}.${key}`).toBe(true)
+      }
+      expect(isHex(preset.accent)).toBe(true)
+    }
+  })
+
+  it('looks presets up by id', () => {
+    expect(presetById('iris')?.name).toBe('Iris')
+    expect(presetById('nope')).toBeUndefined()
   })
 })
 
-describe('colour maths', () => {
-  it('parses #rgb and #rrggbb, and rejects nonsense', () => {
-    expect(parseHex('#fff')).toEqual([255, 255, 255])
-    expect(parseHex('ccff4d')).toEqual([204, 255, 77])
-    expect(parseHex('#12345')).toBeNull()
-    expect(parseHex('rebeccapurple')).toBeNull()
-  })
-
-  it('round-trips a colour through toHex', () => {
-    expect(toHex([204, 255, 77])).toBe('#ccff4d')
-    expect(toHex([0, 0, 0])).toBe('#000000')
-    expect(toHex([300, -5, 12])).toBe('#ff000c')
-  })
-
-  it('orders luminance black < grey < white', () => {
-    expect(luminance('#000000')).toBeLessThan(luminance('#808080'))
-    expect(luminance('#808080')).toBeLessThan(luminance('#ffffff'))
-  })
-
-  it('picks legible ink for the accent', () => {
+describe('theme maths', () => {
+  it('picks ink that contrasts with the accent', () => {
     expect(inkFor('#ccff4d')).toBe('#0b0d11')
-    expect(inkFor('#2450c8')).toBe('#ffffff')
+    expect(inkFor('#0b0d11')).toBe('#ffffff')
   })
 
-  it('lifts the focus colour on dark and deepens it on light', () => {
-    const dark = strongFor('#ccff4d', true)
-    const light = strongFor('#4f7a12', false)
-    expect(luminance(dark)).toBeGreaterThan(luminance('#ccff4d'))
-    expect(luminance(light)).toBeLessThan(luminance('#4f7a12'))
+  it('strengthens an accent toward the far end of the ramp', () => {
+    const dark = strongFor('#808080', true)
+    const light = strongFor('#808080', false)
+    expect(dark).not.toBe('#808080')
+    expect(light).not.toBe(dark)
+  })
+
+  it('leaves an unparseable accent alone', () => {
+    expect(strongFor('not-a-colour', true)).toBe('not-a-colour')
+  })
+
+  it('validates hex', () => {
+    expect(isHex('#AABBCC')).toBe(true)
+    expect(isHex('#abc')).toBe(false)
+    expect(isHex('red')).toBe(false)
   })
 })
 
-describe('stored themes', () => {
+describe('theme storage', () => {
   let store: Map<string, string>
+
   beforeEach(() => {
     store = installStorage()
   })
 
-  it('persists a preset choice and reports the change', () => {
-    const seen: string[] = []
-    onThemeChange(() => seen.push('change'))
-    usePreset('iris')
-    expect(seen).toEqual(['change'])
-    expect(activeTheme().presetId).toBe('iris')
-    expect(activeTheme().accent).toBe('#a78bfa')
-    expect(JSON.parse(store.get('toolspace:accent')!)).toEqual({ presetId: 'iris' })
-    expect(store.get('toolspace:theme')).toBe('dark')
+  it('defaults to the first preset', () => {
+    const active = activeTheme()
+    expect(active.presetId).toBe('voltage')
+    expect(active.dark).toBe(true)
   })
 
-  it('switches the mode for a light preset', () => {
+  it('round-trips a stored preset', () => {
     usePreset('paper')
-    expect(store.get('toolspace:theme')).toBe('light')
-    expect(activeTheme().dark).toBe(false)
+    const active = activeTheme()
+    expect(active.presetId).toBe('paper')
+    expect(active.dark).toBe(false)
   })
 
-  it('ignores an unknown preset id', () => {
-    usePreset('nope')
-    expect(activeTheme().presetId).toBe(PRESETS[0].id)
+  it('falls back when the stored preset no longer exists', () => {
+    store.set('toolspace:theme', JSON.stringify({ presetId: 'deleted' }))
+    expect(activeTheme().presetId).toBe('voltage')
   })
 
-  it('stores and restores a custom theme', () => {
-    useCustom({ name: 'Mine', dark: true, accent: '#ff0080', bg: '#101418' })
-    const theme = activeTheme()
-    expect(theme.presetId).toBeNull()
-    expect(theme.name).toBe('Mine')
-    expect(theme.accent).toBe('#ff0080')
-    expect(theme.bg).toBe('#101418')
+  it('round-trips a custom theme', () => {
+    const custom: CustomTheme = {
+      name: 'Mine',
+      dark: true,
+      base: 'voltage',
+      palette: { bg: '#101010', border: '#222222' },
+      accent: '#ff0080',
+    }
+    useCustom(custom)
+    const active = activeTheme()
+    expect(active.custom?.name).toBe('Mine')
+    expect(active.accent).toBe('#ff0080')
+    expect(active.palette.bg).toBe('#101010')
+    // An override that was not set inherits from the base ramp.
+    expect(active.palette.bgElevated).toBe(basePalette(true).bgElevated)
   })
 
-  it('rejects a custom theme with a bad accent and falls back to the default', () => {
-    store.set('toolspace:accent', JSON.stringify({ custom: { accent: 'not-a-colour', dark: true } }))
-    expect(activeTheme().presetId).toBe(PRESETS[0].id)
+  it('rejects a custom theme with an invalid accent', () => {
+    store.set('toolspace:theme', JSON.stringify({ custom: { name: 'x', accent: 'pink' } }))
+    expect(activeTheme().custom).toBeNull()
   })
 
-  it('drops a bad background but keeps the accent', () => {
+  it('drops invalid palette entries but keeps the rest', () => {
     store.set(
-      'toolspace:accent',
-      JSON.stringify({ custom: { name: 'X', accent: '#336699', dark: true, bg: 'garbage' } }),
+      'toolspace:theme',
+      JSON.stringify({
+        custom: { accent: '#ff0080', name: 'x', dark: true, base: 'voltage', palette: { bg: 'nope', fg: '#ffffff' } },
+      }),
     )
-    const theme = activeTheme()
-    expect(theme.accent).toBe('#336699')
-    expect(theme.bg).toBeNull()
+    const active = activeTheme()
+    expect(active.palette.fg).toBe('#ffffff')
+    expect(active.palette.bg).toBe(basePalette(true).bg)
   })
 
-  it('falls back to the default on corrupt storage', () => {
-    store.set('toolspace:accent', '{not json')
-    expect(activeTheme().presetId).toBe(PRESETS[0].id)
+  it('notifies subscribers', () => {
+    let calls = 0
+    const off = onThemeChange(() => {
+      calls += 1
+    })
+    usePreset('iris')
+    expect(calls).toBe(1)
+    off()
   })
 
-  it('exposes presetById', () => {
-    expect(presetById('ember')?.name).toBe('Ember')
-    expect(presetById('missing')).toBeUndefined()
+  it('survives a corrupt blob', () => {
+    store.set('toolspace:theme', 'not json')
+    expect(activeTheme().presetId).toBe('voltage')
+  })
+})
+
+describe('resolvePalette', () => {
+  it('overlays only valid overrides', () => {
+    const out = resolvePalette(basePalette(true), { bg: '#000000', fg: 'bad' })
+    expect(out.bg).toBe('#000000')
+    expect(out.fg).toBe(basePalette(true).fg)
+  })
+})
+
+describe('customFrom', () => {
+  it('records only the colours that differ from the base', () => {
+    usePreset('iris')
+    const custom = customFrom(activeTheme(), 'iris')
+    expect(custom.palette).toEqual({})
+    expect(custom.accent).toBe(presetById('iris')!.accent)
+  })
+})
+
+describe('applyThemeToDocument', () => {
+  let dom: ReturnType<typeof installDocument>
+
+  beforeEach(() => {
+    installStorage()
+    dom = installDocument()
+  })
+
+  it('writes the ramp and accent onto the document', () => {
+    usePreset('iris')
+    applyThemeToDocument(activeTheme())
+    expect(dom.dataset.theme).toBe('dark')
+    expect(dom.props['--accent']).toBe(presetById('iris')!.accent)
+    expect(dom.props['--bg']).toBe(presetById('iris')!.palette.bg)
+  })
+
+  it('derives the ink and strong accent', () => {
+    usePreset('iris')
+    applyThemeToDocument(activeTheme())
+    expect(dom.props['--accent-ink']).toBe(inkFor(presetById('iris')!.accent))
+    expect(dom.props['--accent-strong']).toBe(strongFor(presetById('iris')!.accent, true))
+  })
+
+  it('updates the theme-color meta tag', () => {
+    usePreset('paper')
+    applyThemeToDocument(activeTheme())
+    expect(dom.meta.attrs.content).toBe(presetById('paper')!.palette.bg)
+  })
+
+  it('caches the resolved variables for the pre-paint script', () => {
+    usePreset('iris')
+    applyThemeToDocument(activeTheme())
+    const cached = JSON.parse(localStorage.getItem('toolspace:theme-vars')!)
+    expect(cached.dark).toBe(true)
+    expect(cached.vars['--accent']).toBe(presetById('iris')!.accent)
+  })
+
+  it('survives a throwing localStorage when caching', () => {
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem: () => null,
+        setItem: () => {
+          throw new Error('blocked')
+        },
+        removeItem: () => {},
+      },
+    })
+    expect(() => applyThemeToDocument(activeTheme())).not.toThrow()
   })
 })

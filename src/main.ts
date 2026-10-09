@@ -1,8 +1,10 @@
 import './styles/main.css'
+import { applySettings } from './core/settings'
 import { loadToolStyles } from './core/tool-styles'
 import { initTheme, mountApp } from './ui/app'
 
 loadToolStyles()
+applySettings()
 initTheme()
 
 const app = document.getElementById('app')

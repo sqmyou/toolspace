@@ -2,10 +2,12 @@ import { clear, el } from '../core/dom'
 import { favourites, isFavourite, onFavouritesChange, toggleFavourite } from '../core/favourites'
 import { icon, iconEl } from '../core/icons'
 import { categoryHue, sigilTile } from '../core/identity'
-import { networkEnabled, onPreferencesChange, setNetworkEnabled } from '../core/preferences'
+import { remember } from '../core/recents'
 import { findTool, searchTools, tools } from '../core/registry'
-import { PRESETS, activeTheme, applyThemeToDocument, useCustom, usePreset } from '../core/theme'
+import { networkEnabled, onSettingsChange, setting } from '../core/settings'
+import { activeTheme, applyThemeToDocument } from '../core/theme'
 import type { Tool } from '../core/types'
+import { settingsPage } from './settings'
 
 /**
  * The tools currently on offer. A user who has switched network tools off sees
@@ -60,13 +62,17 @@ function starButton(slug: string, name: string): HTMLButtonElement {
  * tools declare an emoji; where they do it rides along beside the sigil.
  */
 function tileEl(tool: Tool, size = 34): HTMLElement {
-  return sigilTile(tool.slug, tool.category, size)
+  // The sigil is a setting: when it is off, no tile is added and the layout
+  // closes up rather than leaving a gap.
+  return setting('showSigils')
+    ? sigilTile(tool.slug, tool.category, size)
+    : el('span', { class: 'ts-sigil-off', 'aria-hidden': 'true' })
 }
 
 /* --------------------------------------------------------------------------
    Theme. Presets and custom themes live in core/theme.ts; this file only
-   paints them and offers the picker. The picker writes a preset id or a
-   custom theme, and the module owns every bit of the storage shape.
+   paints them. Every colour, including a custom palette, is written by that
+   module — see also the settings page in ui/settings.ts.
    -------------------------------------------------------------------------- */
 
 /** Paint the stored theme. Called before first paint by main.ts. */
@@ -455,7 +461,7 @@ function home(): HTMLElement {
           el('span', { class: 'ts-mstat-label' }, 'use the network'),
         ),
       ),
-      networkToggle(),
+      settingsLink(),
     ),
     pinned,
     el('div', { class: 'ts-browse' }, el('span', { class: 'ts-browse-label' }, 'Browse'), catBar),
@@ -464,30 +470,17 @@ function home(): HTMLElement {
 }
 
 /**
- * The network-tools switch. Off means the site behaves as if every network
- * tool did not exist, so a user who wants a strictly offline toolspace can
- * have one without relying on the CSP or their connection.
+ * A quiet link to the settings page, shown in the masthead. The switch that
+ * used to live here now sits with every other preference, so there is one
+ * place to look rather than one setting on the home page and the rest hidden.
  */
-function networkToggle(): HTMLElement {
-  const box = el('input', { type: 'checkbox', class: 'ts-switch-input' }) as HTMLInputElement
-  box.checked = networkEnabled()
-  box.setAttribute('aria-label', 'Allow tools that use the network')
-  const root = el(
-    'label',
-    { class: 'ts-switch' },
-    box,
-    el('span', { class: 'ts-switch-track', 'aria-hidden': 'true' }, el('span', { class: 'ts-switch-thumb' })),
-    el(
-      'span',
-      { class: 'ts-switch-text' },
-      el('strong', {}, 'Network tools'),
-      el('span', { class: 'ts-switch-hint' }, networkEnabled() ? 'available, and marked' : 'hidden'),
-    ),
+function settingsLink(): HTMLElement {
+  return el(
+    'a',
+    { class: 'ts-masthead-settings', href: '#/settings' },
+    iconEl('sliders', 14),
+    el('span', {}, 'Settings'),
   )
-  box.addEventListener('change', () => {
-    setNetworkEnabled(box.checked)
-  })
-  return root
 }
 
 function notFound(slug: string, palette: Palette): HTMLElement {
@@ -604,212 +597,6 @@ function toolPage(tool: Tool, palette: Palette): HTMLElement {
   return section
 }
 
-
-/**
- * The theme picker: eight presets, a colour to build your own, and a save box
- * for named themes. Everything it writes is one accent (and optionally a
- * background), which is the whole theming surface — see core/theme.ts.
- */
-function currentBg(): string {
-  const value = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()
-  return /^#[0-9a-f]{6}$/i.test(value) ? value : '#0b0d11'
-}
-
-function themePicker(): HTMLElement {
-  const wrap = el('div', { class: 'ts-theme-wrap' })
-
-  const panel = el('div', {
-    class: 'ts-theme-panel',
-    role: 'dialog',
-    'aria-label': 'Appearance',
-    hidden: true,
-  })
-
-  const trigger = el(
-    'button',
-    {
-      type: 'button',
-      class: 'ts-icon-btn',
-      'aria-label': 'Appearance',
-      'aria-haspopup': 'dialog',
-      'aria-expanded': 'false',
-      title: 'Colour theme',
-    },
-    iconEl('palette', 17),
-  )
-
-  function close() {
-    panel.hidden = true
-    trigger.setAttribute('aria-expanded', 'false')
-  }
-
-  function open() {
-    panel.hidden = false
-    trigger.setAttribute('aria-expanded', 'true')
-  }
-
-  document.addEventListener('click', (event) => {
-    if (!panel.hidden && !wrap.contains(event.target as Node)) close()
-  })
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !panel.hidden) {
-      close()
-      trigger.focus()
-    }
-  })
-
-  trigger.addEventListener('click', () => (panel.hidden ? open() : close()))
-
-  function paint() {
-    const active = activeTheme()
-    clear(panel)
-
-    const presetGrid = el('div', { class: 'ts-theme-presets', role: 'list' })
-    for (const preset of PRESETS) {
-      const isActive = active.presetId === preset.id
-      presetGrid.append(
-        el(
-          'button',
-          {
-            type: 'button',
-            class: `ts-theme-preset${isActive ? ' is-active' : ''}`,
-            role: 'listitem',
-            'aria-pressed': String(isActive),
-            title: preset.name,
-            onclick: () => {
-              usePreset(preset.id)
-              applyThemeToDocument(activeTheme())
-              paint()
-            },
-          },
-          el('span', { class: 'ts-theme-swatch', style: `--sw:${preset.accent}` }),
-          el('span', { class: 'ts-theme-preset__name' }, preset.name),
-        ),
-      )
-    }
-
-    panel.append(
-      el('p', { class: 'ts-theme-head' }, 'Appearance'),
-      el('p', { class: 'ts-theme-label' }, 'Preset'),
-      presetGrid,
-      el('p', { class: 'ts-theme-label' }, 'Your own'),
-    )
-
-    // A small custom builder: an accent, an optional background, and a name.
-    const custom = active.custom
-    const accent = el('input', {
-      type: 'color',
-      class: 'ts-theme-color',
-      'aria-label': 'Accent colour',
-      value: custom?.accent ?? active.accent,
-    }) as HTMLInputElement
-    const bgOn = el('input', {
-      type: 'checkbox',
-      class: 'ts-theme-toggle',
-      checked: Boolean(custom?.bg),
-      'aria-label': 'Set a background colour',
-    }) as HTMLInputElement
-    const bg = el('input', {
-      type: 'color',
-      class: 'ts-theme-color',
-      'aria-label': 'Background colour',
-      value: custom?.bg ?? currentBg(),
-    }) as HTMLInputElement
-    const name = el('input', {
-      type: 'text',
-      class: 'ts-theme-name',
-      placeholder: 'Untitled theme',
-      maxlength: '24',
-      'aria-label': 'Theme name',
-      value: custom?.name ?? '',
-    }) as HTMLInputElement
-    const darkOn = el('input', {
-      type: 'checkbox',
-      class: 'ts-theme-toggle',
-      checked: custom?.dark ?? active.dark,
-      'aria-label': 'Dark ramp',
-    }) as HTMLInputElement
-
-    function preview() {
-      applyThemeToDocument({
-        presetId: null,
-        custom: null,
-        dark: darkOn.checked,
-        accent: accent.value,
-        bg: bgOn.checked ? bg.value : null,
-        name: name.value || 'Custom',
-      })
-    }
-    accent.addEventListener('input', preview)
-    bg.addEventListener('input', preview)
-    bgOn.addEventListener('change', () => {
-      bg.disabled = !bgOn.checked
-      preview()
-    })
-    darkOn.addEventListener('change', preview)
-    bg.disabled = !bgOn.checked
-
-    panel.append(
-      el(
-        'div',
-        { class: 'ts-theme-builder' },
-        el('span', { class: 'ts-theme-label' }, 'Accent'),
-        accent,
-        el('label', { class: 'ts-theme-check' }, darkOn, el('span', {}, 'Dark background')),
-        el('label', { class: 'ts-theme-check' }, bgOn, el('span', {}, 'Custom background')),
-        bg,
-      ),
-      el(
-        'div',
-        { class: 'ts-theme-save' },
-        name,
-        el(
-          'button',
-          {
-            type: 'button',
-            class: 'ts-k-btn ts-k-btn--sm',
-            onclick: () => {
-              useCustom({
-                name: name.value.trim() || 'Custom',
-                dark: darkOn.checked,
-                accent: accent.value,
-                bg: bgOn.checked ? bg.value : null,
-              })
-              applyThemeToDocument(activeTheme())
-              paint()
-            },
-          },
-          'Save theme',
-        ),
-      ),
-      custom
-        ? el(
-            'p',
-            { class: 'ts-theme-active' },
-            `“${custom.name}” saved on this device. `,
-            el(
-              'button',
-              {
-                type: 'button',
-                class: 'ts-theme-reset',
-                onclick: () => {
-                  usePreset(PRESETS[0].id)
-                  applyThemeToDocument(activeTheme())
-                  paint()
-                },
-              },
-              'Reset to Voltage',
-            ),
-          )
-        : el('p', { class: 'ts-theme-active' }, 'Saved on this device only.'),
-    )
-  }
-
-  paint()
-  wrap.append(trigger, panel)
-  return wrap
-}
-
 const BRAND_MARK =
   '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"><path d="M12 2.6 20.4 7.4v9.2L12 21.4 3.6 16.6V7.4z"/><circle cx="12" cy="12" r="3.1" fill="currentColor" stroke="none"/></svg>'
 
@@ -841,7 +628,9 @@ function offlineBanner(): HTMLElement {
  */
 function revealOnScroll(root: HTMLElement): void {
   if (typeof IntersectionObserver === 'undefined') return
-  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+  const motion = setting('motion')
+  if (motion === 'reduced') return
+  if (motion === 'system' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
   const targets = [...root.querySelectorAll<HTMLElement>('.ts-reveal')]
   if (targets.length === 0) return
   const observer = new IntersectionObserver(
@@ -881,8 +670,6 @@ export function mountApp(app: HTMLElement): void {
     el('kbd', {}, 'Ctrl K'),
   )
 
-  const themeBtn = themePicker()
-
   const brandMark = el('span', { class: 'ts-brand-mark', 'aria-hidden': 'true' })
   brandMark.innerHTML = BRAND_MARK
 
@@ -897,7 +684,16 @@ export function mountApp(app: HTMLElement): void {
     ),
     el('span', { class: 'ts-header-spacer' }),
     searchTrigger,
-    themeBtn,
+    el(
+      'a',
+      {
+        class: 'ts-icon-btn ts-header-settings',
+        href: '#/settings',
+        'aria-label': 'Settings',
+        title: 'Settings',
+      },
+      iconEl('sliders', 17),
+    ),
   )
 
   const toTop = el(
@@ -920,12 +716,15 @@ export function mountApp(app: HTMLElement): void {
     window.scrollTo({ top: 0 })
     if (!slug) {
       main.append(home())
+    } else if (slug === 'settings') {
+      main.append(settingsPage())
     } else {
       const tool = findTool(slug)
       // A network tool that is switched off is treated as if it does not
       // exist, so a stale link cannot quietly make a cross-origin request.
       const hidden = tool != null && Boolean(tool.remote) && !networkEnabled()
       main.append(tool && !hidden ? toolPage(tool, palette) : notFound(slug, palette))
+      if (tool && !hidden && setting('recents')) remember(tool.slug)
     }
     revealOnScroll(main)
   }
@@ -944,7 +743,7 @@ export function mountApp(app: HTMLElement): void {
   window.addEventListener('hashchange', fromHash)
   // Switching network tools off or on rebuilds the current view, so a hidden
   // tool cannot linger on the page and the counts stay truthful.
-  onPreferencesChange(fromHash)
+  onSettingsChange(fromHash)
 
   app.append(offlineBanner(), header, main, toTop)
   fromHash()

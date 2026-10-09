@@ -92,8 +92,10 @@
   --muted: #99a3b2;
   --faint: #7e8794;
 
-  /* The one high-voltage accent. Presets and custom themes override these two
-     inline; every softer shade is mixed from them, so a theme is one colour. */
+  /* The one high-voltage accent. Presets and custom themes write these inline;
+     every softer shade is mixed from the accent, so a theme's "feel" is one
+     colour plus the ramp. `--accent-strong` is derived by core/theme.ts so the
+     focus ring tracks the accent in both ramps. */
   --accent: #ccff4d;
   --accent-strong: #d9ff70;
   --accent-ink: #0f1501;
@@ -207,17 +209,9 @@
   }
 }
 
-/* A custom background re-ramps the whole surface from that one colour: a
-   touch lighter for the soft fills, darker for insets. The user picks one
-   colour, not five, so every shade is mixed from it. Declared last so it wins
-   over both the base and the light ramp. */
-:root[data-bg="custom"] {
-  --bg-soft: color-mix(in srgb, var(--bg) 94%, var(--fg));
-  --bg-input: color-mix(in srgb, var(--bg) 96%, #000);
-  --bg-elevated: color-mix(in srgb, var(--bg) 90%, var(--fg));
-  --border: color-mix(in srgb, var(--bg) 82%, var(--fg));
-  --border-strong: color-mix(in srgb, var(--bg) 66%, var(--fg));
-}
+/* A custom theme can set any surface, so the palette is written inline by
+   core/theme.ts and the ramp blocks above are only the defaults. Nothing extra
+   is needed here — this comment marks why there is no `[data-bg]` override. */
 
 * { box-sizing: border-box; }
 
@@ -285,232 +279,6 @@ a { color: inherit; }
   background: color-mix(in srgb, var(--bg) 86%, transparent);
   backdrop-filter: blur(12px) saturate(1.2);
   border-bottom: 1px solid var(--border);
-}
-
-/* --- Theme picker: a small popover under the header palette button. -------- */
-.ts-theme-wrap { position: relative; display: flex; }
-.ts-theme-panel {
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  z-index: 40;
-  width: min(340px, calc(100vw - 28px));
-  padding: 15px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-lg);
-  background: var(--bg-elevated);
-  box-shadow: var(--shadow);
-}
-.ts-theme-panel[hidden] { display: none; }
-.ts-theme-head {
-  margin: 0 0 12px;
-  font-size: var(--text-md);
-  font-weight: 600;
-  letter-spacing: var(--tracking-tight);
-}
-.ts-theme-label {
-  margin: 0 0 7px;
-  font-family: var(--mono);
-  font-size: var(--text-2xs);
-  letter-spacing: var(--tracking-mono);
-  text-transform: uppercase;
-  color: var(--faint);
-}
-.ts-theme-presets {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 7px;
-  margin-bottom: 14px;
-}
-.ts-theme-preset {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  padding: 8px 4px 6px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-soft);
-  color: var(--muted);
-  font-size: var(--text-2xs);
-  cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
-}
-.ts-theme-preset:hover { border-color: var(--border-strong); color: var(--fg); }
-.ts-theme-preset.is-active { border-color: var(--accent); color: var(--fg); }
-.ts-theme-swatch {
-  width: 100%;
-  height: 16px;
-  border-radius: 4px;
-  background: var(--sw);
-}
-.ts-theme-preset__name { letter-spacing: 0.01em; }
-
-.ts-theme-builder {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 8px 10px;
-  margin-bottom: 12px;
-}
-.ts-theme-builder .ts-theme-label { margin: 0; }
-.ts-theme-color {
-  width: 100%;
-  height: 30px;
-  padding: 2px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-input);
-  cursor: pointer;
-}
-.ts-theme-color:disabled { opacity: 0.4; cursor: not-allowed; }
-.ts-theme-check {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--muted);
-  font-size: var(--text-sm);
-  cursor: pointer;
-}
-.ts-theme-toggle {
-  appearance: none;
-  flex: none;
-  width: 15px;
-  height: 15px;
-  margin: 0;
-  border: 1px solid var(--border-strong);
-  border-radius: 4px;
-  background: var(--bg-input);
-  cursor: pointer;
-}
-.ts-theme-toggle:checked { background: var(--accent); border-color: var(--accent); }
-.ts-theme-toggle:checked::after {
-  content: '';
-  display: block;
-  width: 4px;
-  height: 8px;
-  margin: 1px auto 0;
-  border: solid var(--accent-ink);
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-}
-.ts-theme-save { display: flex; gap: 8px; margin-bottom: 12px; }
-.ts-theme-name {
-  flex: 1;
-  min-width: 0;
-  padding: 7px 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-input);
-  color: var(--fg);
-  font-size: var(--text-sm);
-}
-.ts-theme-active { margin: 0; color: var(--faint); font-size: var(--text-xs); }
-.ts-theme-reset {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--accent);
-  font: inherit;
-  cursor: pointer;
-  text-decoration: underline;
-}
-
-.ts-brand {
-  font-weight: 700;
-  font-size: var(--text-lg);
-  text-decoration: none;
-  letter-spacing: -0.015em;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex: none;
-  /* Grow the tap target past the text box without moving the header. */
-  padding: 7px 0;
-  margin: -7px 0;
-}
-.ts-brand-mark { color: var(--accent); display: inline-flex; }
-.ts-brand-word { font-family: var(--mono); font-weight: 600; letter-spacing: -0.02em; }
-.ts-brand-tld { color: var(--muted); font-weight: 400; }
-
-.ts-header-spacer { flex: 1; }
-
-/* The search trigger looks like an input but opens the palette. */
-.ts-search-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 250px;
-  padding: 8px 12px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--bg-input);
-  color: var(--muted);
-  font: inherit;
-  font-size: var(--text-md);
-  cursor: pointer;
-  text-align: left;
-  transition: border-color 0.15s ease, color 0.15s ease;
-}
-.ts-search-trigger:hover { border-color: var(--border-strong); color: var(--fg); }
-.ts-search-trigger kbd {
-  margin-left: auto;
-  font-family: var(--mono);
-  font-size: var(--text-xs);
-  padding: 2px 6px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  color: var(--muted);
-}
-
-.ts-icon-btn {
-  flex: none;
-  width: 38px;
-  height: 38px;
-  display: inline-grid;
-  place-items: center;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--bg-input);
-  color: var(--fg);
-  font-size: var(--text-lg);
-  cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
-}
-.ts-icon-btn:hover { border-color: var(--border-strong); color: var(--accent); }
-
-/* Install affordance: hires, and collapses to just its icon on small screens. */
-
-/* Offline strip — a quiet, non-blocking status line above the header. */
-.ts-offline {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 6px 14px;
-  background: var(--accent-soft);
-  border-bottom: 1px solid var(--accent-line);
-  color: var(--fg);
-  font-size: var(--text-sm);
-}
-.ts-offline[hidden] { display: none; }
-.ts-offline .ts-ic { color: var(--accent); display: inline-flex; flex: none; }
-
-/* Main column */
-.ts-main {
-  flex: 1;
-  width: 100%;
-  max-width: var(--container);
-  margin: 0 auto;
-  padding: clamp(22px, 4vw, 44px) clamp(14px, 4vw, 32px) 72px;
-}
-
-.ts-footer {
-  border-top: 1px solid var(--border);
-  color: var(--muted);
-  font-size: var(--text-base);
-  padding: 22px clamp(14px, 4vw, 32px);
-  text-align: center;
 }
 
 /* --- Command palette ------------------------------------------------------ */
@@ -637,60 +405,6 @@ a { color: inherit; }
 .ts-mstat { display: flex; flex-direction: column; gap: 1px; }
 .ts-mstat-value { font-family: var(--mono); font-size: var(--text-xl); font-weight: 600; letter-spacing: var(--tracking-tight); }
 .ts-mstat-label { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.1em; color: var(--faint); font-family: var(--mono); }
-
-/* The network-tools switch. A real checkbox under a styled track, so it stays
-   keyboard-reachable and screen-reader labelled while looking like a switch. */
-.ts-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 26px;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-soft);
-  cursor: pointer;
-  width: fit-content;
-  max-width: 100%;
-}
-.ts-switch:hover { border-color: var(--border-strong); }
-.ts-switch-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-  border: 0;
-}
-.ts-switch-track {
-  position: relative;
-  flex: none;
-  width: 38px;
-  height: 22px;
-  border-radius: 999px;
-  background: var(--bg-input);
-  border: 1px solid var(--border-strong);
-  transition: background 0.18s ease, border-color 0.18s ease;
-}
-.ts-switch-thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--faint);
-  transition: transform 0.18s ease, background 0.18s ease;
-}
-.ts-switch-input:checked + .ts-switch-track { background: var(--accent-soft); border-color: var(--accent-line); }
-.ts-switch-input:checked + .ts-switch-track .ts-switch-thumb { transform: translateX(16px); background: var(--accent); }
-.ts-switch-input:focus-visible + .ts-switch-track { outline: 2px solid var(--accent); outline-offset: 2px; }
-.ts-switch-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.ts-switch-text strong { font-size: var(--text-sm); font-weight: 600; }
-.ts-switch-hint { font-size: var(--text-xs); color: var(--faint); }
 
 .ts-browse { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
 .ts-browse-label {
@@ -1279,9 +993,12 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
   input[type="checkbox"], input[type="radio"] { width: 18px; height: 18px; }
 }
 
+/* Motion is opt-out through Settings as well as the OS. `data-motion` is set
+   by core/settings.ts: "reduced" always wins, "full" ignores the OS. */
 @media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; animation: none !important; }
+  :root:not([data-motion="full"]) * { transition: none !important; animation: none !important; }
 }
+:root[data-motion="reduced"] * { transition: none !important; animation: none !important; }
 
 /* --- Cross-tool component clusters --------------------------------------- */
 
@@ -2103,4 +1820,135 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
   .ts-k-panel__body { padding: 14px; }
   .ts-k-seg { width: 100%; }
   .ts-k-seg__item { flex: 1; align-items: center; }
+}
+
+/* --- Settings-driven density, width and stats ----------------------------
+   The few places a setting changes layout rather than colour. Kept together
+   so it is obvious what the settings store actually controls. */
+:root[data-density="compact"] .ts-row-item { padding: 5px 10px; gap: 10px; }
+:root[data-density="compact"] .ts-row-desc { display: none; }
+:root[data-density="compact"] .ts-row-grid { gap: 0; }
+
+:root[data-stats="off"] .ts-masthead-stats { display: none; }
+
+:root[data-width="narrow"] .ts-toolpage { max-width: 760px; margin-inline: auto; }
+:root[data-width="wide"] .ts-toolpage { max-width: none; }
+
+/* Sigils off: the tile is left out of the DOM, so this is only a guard. */
+.ts-sigil-off { display: none; }
+
+/* --- Settings page -------------------------------------------------------
+   A real page, not a popover. It composes the shared markup and the ts-set-*
+   classes below; the theme module owns every value it writes. */
+.ts-set { max-width: 900px; margin: 0 auto; padding: clamp(24px, 4vw, 48px) clamp(14px, 4vw, 32px) 96px; }
+.ts-set-title { margin-bottom: 40px; }
+.ts-set-title h1 { font-size: var(--text-2xl); letter-spacing: var(--tracking-display); margin: 0 0 10px; }
+.ts-set-title .ts-eyebrow { margin-bottom: 10px; }
+
+.ts-set-section { margin-bottom: 44px; }
+.ts-set-head h2 { font-size: var(--text-lg); letter-spacing: var(--tracking-tight); margin: 0 0 4px; }
+.ts-set-head p { margin: 0 0 18px; color: var(--muted); font-size: var(--text-base); max-width: 60ch; }
+
+/* Preset grid: a responsive wall of swatches, each a live colour peek. */
+.ts-set-presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(126px, 1fr)); gap: 10px; margin-bottom: 22px; }
+.ts-set-preset {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, transform 0.15s ease, background 0.15s ease;
+}
+.ts-set-preset:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+.ts-set-preset.is-active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.ts-set-preset__meta { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.ts-set-preset__name { font-size: var(--text-sm); font-weight: 600; }
+.ts-set-preset__tone { font-family: var(--mono); font-size: var(--text-2xs); text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); }
+
+/* The preview chip: page, raised surface and accent in one small swatch. */
+.ts-set-preview { display: flex; align-items: center; gap: 4px; height: 40px; padding: 6px; border-radius: var(--radius-sm); background: var(--p-bg); border: 1px solid var(--p-border); }
+.ts-set-preview__bar { width: 6px; height: 100%; border-radius: 2px; background: var(--p-accent); }
+.ts-set-preview__dot { width: 12px; height: 12px; border-radius: 50%; background: var(--p-surface); border: 1px solid var(--p-border); }
+.ts-set-preview__line { flex: 1; height: 4px; border-radius: 2px; background: var(--p-fg); opacity: 0.5; }
+
+/* The "build your own" editor. */
+.ts-set-builder { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-soft); padding: clamp(14px, 3vw, 22px); }
+.ts-set-builder__head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+.ts-set-builder__head h3 { margin: 0; font-size: var(--text-md); letter-spacing: var(--tracking-tight); }
+.ts-set-builder__preview .ts-set-preview { width: 74px; height: 36px; }
+.ts-set-builder__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px 20px; }
+.ts-set-field { display: flex; flex-direction: column; gap: 6px; }
+.ts-set-field > span { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); font-family: var(--mono); }
+
+.ts-set-color { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+.ts-set-color__label { font-size: var(--text-sm); color: var(--muted); }
+.ts-set-color__controls { display: flex; align-items: center; gap: 6px; }
+.ts-set-hex { width: 8ch; }
+
+.ts-set-advanced { grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 12px; }
+.ts-set-advanced summary { cursor: pointer; font-size: var(--text-sm); color: var(--muted); }
+.ts-set-advanced summary:hover { color: var(--fg); }
+.ts-set-advanced__body { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 20px; margin-top: 12px; }
+
+.ts-set-builder__foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+.ts-set-derived { font-size: var(--text-sm); color: var(--faint); max-width: 46ch; }
+
+/* A settings row: text left, control right. */
+.ts-set-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 15px 0; border-bottom: 1px solid var(--border); }
+.ts-set-row:last-of-type { border-bottom: 0; }
+.ts-set-row__text { min-width: 0; }
+.ts-set-row__title { font-size: var(--text-base); font-weight: 600; }
+.ts-set-row__text p { margin: 3px 0 0; color: var(--muted); font-size: var(--text-sm); max-width: 56ch; }
+
+.ts-set-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ts-set-data { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.ts-set-count { font-family: var(--mono); font-size: var(--text-sm); color: var(--muted); }
+.ts-set-foot { margin-top: 40px; color: var(--faint); font-size: var(--text-sm); }
+
+/* Segmented control, settings flavour (the tool-kit one is ts-k-seg). */
+.ts-set-seg { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg-input); }
+.ts-set-seg__item { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: var(--text-sm); padding: 5px 12px; border-radius: 999px; cursor: pointer; }
+.ts-set-seg__item:hover { color: var(--fg); }
+.ts-set-seg__item.is-on { background: var(--accent-soft); color: var(--fg); box-shadow: 0 0 0 1px var(--accent-line) inset; }
+
+/* A real checkbox under a styled track, so it stays keyboard reachable. */
+.ts-set-switchwrap { display: inline-flex; align-items: center; flex: none; }
+.ts-set-switch { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.ts-set-switch__track {
+  position: relative;
+  display: block;
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-strong);
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+.ts-set-switch__track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform 0.16s ease, background 0.16s ease;
+}
+.ts-set-switch:checked + .ts-set-switch__track { background: var(--accent-soft); border-color: var(--accent-line); }
+.ts-set-switch:checked + .ts-set-switch__track::after { transform: translateX(18px); background: var(--accent); }
+.ts-set-switch:focus-visible + .ts-set-switch__track { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
+
+/* Header and masthead links to Settings. */
+.ts-header-settings { text-decoration: none; }
+.ts-masthead-settings { display: inline-flex; align-items: center; gap: 7px; margin-top: 24px; font-size: var(--text-sm); color: var(--muted); text-decoration: none; border-bottom: 1px solid transparent; }
+.ts-masthead-settings:hover { color: var(--fg); border-bottom-color: var(--border-strong); }
+
+@media (max-width: 560px) {
+  .ts-set-row { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .ts-set-builder__grid { grid-template-columns: 1fr; }
 }
