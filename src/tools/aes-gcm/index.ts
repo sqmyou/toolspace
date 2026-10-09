@@ -7,29 +7,59 @@ import {
   note,
   outputBlock,
   panel,
+  segmented,
   textField,
   textarea,
   toolLayout,
 } from '../../core/components'
 import { el } from '../../core/dom'
 import type { Tool } from '../../core/types'
-import { decrypt, encrypt, isBundle } from './aes'
+import { type AesMode, bundleMode, decrypt, encrypt } from './aes'
+
+const MODES: { value: AesMode; label: string }[] = [
+  { value: 'gcm', label: 'GCM' },
+  { value: 'cbc', label: 'CBC' },
+  { value: 'ctr', label: 'CTR' },
+]
+
+const UNAUTHENTICATED_NOTE =
+  'CBC and CTR are not authenticated: a wrong passphrase can produce garbage instead of an error, and a changed ciphertext is not detected. Use GCM unless you need a specific mode for interoperability.'
 
 const tool: Tool = {
   slug: 'aes-gcm',
-  name: 'AES-GCM Encryptor / Decryptor',
-  description: 'Encrypt and decrypt text with a passphrase using AES-256-GCM.',
+  name: 'AES Encryptor / Decryptor',
+  description: 'Encrypt and decrypt text with a passphrase using AES-256 in GCM, CBC or CTR mode.',
   category: 'Security',
-  keywords: ['aes', 'gcm', 'encrypt', 'decrypt', 'pbkdf2', 'cipher', 'webcrypto'],
+  icon: 'lock',
+  keywords: ['aes', 'gcm', 'cbc', 'ctr', 'encrypt', 'decrypt', 'pbkdf2', 'cipher', 'webcrypto'],
   render(root) {
+    let mode: AesMode = 'gcm'
     const passphrase = textField({ type: 'password', placeholder: 'Passphrase', onInput: () => refreshHint() })
     const plaintext = textarea({ rows: 5, placeholder: 'Text to encrypt…' })
-    const bundle = textarea({ rows: 5, mono: true, placeholder: 'Bundle to decrypt (tsgcm1.…)', onInput: () => refreshHint() })
+    const bundle = textarea({ rows: 5, mono: true, placeholder: 'Bundle to decrypt (tsgcm1.… or tsaes1.…)', onInput: () => refreshHint() })
     const error = note('', 'danger')
     error.hidden = true
     const hint = el('div', { class: 'ts-k-actions' })
     let result = ''
     const output = outputBlock('', { label: 'Result', copy: () => result, meta: '' })
+
+    // Only shown for CBC/CTR, where the mode is not authenticated.
+    const modeWarning = note(UNAUTHENTICATED_NOTE, 'warn')
+
+    const modeControl = segmented({
+      label: 'Mode',
+      value: mode,
+      items: MODES,
+      onChange: (value) => {
+        mode = value as AesMode
+        syncMode()
+        refreshHint()
+      },
+    })
+
+    function syncMode() {
+      modeWarning.hidden = mode === 'gcm'
+    }
 
     function showError(err: unknown) {
       error.textContent = err instanceof Error ? err.message : 'Something went wrong.'
@@ -37,14 +67,20 @@ const tool: Tool = {
     }
 
     function refreshHint() {
-      hint.replaceChildren(...(isBundle(bundle.value) ? [badge('Bundle detected', 'ok')] : []))
+      const detected = bundleMode(bundle.value)
+      const badges: HTMLElement[] = []
+      if (detected) {
+        badges.push(badge(`Bundle detected · ${detected.toUpperCase()}`, 'ok'))
+        if (detected !== 'gcm') badges.push(badge('Not authenticated', 'warn'))
+      }
+      hint.replaceChildren(...badges)
     }
 
     async function runEncrypt() {
       try {
-        result = await encrypt(passphrase.value, plaintext.value)
+        result = await encrypt(passphrase.value, plaintext.value, mode)
         error.hidden = true
-        output.setLabel('Encrypted bundle')
+        output.setLabel(`Encrypted bundle (${mode.toUpperCase()})`)
         output.body.replaceChildren(result)
         output.setMeta(`${result.length} characters`)
       } catch (err) {
@@ -70,7 +106,9 @@ const tool: Tool = {
         panel(
           { title: 'Passphrase', icon: 'key' },
           field(passphrase, { label: 'Passphrase' }),
-                  ),
+          modeControl,
+          modeWarning,
+        ),
         panel(
           { title: 'Encrypt', icon: 'lock' },
           field(plaintext, { label: 'Plaintext' }),
@@ -87,9 +125,10 @@ const tool: Tool = {
         actions(
           button('Download result', { icon: 'download', onClick: () => download('encrypted.txt', result) }),
         ),
-              ),
+      ),
     )
 
+    syncMode()
     refreshHint()
   },
 }
