@@ -5,7 +5,7 @@ import {
   findingRow,
   note,
   panel,
-  segmented,
+  select,
   stat,
   stats,
   table,
@@ -42,16 +42,15 @@ const tool: Tool = {
 
     let base = baseZone.zone
     const dateInput = textField({ type: 'date', value: todayIn(baseZone.zone) })
-    const baseSelect = segmented({
-      label: 'Base zone',
-      items: COMMON_ZONES.map((zone) => ({ value: zone.zone, label: zone.label })),
+    const baseSelect = select({
+      options: COMMON_ZONES.map((zone) => ({ value: zone.zone, label: zone.label })),
       value: baseZone.zone,
       onChange: (value) => {
         base = value
         run()
       },
     })
-    baseSelect.classList.add('ts-tz-bases')
+    baseSelect.setAttribute('aria-label', 'Base timezone')
 
     const workStart = textField({ type: 'number', value: '9' })
     workStart.min = '0'
@@ -230,7 +229,7 @@ const tool: Tool = {
             field(workStart, { label: 'Work from', grow: true }),
             field(workEnd, { label: 'Work until', grow: true }),
           ),
-          el('div', { class: 'ts-k-field' }, el('span', { class: 'ts-k-label' }, 'Base zone'), baseSelect),
+          field(baseSelect, { label: 'Base zone' }),
           note('Green cells sit inside everyone’s working hours, amber is a weekend, dim is outside awake hours. Times come from your browser’s timezone database.'),
         ),
         panel({ title: 'Timezones', icon: 'globe' }, zonePresets, zoneChecks),

@@ -1,5 +1,4 @@
 .ts-tz-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
-.ts-tz-bases { margin-top: 4px; }
 .ts-tz-presets { margin-bottom: 12px; }
 .ts-tz-zones { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 14px; }
 
