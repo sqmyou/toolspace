@@ -4,4 +4,7 @@
 /* A size this video lacks shows the placeholder; dim it and let the caption say why. */
 .ts-k-media.is-missing .ts-k-media__img { opacity: 0.2; filter: grayscale(1); }
 
-.ts-k-media__img { aspect-ratio: 16 / 9; width: 100%; object-fit: contain; }
+/* Let the frame hug the thumbnail's own shape instead of forcing 16:9. The
+   older 4:3 sizes are served with the widescreen frame already letterboxed, so
+   forcing a ratio just adds a second, empty band around a smaller image. */
+.ts-k-media__img { max-width: 100%; object-fit: contain; }

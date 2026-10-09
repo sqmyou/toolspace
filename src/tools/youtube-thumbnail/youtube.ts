@@ -32,8 +32,8 @@ export interface ThumbnailQuality {
 export const QUALITIES: ThumbnailQuality[] = [
   { name: 'maxresdefault', label: 'Max resolution', width: 1280, height: 720, aspect: '16:9', note: 'Best quality, when the uploader provided it' },
   { name: 'hq720', label: 'HD 720', width: 1280, height: 720, aspect: '16:9', note: 'Alias of max resolution on most videos' },
-  { name: 'sddefault', label: 'Standard', width: 640, height: 480, aspect: '4:3', note: 'Padded to 4:3 with black bars' },
-  { name: 'hqdefault', label: 'High quality', width: 480, height: 360, aspect: '4:3', note: 'Always present — the most reliable one' },
+  { name: 'sddefault', label: 'Standard', width: 640, height: 480, aspect: '4:3', note: 'Often missing on newer uploads; padded to 4:3' },
+  { name: 'hqdefault', label: 'High quality', width: 480, height: 360, aspect: '4:3', note: 'Always present; padded to 4:3 with black bars' },
   { name: 'mqdefault', label: 'Medium', width: 320, height: 180, aspect: '16:9', note: 'True widescreen, small file' },
 ]
 
