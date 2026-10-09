@@ -1,5 +1,16 @@
+import {
+  actions,
+  button,
+  chips,
+  copyButton,
+  note,
+  panel,
+  stat,
+  stats,
+  textarea,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
-import { copyChip } from '../../core/ui'
 import type { Tool } from '../../core/types'
 import {
   countText,
@@ -22,51 +33,35 @@ const tool: Tool = {
   category: 'Text',
   keywords: ['letter count', 'character count', 'word count', 'sentence count', 'twitter limit', 'meta description', 'seo', 'reading time'],
   render(root) {
-    const input = el('textarea', {
-      class: 'ts-textarea',
-      rows: 9,
-      placeholder: 'Start typing or paste text…',
-      'aria-label': 'Text to count',
-      value: SAMPLE,
-    }) as HTMLTextAreaElement
-
-    const statGrid = el('div', { class: 'ts-stat-grid' })
+    const input = textarea({ rows: 9, value: SAMPLE, placeholder: 'Start typing or paste text…', onInput: () => update() })
+    const counts = stats()
     const freqGrid = el('div', { class: 'ts-letter-grid' })
-    const platformBar = el('div', { class: 'ts-cat-bar', role: 'group', 'aria-label': 'Filter limits by platform' })
     const limitBody = el('div', { class: 'ts-limit-list' })
     let platform = ''
 
-    function stat(label: string, value: string, hint?: string) {
-      return el(
-        'div',
-        { class: 'ts-stat' },
-        el('span', { class: 'ts-muted' }, label),
-        el('span', { class: 'ts-stat-value' }, value),
-        hint ? el('span', { class: 'ts-stat-hint' }, hint) : null,
+    const platformBar = el('div')
+
+    function selectPlatform(name: string) {
+      platform = platform === name ? '' : name
+      renderPlatforms()
+      update()
+    }
+
+    function renderPlatforms() {
+      platformBar.replaceChildren(
+        chips(
+          [
+            { label: 'All platforms', value: '', active: platform === '', onClick: () => selectPlatform('') },
+            ...limitPlatforms().map((name) => ({ label: name, value: name, active: platform === name, onClick: () => selectPlatform(name) })),
+          ],
+        ),
       )
     }
 
-    function renderStats(counts: CountResult) {
-      statGrid.replaceChildren(
-        stat('Characters', String(counts.characters)),
-        stat('Characters (no spaces)', String(counts.charactersNoSpaces)),
-        stat('Letters', String(counts.letters)),
-        stat('Words', String(counts.words)),
-        stat('Unique words', String(counts.uniqueWords)),
-        stat('Sentences', String(counts.sentences)),
-        stat('Paragraphs', String(counts.paragraphs)),
-        stat('Digits', String(counts.digits)),
-        stat('Punctuation', String(counts.punctuation)),
-        stat('Uppercase', String(counts.upper)),
-        stat('Lowercase', String(counts.lower)),
-        stat('Reading time', formatDuration(counts.readingSeconds)),
-      )
-    }
-
-    function renderFrequency(counts: CountResult) {
-      const top = letterFrequency(input.value)
+    function renderFrequency(value: string) {
+      const top = letterFrequency(value)
       if (top.length === 0) {
-        freqGrid.replaceChildren(el('p', { class: 'ts-muted' }, 'No letters yet.'))
+        freqGrid.replaceChildren(el('p', { class: 'ts-k-hint' }, 'No letters yet.'))
         return
       }
       const max = top[0].count
@@ -84,14 +79,6 @@ const tool: Tool = {
             el('span', { class: 'ts-letter-count' }, String(entry.count)),
           ),
         ),
-      )
-      void counts
-    }
-
-    function renderLimits(counts: CountResult) {
-      const statuses = evaluateLimits(counts, platform)
-      limitBody.replaceChildren(
-        ...statuses.map((status) => limitRow(status)),
       )
     }
 
@@ -111,93 +98,51 @@ const tool: Tool = {
             status.kind === 'char' ? `${status.used} / ${status.limit}` : `${status.used} / ${status.limit} words`,
           ),
         ),
-        el(
-          'div',
-          { class: 'ts-limit-track' },
-          el('span', { class: 'ts-limit-fill', style: `width:${pct}%` }),
-        ),
+        el('div', { class: 'ts-limit-track' }, el('span', { class: 'ts-limit-fill', style: `width:${pct}%` })),
         el(
           'div',
           { class: 'ts-limit-foot' },
-          el('span', { class: 'ts-muted' }, status.note),
-          el(
-            'span',
-            { class: 'ts-limit-remaining' },
-            status.remaining >= 0 ? `${status.remaining} left` : `${Math.abs(status.remaining)} over`,
-          ),
-        ),
-      )
-    }
-
-    function renderPlatforms() {
-      platformBar.replaceChildren(
-        el(
-          'button',
-          {
-            type: 'button',
-            class: `ts-cat-chip ts-cat-chip-all${platform === '' ? ' is-active' : ''}`,
-            onclick: () => {
-              platform = ''
-              renderPlatforms()
-              update()
-            },
-          },
-          'All platforms',
-        ),
-        ...limitPlatforms().map((name) =>
-          el(
-            'button',
-            {
-              type: 'button',
-              class: `ts-cat-chip${platform === name ? ' is-active' : ''}`,
-              onclick: () => {
-                platform = platform === name ? '' : name
-                renderPlatforms()
-                update()
-              },
-            },
-            name,
-          ),
+          el('span', { class: 'ts-k-hint' }, status.note),
+          el('span', { class: 'ts-limit-remaining' }, status.remaining >= 0 ? `${status.remaining} left` : `${Math.abs(status.remaining)} over`),
         ),
       )
     }
 
     function update() {
-      const counts = countText(input.value)
-      renderStats(counts)
-      renderFrequency(counts)
-      renderLimits(counts)
+      const result: CountResult = countText(input.value)
+      counts.replaceChildren(
+        stat({ label: 'Characters', value: String(result.characters) }),
+        stat({ label: 'No spaces', value: String(result.charactersNoSpaces) }),
+        stat({ label: 'Letters', value: String(result.letters) }),
+        stat({ label: 'Words', value: String(result.words) }),
+        stat({ label: 'Unique words', value: String(result.uniqueWords) }),
+        stat({ label: 'Sentences', value: String(result.sentences) }),
+        stat({ label: 'Paragraphs', value: String(result.paragraphs) }),
+        stat({ label: 'Digits', value: String(result.digits) }),
+        stat({ label: 'Punctuation', value: String(result.punctuation) }),
+        stat({ label: 'Uppercase', value: String(result.upper) }),
+        stat({ label: 'Lowercase', value: String(result.lower) }),
+        stat({ label: 'Reading time', value: formatDuration(result.readingSeconds) }),
+      )
+      renderFrequency(input.value)
+      limitBody.replaceChildren(...evaluateLimits(result, platform).map(limitRow))
     }
 
-    input.addEventListener('input', update)
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool' },
-        el(
-          'div',
-          { class: 'ts-field' },
-          el(
-            'div',
-            { class: 'ts-row ts-between' },
-            el('label', {}, 'Your text'),
-            el(
-              'div',
-              { class: 'ts-tool-actions' },
-              copyChip(() => input.value, 'Copy'),
-              el('button', { type: 'button', class: 'ts-button', onclick: () => { input.value = ''; update() } }, 'Clear'),
-            ),
-          ),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Your text', icon: 'text' },
           input,
+          actions(
+            copyButton(() => input.value, { label: 'Copy' }),
+            button('Clear', { icon: 'x', onClick: () => { input.value = ''; update() } }),
+          ),
         ),
-        el('div', { class: 'ts-subhead' }, 'Counts'),
-        statGrid,
-        el('div', { class: 'ts-subhead' }, 'Most-used letters'),
-        freqGrid,
-        el('div', { class: 'ts-subhead' }, 'Platform limits'),
-        platformBar,
-        limitBody,
+        counts,
+        panel({ title: 'Most-used letters', icon: 'chart' }, freqGrid),
+        panel({ title: 'Platform limits', icon: 'ruler' }, platformBar, limitBody),
+        note('Counting is character-based and treats CJK and emoji as you would expect. Everything runs locally.'),
       ),
     )
 
