@@ -225,7 +225,7 @@ const tool: Tool = {
         panel({ title: 'Order and pages', icon: 'list' }, list),
         panel({ title: 'Result', icon: 'info' }, summary, resultRow, actions(downloadButton)),
         note(
-          'Files are parsed and rewritten in this tab. Nothing is uploaded. Encrypted PDFs and files that use cross-reference streams are reported rather than merged.',
+          'Files are parsed and rewritten in this tab. Encrypted PDFs and files that use cross-reference streams are reported rather than merged.',
         ),
       ),
     )

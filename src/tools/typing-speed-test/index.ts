@@ -1,7 +1,16 @@
 import { button, note, panel, section, stat, stats, toolLayout } from '../../core/components'
 import { el } from '../../core/dom'
 import type { Tool } from '../../core/types'
-import { buildText, characters, consistencyOf, keystrokeStats, shuffled, type KeyEvent } from './typing'
+import {
+  characters,
+  consistencyFrom,
+  keystrokeStats,
+  linearTrend,
+  perSecondSeries,
+  shuffled,
+  weakKeys,
+  type KeyEvent,
+} from './typing'
 
 /** A small common-word bank — enough variety that a run never feels looped. */
 const BANK = (
@@ -25,6 +34,10 @@ const QUOTES = [
 type Mode = 'time' | 'words'
 type Duration = 15 | 30 | 60 | 120
 
+const PB_KEY = 'toolspace:typing-pb'
+/** Lines of text kept in view; the third is the lookahead. */
+const VISIBLE_LINES = 3
+
 /** A uniform integer in [0, max) from the platform CSPRNG. */
 function randomInt(max: number): number {
   if (max <= 0) return 0
@@ -38,12 +51,62 @@ function randomInt(max: number): number {
   return value % max
 }
 
+function readBest(): number {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PB_KEY) ?? 'null') as { wpm?: number } | null
+    return typeof parsed?.wpm === 'number' && Number.isFinite(parsed.wpm) ? parsed.wpm : 0
+  } catch {
+    return 0
+  }
+}
+
+function writeBest(wpm: number): void {
+  try {
+    localStorage.setItem(PB_KEY, JSON.stringify({ wpm, at: Date.now() }))
+  } catch {
+    /* storage can be unavailable — a personal best is a nicety, not a requirement */
+  }
+}
+
+/** Draw the speed-over-time chart as a numbers-only SVG string, so it is injection-safe. */
+function chartSvg(samples: { second: number; wpm: number }[]): string {
+  if (samples.length < 2) return ''
+  const width = 640
+  const height = 160
+  const padX = 10
+  const padY = 14
+  const values = samples.map((sample) => sample.wpm)
+  const peak = Math.max(20, ...values)
+  const step = (width - padX * 2) / (samples.length - 1)
+  const x = (index: number) => padX + index * step
+  const y = (value: number) => height - padY - (value / peak) * (height - padY * 2)
+
+  const points = values.map((value, index) => `${x(index).toFixed(1)},${y(value).toFixed(1)}`)
+  const area = `M ${padX},${height - padY} L ${points.join(' L ')} L ${x(values.length - 1).toFixed(1)},${height - padY} Z`
+  const bars = values
+    .map((value, index) => {
+      const top = y(value)
+      return `<rect class="ts-type-chart__bar" x="${(x(index) - step * 0.28).toFixed(1)}" y="${top.toFixed(1)}" width="${(step * 0.56).toFixed(1)}" height="${(height - padY - top).toFixed(1)}" rx="2" />`
+    })
+    .join('')
+  const trend = linearTrend(values).map((value, index) => `${x(index).toFixed(1)},${y(value).toFixed(1)}`)
+  const dots = values.map((value, index) => `<circle class="ts-type-chart__dot" cx="${x(index).toFixed(1)}" cy="${y(value).toFixed(1)}" r="2.4" />`).join('')
+
+  return (
+    `<svg class="ts-type-chart" viewBox="0 0 ${width} ${height}" role="img" ` +
+    `aria-label="Words per minute across ${samples.length} seconds">` +
+    `<path class="ts-type-chart__area" d="${area}" />${bars}` +
+    `<polyline class="ts-type-chart__trend" points="${trend.join(' ')}" />` +
+    `<polyline class="ts-type-chart__line" points="${points.join(' ')}" />${dots}</svg>`
+  )
+}
+
 const tool: Tool = {
   slug: 'typing-speed-test',
   name: 'Typing Speed Test',
-  description: 'A monkeytype-style test: pick time or word count, punctuation and numbers, then read your WPM, accuracy and consistency.',
+  description: 'A monkeytype-style test: pick time or words, punctuation and numbers, then read your WPM, accuracy and consistency over a live chart.',
   category: 'Numbers',
-  keywords: ['typing', 'wpm', 'speed', 'keyboard', 'monkeytype', 'words per minute', 'accuracy', 'practice', 'test'],
+  keywords: ['typing', 'wpm', 'speed', 'keyboard', 'monkeytype', 'words per minute', 'accuracy', 'practice', 'test', 'consistency'],
   render(root) {
     let mode: Mode = 'time'
     let duration: Duration = 30
@@ -51,10 +114,16 @@ const tool: Tool = {
     let punctuation = false
     let numbers = false
     let quoteMode = false
+    let stopOnError = false
 
-    const textBox = el('div', { class: 'ts-type-text', 'aria-hidden': 'true' })
+    const settings = el('div', { class: 'ts-type-settings' })
+    const timerLabel = el('div', { class: 'ts-type-timer' }, '')
+    const hint = el('div', { class: 'ts-type-hint' }, 'Start typing — the timer begins on your first key')
+
+    const track = el('div', { class: 'ts-type-track' })
+    const clip = el('div', { class: 'ts-type-clip' }, track)
     const caret = el('span', { class: 'ts-type-caret' })
-    const stage = el('div', { class: 'ts-type-stage' }, textBox, caret)
+    const stage = el('div', { class: 'ts-type-stage' }, clip, hint)
 
     const hidden = el('input', {
       class: 'ts-type-input',
@@ -73,33 +142,119 @@ const tool: Tool = {
       el('div', { class: 'ts-k-stat' }, liveAcc, el('span', { class: 'ts-k-stat__label' }, 'Accuracy')),
     )
 
-    const results = el('div', { class: 'ts-type-results' })
+    const results = el('div', { class: 'ts-type-results', 'aria-live': 'polite' })
     results.hidden = true
-    const timerLabel = el('div', { class: 'ts-type-timer' }, '')
 
     let target = ''
+    let words: string[] = []
+    let charSpans: HTMLElement[] = []
     let events: KeyEvent[] = []
     let typed = ''
+    let locked = false
     let startedAt = 0
     let running = false
+    let finished = false
     let raf = 0
+    let lineHeight = 0
 
-    const settings = el('div', { class: 'ts-type-settings' })
+    /* -- text generation ---------------------------------------------------- */
+
+    function makeWords(count: number): string[] {
+      const base = shuffled(BANK)
+      const out: string[] = []
+      for (let i = 0; i < count; i += 1) {
+        let word = base[i % base.length]
+        if (out[out.length - 1] === word && base.length > 1) word = base[(i + 1) % base.length]
+        if (punctuation) {
+          if (i > 0 && i % 7 === 0) word += PUNCTUATION[i % PUNCTUATION.length]
+          else if (i > 0 && i % 11 === 0) word = word[0].toUpperCase() + word.slice(1)
+        }
+        out.push(word)
+        if (numbers && i > 0 && i % 13 === 0) out.push(String(randomInt(100)))
+      }
+      return out
+    }
+
+    function generate() {
+      if (quoteMode) words = [shuffled(QUOTES)[0]]
+      else if (mode === 'words') words = makeWords(wordCount)
+      else words = makeWords(duration >= 60 ? 150 : 85)
+      target = words.join(' ')
+      if (!punctuation && !quoteMode) target = target.toLowerCase()
+    }
+
+    function extend() {
+      words = words.concat(makeWords(mode === 'time' && duration >= 60 ? 90 : 60))
+      target = words.join(' ')
+      if (!punctuation && !quoteMode) target = target.toLowerCase()
+      buildSpans()
+    }
+
+    /* -- rendering ---------------------------------------------------------- */
+
+    function charState(index: number): string {
+      if (index < typed.length) return typed[index] === target[index] ? 'ok' : 'bad'
+      if (index === typed.length) return locked ? 'bad' : 'current'
+      return 'rest'
+    }
+
+    function paint(index: number) {
+      const span = charSpans[index]
+      if (span) span.className = `ts-type-char is-${charState(index)}`
+    }
+
+    function measure() {
+      const first = charSpans[0]
+      if (!first) return
+      const computed = parseFloat(getComputedStyle(track).lineHeight)
+      if (!lineHeight) lineHeight = Number.isFinite(computed) && computed > 0 ? computed : first.offsetHeight * 1.65
+      clip.style.height = `${lineHeight * VISIBLE_LINES}px`
+    }
+
+    function buildSpans() {
+      charSpans = characters(target).map((char) => el('span', { class: 'ts-type-char is-rest' }, char === ' ' ? '\u00a0' : char))
+      track.replaceChildren(...charSpans, caret)
+      paint(typed.length)
+      measure()
+      positionCaret()
+    }
+
+    function positionCaret() {
+      const current = charSpans[Math.min(typed.length, charSpans.length - 1)]
+      if (!current) {
+        caret.style.display = 'none'
+        return
+      }
+      caret.style.display = ''
+      const atEnd = typed.length >= charSpans.length
+      caret.style.left = `${current.offsetLeft + (atEnd ? current.offsetWidth : 0)}px`
+      caret.style.top = `${current.offsetTop}px`
+      caret.style.height = `${current.offsetHeight}px`
+
+      const lineOf = lineHeight ? Math.floor(current.offsetTop / lineHeight) : 0
+      const totalLines = lineHeight ? Math.ceil(track.scrollHeight / lineHeight) : VISIBLE_LINES
+      const scroll = Math.min(Math.max(0, totalLines - VISIBLE_LINES), Math.max(0, lineOf - 1))
+      track.style.transform = `translateY(${-scroll * lineHeight}px)`
+    }
+
+    /* -- settings ----------------------------------------------------------- */
 
     function chipGroup(label: string, options: Array<{ label: string; active: () => boolean; pick: () => void }>): HTMLElement {
       const group = el('div', { class: 'ts-type-group' }, el('span', { class: 'ts-type-group__label' }, label))
       for (const option of options) {
-        const node = el('button', {
-          class: `ts-type-chip${option.active() ? ' is-active' : ''}`,
-          type: 'button',
-          'aria-pressed': option.active() ? 'true' : 'false',
-          onclick: () => {
-            option.pick()
-            renderSettings()
-            reset()
-          },
-        }, option.label)
-        group.append(node)
+        group.append(
+          el('button', {
+            class: `ts-type-chip${option.active() ? ' is-active' : ''}`,
+            type: 'button',
+            'aria-pressed': option.active() ? 'true' : 'false',
+            onclick: () => {
+              option.pick()
+              renderSettings()
+              reset()
+              hidden.focus()
+            },
+          }, option.label),
+        )
       }
       return group
     }
@@ -117,96 +272,103 @@ const tool: Tool = {
           { label: 'punctuation', active: () => punctuation, pick: () => (punctuation = !punctuation) },
           { label: 'numbers', active: () => numbers, pick: () => (numbers = !numbers) },
           { label: 'quotes', active: () => quoteMode, pick: () => (quoteMode = !quoteMode) },
+          { label: 'stop on error', active: () => stopOnError, pick: () => (stopOnError = !stopOnError) },
         ]),
       )
     }
 
-    function generate(): string {
-      if (quoteMode) return shuffled(QUOTES)[0]
-      let words = shuffled(BANK)
-      if (punctuation) {
-        words = words.map((word, index) => {
-          if (index > 0 && index % 7 === 0) return `${word}${PUNCTUATION[index % PUNCTUATION.length]}`
-          if (index % 11 === 0 && index > 0) return `${word[0].toUpperCase()}${word.slice(1)}`
-          return word
-        })
-      }
-      if (numbers) {
-        words = words.map((word, index) => (index > 0 && index % 13 === 0 ? `${word} ${randomInt(100)}` : word))
-      }
-      const count = mode === 'words' ? wordCount : Math.max(wordCount, 60)
-      const text = buildText(words, count)
-      return punctuation || quoteMode ? text : text.toLowerCase()
-    }
+    /* -- run control -------------------------------------------------------- */
 
     function reset() {
       cancelAnimationFrame(raf)
       running = false
+      finished = false
+      locked = false
       events = []
       typed = ''
-      target = generate()
+      lineHeight = 0
+      clip.style.height = ''
       hidden.value = ''
       results.hidden = true
-      caret.style.display = 'none'
-      timerLabel.textContent = mode === 'time' ? `${duration}s` : `${wordCount} words`
-      renderText()
+      hint.hidden = false
+      generate()
+      buildSpans()
+      track.style.transform = 'translateY(0)'
       liveWpm.textContent = '0'
       liveAcc.textContent = '100%'
-      renderSettings()
+      timerLabel.textContent = mode === 'time' ? `${duration}s` : `${wordCount} words`
+      stage.classList.remove('is-started')
     }
 
-    function renderText() {
-      const chars = characters(target)
-      const nodes = chars.map((char, index) => {
-        const state = index < typed.length ? (typed[index] === char ? 'ok' : 'bad') : index === typed.length ? 'current' : 'rest'
-        const display = char === ' ' ? '\u00a0' : char
-        return el('span', { class: `ts-type-char is-${state}` }, display)
-      })
-      textBox.replaceChildren(...nodes)
-
-      const current = textBox.children[Math.min(typed.length, nodes.length - 1)] as HTMLElement | undefined
-      if (!current) {
-        caret.style.display = 'none'
-        return
-      }
-      caret.style.display = 'block'
-      caret.style.transform = `translate(${current.offsetLeft + (typed.length < chars.length ? 0 : current.offsetWidth)}px, ${current.offsetTop}px)`
-      caret.style.height = `${current.offsetHeight}px`
+    function begin() {
+      running = true
+      startedAt = performance.now()
+      hint.hidden = true
+      stage.classList.add('is-started')
+      raf = requestAnimationFrame(tick)
     }
 
     function finish() {
+      if (finished) return
+      finished = true
       running = false
       cancelAnimationFrame(raf)
       const elapsed = startedAt ? performance.now() - startedAt : 0
-      const statsData = keystrokeStats(events, typed.length, elapsed)
+      let standing = 0
+      for (let i = 0; i < typed.length; i += 1) if (typed[i] === target[i]) standing += 1
+      const summary = keystrokeStats(events, standing, elapsed)
       const gaps: number[] = []
       for (let i = 1; i < events.length; i += 1) gaps.push(events[i].at - events[i - 1].at)
-      const mean = gaps.length ? gaps.reduce((a, b) => a + b, 0) / gaps.length : 0
-      const steady = consistencyOf(gaps, mean)
+      const consistency = consistencyFrom(gaps)
+      const series = perSecondSeries(events, elapsed)
+      const weak = weakKeys(events)
+
+      const previousBest = readBest()
+      const isBest = summary.wpm > previousBest
+      if (isBest) writeBest(summary.wpm)
 
       results.replaceChildren(
-        stats(
-          stat({ label: 'WPM', value: statsData.wpm.toFixed(0) }),
-          stat({ label: 'Raw WPM', value: statsData.rawWpm.toFixed(0), hint: 'All correct keypresses' }),
-          stat({ label: 'Accuracy', value: `${statsData.accuracy.toFixed(1)}%` }),
-          stat({ label: 'Consistency', value: `${Math.round(steady)}%` }),
+        el('div', { class: 'ts-type-summary' },
+          el('div', { class: 'ts-type-summary__wpm' },
+            el('span', { class: 'ts-type-summary__value ts-k-mono' }, summary.wpm.toFixed(0)),
+            el('span', { class: 'ts-type-summary__unit' }, 'WPM'),
+            isBest ? el('span', { class: 'ts-type-pb' }, previousBest > 0 ? 'Personal best' : 'First run logged') : null,
+          ),
+          stats(
+            stat({ label: 'Accuracy', value: `${summary.accuracy.toFixed(1)}%` }),
+            stat({ label: 'Raw WPM', value: summary.rawWpm.toFixed(0), hint: 'Every correct keypress' }),
+            stat({ label: 'Consistency', value: `${consistency.score}%` }),
+            stat({ label: 'Characters', value: `${summary.correct} ✓  ${summary.incorrect} ✗` }),
+            stat({ label: 'Corrections', value: String(summary.backspaces) }),
+          ),
         ),
-        stats(
-          stat({ label: 'Correct', value: String(statsData.correct) }),
-          stat({ label: 'Incorrect', value: String(statsData.incorrect) }),
-          stat({ label: 'Corrections', value: String(statsData.backspaces) }),
-        ),
+        ...(series.length >= 2
+          ? [card('Speed over time', el('div', { class: 'ts-type-chart-wrap', innerHTML: chartSvg(series) }))]
+          : []),
+        ...(weak.length
+          ? [card('Keys to practise', el('div', { class: 'ts-type-weak' },
+              ...weak.map((entry) => el('span', { class: 'ts-type-weak__key' },
+                el('b', {}, entry.char),
+                el('span', {}, `${Math.round(entry.rate * 100)}% off`),
+              )),
+            ))]
+          : []),
       )
       results.hidden = false
-      timerLabel.textContent = 'Done — press Tab or click here to go again'
+      timerLabel.textContent = 'Done — type or press Tab to go again'
+    }
+
+    /** A small titled block used inside the results. */
+    function card(title: string, body: HTMLElement): HTMLElement {
+      return el('div', { class: 'ts-type-card' }, el('div', { class: 'ts-type-card__title' }, title), body)
     }
 
     function tick() {
       if (!running) return
       const elapsed = performance.now() - startedAt
-      const correctSoFar = keystrokeStats(events, typed.length, elapsed)
-      liveWpm.textContent = correctSoFar.wpm.toFixed(0)
-      liveAcc.textContent = `${correctSoFar.accuracy.toFixed(0)}%`
+      const live = keystrokeStats(events, typed.length, elapsed)
+      liveWpm.textContent = live.rawWpm.toFixed(0)
+      liveAcc.textContent = `${live.accuracy.toFixed(0)}%`
 
       if (mode === 'time') {
         const left = Math.max(0, duration * 1000 - elapsed)
@@ -215,13 +377,10 @@ const tool: Tool = {
           finish()
           return
         }
+      } else {
+        const done = typed.split(' ').length - 1
+        timerLabel.textContent = `${Math.min(done, wordCount)} / ${wordCount} words`
       }
-      raf = requestAnimationFrame(tick)
-    }
-
-    function begin() {
-      running = true
-      startedAt = performance.now()
       raf = requestAnimationFrame(tick)
     }
 
@@ -229,46 +388,80 @@ const tool: Tool = {
       if (event.key === 'Tab') {
         event.preventDefault()
         reset()
+        hidden.focus()
         return
       }
       if (event.key === 'Escape') {
         hidden.blur()
         return
       }
-
+      if (finished) {
+        if (event.key.length === 1 || event.key === 'Backspace') {
+          event.preventDefault()
+          reset()
+          hidden.focus()
+        }
+        return
+      }
       if (!running) begin()
 
       if (event.key === 'Backspace') {
         event.preventDefault()
+        if (locked) {
+          locked = false
+          paint(typed.length)
+          positionCaret()
+          return
+        }
         if (typed.length > 0) {
+          const removed = typed.length - 1
           typed = typed.slice(0, -1)
           events.push({ char: null, correct: true, at: performance.now() - startedAt })
-          renderText()
+          paint(removed)
+          paint(typed.length)
+          positionCaret()
         }
         return
       }
 
-      if (event.key.length !== 1) return
+      if (event.key.length !== 1 || event.ctrlKey || event.metaKey || event.altKey) return
       event.preventDefault()
 
+      if (typed.length >= target.length) {
+        if (mode === 'time') {
+          extend()
+        } else {
+          finish()
+          return
+        }
+      }
+
       const expected = target[typed.length]
-      if (expected === undefined) return
+      if (expected === undefined) {
+        finish()
+        return
+      }
 
       const correct = event.key === expected
-      events.push({ char: event.key, correct, at: performance.now() - startedAt })
-      typed += event.key
-      renderText()
+      events.push({ char: event.key, correct, at: performance.now() - startedAt, expected })
 
-      if (typed.length >= target.length) finish()
+      if (!correct && stopOnError) {
+        locked = true
+        paint(typed.length)
+        positionCaret()
+        return
+      }
+
+      typed += event.key
+      paint(typed.length - 1)
+      paint(typed.length)
+      positionCaret()
+
+      if (typed.length >= target.length && mode === 'words') finish()
     }
 
     hidden.addEventListener('keydown', onKey)
     stage.addEventListener('click', () => hidden.focus())
-    stage.addEventListener('keydown', () => {})
-
-    const restart = button('Restart', { icon: 'refresh', onClick: () => reset() })
-
-    reset()
 
     root.append(
       toolLayout(
@@ -280,19 +473,20 @@ const tool: Tool = {
           stage,
           hidden,
           liveBar,
-          el('div', { class: 'ts-k-actions' }, restart),
+          el('div', { class: 'ts-k-actions' }, button('Restart', { icon: 'refresh', onClick: () => { reset(); hidden.focus() } })),
         ),
         results,
         section(
           'How it is measured',
           note(
-            'A "word" is five characters, the convention that makes prose and code comparable. WPM counts only the characters still standing, so a correction costs time but not a character; raw WPM counts every correct keypress and is the flattering number. Accuracy is correct keypresses over all keypresses, so backspacing cannot erase a mistake from the score. Consistency is derived from how evenly your inter-key gaps fell.',
+            'A "word" is five characters, the convention that makes prose and code comparable. WPM counts only the characters still standing, so a correction costs time but not a character; raw WPM counts every correct keypress and is the flattering number. Accuracy is correct keypresses over all keypresses, so backspacing cannot erase a mistake from the score. Consistency reads how evenly your inter-key gaps fell.',
           ),
         ),
       ),
     )
 
-    // Focus the hidden input so a typist can start without clicking.
+    renderSettings()
+    reset()
     setTimeout(() => hidden.focus(), 0)
   },
 }

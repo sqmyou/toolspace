@@ -130,12 +130,20 @@ is actionable:
   static `<head>`, so `applyMeta()` sets `document.title`, the description and a
   `<link rel="canonical">` on every route change. `SITE_ORIGIN` is a hardcoded
   production URL — change it in the same commit as any domain move.
-- **Check for an existing tool before adding one.** Several tools grew into
-  neighbours of each other: `csv-json` already converts CSV ↔ JSON ↔ Markdown
-  (and `site-files` covers robots.txt *and* sitemap, `cron-explainer` explains
-  *and* builds, `id-generator` does the UUID/ULID/NanoID family). A "missing
-  tool" list compiled from flags or memory will re-propose these, so grep
-  `src/tools/*/index.ts` for the keywords first. When a new tool does overlap,
-  fold its one extra capability into the existing tool rather than shipping a
-  second page — that is how column alignment moved into `csv-json` and
-  `csv-markdown` was removed.
+- **Check for an existing tool before adding one.** Overlap has crept in more
+  than once, so treat any "missing tool" list compiled from memory as unproven —
+  grep the `name`, `description` and `keywords` in `src/tools/*/index.ts` first.
+  Known consolidated families (do not re-propose these as new tools):
+  - `csv-json` — CSV ↔ JSON ↔ Markdown, delimiter sniffing, column alignment,
+    **and** nested-JSON flattening (folded in from `json-to-csv`).
+  - `base-encodings` — Base32 (RFC 4648 **and** Crockford), Base58, Base58Check,
+    hex and binary (folded in from `base32`).
+  - `id-generator` — UUID v4/v7, ULID (+ ULID decode), NanoID, hex, ObjectId
+    (folded in from `ulid`).
+  - `site-files` — robots.txt *and* sitemap.
+  - `cron-explainer` — explains *and* builds cron expressions.
+  - `hash-generator` — hashes **and HMAC**.
+  When a new tool does overlap, fold its one extra capability into the existing
+  tool rather than shipping a second page. That is how column alignment and
+  flattening landed in `csv-json`, and `csv-markdown`, `json-to-csv`, `base32`
+  and `ulid` were removed.

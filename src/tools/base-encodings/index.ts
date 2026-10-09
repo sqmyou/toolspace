@@ -21,11 +21,12 @@ type Format = 'base32' | 'base58' | 'base58check' | 'hex' | 'binary'
 const tool: Tool = {
   slug: 'base-encodings',
   name: 'Base32 / Base58 / Hex / Binary Codec',
-  description: 'Convert text to and from Base32, Base58, Base58Check, hex and binary.',
+  description: 'Convert text to and from Base32 (RFC 4648 or Crockford), Base58, Base58Check, hex and binary.',
   category: 'Data',
   keywords: ['base32', 'base58', 'base58check', 'hex', 'binary', 'encode', 'decode'],
   render(root) {
     let format: Format = 'base32'
+    let variant: 'rfc4648' | 'crockford' = 'rfc4648'
 
     const formatSelect = select({
       options: [
@@ -38,8 +39,22 @@ const tool: Tool = {
       value: format,
       onChange: (value) => {
         format = value as Format
+        variantField.hidden = format !== 'base32'
       },
     })
+
+    const variantSelect = select({
+      options: [
+        { value: 'rfc4648', label: 'RFC 4648 (A-Z, 2-7)' },
+        { value: 'crockford', label: 'Crockford (no I, L, O, U)' },
+      ],
+      value: variant,
+      onChange: (value) => {
+        variant = value as 'rfc4648' | 'crockford'
+      },
+    })
+    const variantField = field(variantSelect, { label: 'Base32 alphabet', hint: 'Crockford drops padding and folds I, L and O when decoding.' })
+    variantField.hidden = format !== 'base32'
 
     const input = textarea({ rows: 6, placeholder: 'Text to encode, or encoded value to decode…' })
     input.setAttribute('aria-label', 'Input')
@@ -73,7 +88,7 @@ const tool: Tool = {
         const bytes = bytesFromText(input.value)
         if (action === 'encode') {
           const value =
-            format === 'base32' ? base32Encode(bytes)
+            format === 'base32' ? base32Encode(bytes, { variant })
             : format === 'base58' ? base58Encode(bytes)
             : format === 'base58check' ? await base58CheckEncode(bytes)
             : format === 'hex' ? toHex(bytes, true)
@@ -82,7 +97,7 @@ const tool: Tool = {
           return
         }
         const decoded =
-          format === 'base32' ? base32Decode(input.value)
+          format === 'base32' ? base32Decode(input.value, { variant })
           : format === 'base58' ? base58Decode(input.value.trim())
           : format === 'base58check' ? await base58CheckDecode(input.value.trim())
           : format === 'hex' ? fromHex(input.value)
@@ -96,7 +111,7 @@ const tool: Tool = {
     root.append(
       toolLayout(
         {},
-        panel({ title: 'Input', icon: 'text' }, field(formatSelect, { label: 'Encoding' }), field(input, { label: 'Value' })),
+        panel({ title: 'Input', icon: 'text' }, field(formatSelect, { label: 'Encoding' }), variantField, field(input, { label: 'Value' })),
         error,
         output,
         actions(
@@ -104,7 +119,7 @@ const tool: Tool = {
           button('Decode', { icon: 'arrowUp', onClick: () => void run('decode') }),
           button('Download', { icon: 'download', onClick: () => download('encoded.txt', outText.value) }),
         ),
-              ),
+      ),
     )
   },
 }

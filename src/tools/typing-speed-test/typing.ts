@@ -17,6 +17,8 @@ export interface KeyEvent {
   correct: boolean
   /** Milliseconds since the test began. */
   at: number
+  /** The character that was expected, when the tool recorded it. */
+  expected?: string | null
 }
 
 export interface KeystrokeStats {
@@ -105,4 +107,104 @@ export function shuffled<T>(items: T[]): T[] {
 /** Split a practice text into the characters a typist has to hit. */
 export function characters(text: string): string[] {
   return [...text]
+}
+
+/** A single second of a run, used to draw the speed-over-time chart. */
+export interface SecondSample {
+  /** The second this sample closes, 1-based. */
+  second: number
+  /** Net WPM for that second alone: correct characters × 12 (five to a word, per second). */
+  wpm: number
+  /** Errors committed during that second. */
+  errors: number
+}
+
+/**
+ * Bucket a run into one-second samples.
+ *
+ * WPM weights each bucket equally at one second, so the value is the plain
+ * "characters in this second, five to a word": `wpm = correct × 12`.
+ */
+export function perSecondSeries(events: KeyEvent[], durationMs: number): SecondSample[] {
+  const samples: SecondSample[] = []
+  const whole = Math.floor(durationMs / 1000)
+  for (let second = 1; second <= whole; second += 1) {
+    const from = (second - 1) * 1000
+    const to = second * 1000
+    const bucket = events.filter((event) => event.at > from && event.at <= to)
+    const correct = bucket.filter((event) => event.char !== null && event.correct).length
+    const errors = bucket.filter((event) => event.char !== null && !event.correct).length
+    samples.push({ second, wpm: correct * (60000 / 1000) / CHARS_PER_WORD, errors })
+  }
+  return samples
+}
+
+export interface WeakKey {
+  /** The expected character that was missed most often. */
+  char: string
+  /** How many times it was missed. */
+  misses: number
+  /** How many times it was attempted. */
+  attempts: number
+  /** Misses ÷ attempts, 0..1. */
+  rate: number
+}
+
+/**
+ * Rank the characters a typist struggled with.
+ *
+ * Only events that recorded an `expected` character and were wrong count as
+ * misses, so a stray backspace cannot distort the picture.
+ */
+export function weakKeys(events: KeyEvent[], minimum = 3, limit = 6): WeakKey[] {
+  const tally = new Map<string, { misses: number; attempts: number }>()
+  for (const event of events) {
+    const key = event.expected
+    if (key == null || key === ' ') continue
+    const entry = tally.get(key) ?? { misses: 0, attempts: 0 }
+    entry.attempts += 1
+    if (!event.correct) entry.misses += 1
+    tally.set(key, entry)
+  }
+  return [...tally.entries()]
+    .filter(([, entry]) => entry.misses > 0)
+    .map(([char, entry]) => ({ char, misses: entry.misses, attempts: entry.attempts, rate: entry.misses / entry.attempts }))
+    .filter((entry) => entry.attempts >= minimum)
+    .sort((a, b) => b.rate - a.rate || b.misses - a.misses || a.char.localeCompare(b.char))
+    .slice(0, limit)
+}
+
+/** A least-squares line through `ys` sampled at 0..n-1, used to trend the chart. */
+export function linearTrend(values: number[]): number[] {
+  const n = values.length
+  if (n === 0) return []
+  if (n === 1) return [values[0]]
+  const meanX = (n - 1) / 2
+  const meanY = values.reduce((sum, value) => sum + value, 0) / n
+  let numerator = 0
+  let denominator = 0
+  for (let i = 0; i < n; i += 1) {
+    numerator += (i - meanX) * (values[i] - meanY)
+    denominator += (i - meanX) ** 2
+  }
+  const slope = denominator === 0 ? 0 : numerator / denominator
+  const intercept = meanY - slope * meanX
+  return values.map((_, i) => intercept + slope * i)
+}
+
+/**
+ * Score how steady the inter-key gaps were.
+ *
+ * A run with a handful of samples reads 0; otherwise the coefficient of
+ * variation (`stdDev ÷ mean`) maps to a 0..100 score, capped at 100.
+ */
+export function consistencyFrom(gaps: number[]): { score: number; mean: number; deviation: number } {
+  if (gaps.length < 5) return { score: 0, mean: 0, deviation: 0 }
+  const mean = gaps.reduce((sum, gap) => sum + gap, 0) / gaps.length
+  if (mean <= 0) return { score: 0, mean: 0, deviation: 0 }
+  const variance = gaps.reduce((sum, gap) => sum + (gap - mean) ** 2, 0) / gaps.length
+  const deviation = Math.sqrt(variance)
+  const coefficient = deviation / mean
+  const score = Math.min(100, Math.max(0, Math.round(100 * (1 - coefficient / 2))))
+  return { score, mean, deviation }
 }

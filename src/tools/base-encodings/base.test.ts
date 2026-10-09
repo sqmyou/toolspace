@@ -43,6 +43,29 @@ describe('base32', () => {
     expect([...base32Decode(base32Encode(source))]).toEqual([...source])
     expect([...base32Decode('mzxw6ytboi======')]).toEqual([...bytes('foobar')])
   })
+
+  it('supports the Crockford variant without padding', () => {
+    const encoded = base32Encode(bytes('foobar'), { variant: 'crockford' })
+    expect(encoded).toBe('CSQPYRK1E8')
+    expect(encoded).not.toContain('=')
+    expect([...base32Decode(encoded, { variant: 'crockford' })]).toEqual([...bytes('foobar')])
+  })
+
+  it('folds the Crockford lookalikes I, L and O on decode', () => {
+    expect([...base32Decode('CSQPYRK1E8', { variant: 'crockford' })]).toEqual([...bytes('foobar')])
+    const id = base32Encode(new Uint8Array([0, 1]), { variant: 'crockford' })
+    expect([...base32Decode(id.replace(/0/g, 'O').replace(/1/g, 'I'), { variant: 'crockford' })])
+      .toEqual([...base32Decode(id, { variant: 'crockford' })])
+  })
+
+  it('can omit RFC 4648 padding', () => {
+    expect(base32Encode(bytes('f'), { padding: false })).toBe('MY')
+  })
+
+  it('rejects a truncated or trailing-data string', () => {
+    expect(() => base32Decode('M')).toThrow(/truncated/)
+    expect(() => base32Decode('MZ')).toThrow(/trailing/)
+  })
 })
 
 describe('base58', () => {

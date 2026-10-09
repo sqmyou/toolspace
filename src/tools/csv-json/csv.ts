@@ -112,7 +112,28 @@ function cellToString(value: unknown): string {
   return String(value)
 }
 
-export function jsonToCsv(input: string, delimiter: Delimiter = ','): { csv: string; error?: string } {
+/**
+ * Collapse an object into a single level of dotted keys ("user.name"). Objects
+ * recurse and arrays join with "; ", so a row never spans several lines.
+ */
+function flatten(value: unknown, prefix: string, into: Record<string, string>): void {
+  if (Array.isArray(value)) {
+    into[prefix] = value.map((item) => (item !== null && typeof item === 'object' ? JSON.stringify(item) : String(item ?? ''))).join('; ')
+    return
+  }
+  if (value !== null && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+    if (entries.length === 0) {
+      into[prefix] = ''
+      return
+    }
+    for (const [key, child] of entries) flatten(child, prefix ? `${prefix}.${key}` : key, into)
+    return
+  }
+  into[prefix] = value == null ? '' : String(value)
+}
+
+export function jsonToCsv(input: string, delimiter: Delimiter = ',', options: { flatten?: boolean } = {}): { csv: string; error?: string } {
   let parsed: unknown
   try {
     parsed = JSON.parse(input)
@@ -126,21 +147,35 @@ export function jsonToCsv(input: string, delimiter: Delimiter = ','): { csv: str
 
   if (!Array.isArray(parsed)) {
     if (typeof parsed === 'object' && parsed !== null) {
-      const entries = Object.entries(parsed as Record<string, unknown>)
+      const flat: Record<string, string> = {}
+      if (options.flatten) flatten(parsed, '', flat)
+      const entries = options.flatten ? Object.entries(flat) : Object.entries(parsed as Record<string, unknown>).map(([key, value]) => [key, cellToString(value)] as const)
       const lines = ['key' + delimiter + 'value']
-      for (const [key, value] of entries) lines.push(`${quote(key, delimiter)}${delimiter}${quote(cellToString(value), delimiter)}`)
+      for (const [key, value] of entries) lines.push(`${quote(key, delimiter)}${delimiter}${quote(String(value), delimiter)}`)
       return { csv: lines.join('\n') }
     }
     return { csv: '', error: 'JSON must be an array of objects, an array of values, or an object' }
   }
 
   const objects = parsed as Record<string, unknown>[]
-  const headers = [...new Set(objects.flatMap((item) => (item && typeof item === 'object' ? Object.keys(item) : [])))]
+  const rows = objects.map((item) => {
+    const row: Record<string, string> = {}
+    if (options.flatten) {
+      flatten(item, '', row)
+    } else if (item !== null && typeof item === 'object') {
+      for (const [key, value] of Object.entries(item)) row[key] = cellToString(value)
+    }
+    return row
+  })
+
+  const headers = options.flatten
+    ? [...new Set(rows.flatMap((row) => Object.keys(row)))]
+    : [...new Set(objects.flatMap((item) => (item && typeof item === 'object' ? Object.keys(item) : [])))]
   if (headers.length === 0) return { csv: '' }
 
   const lines = [headers.map((header) => quote(header, delimiter)).join(delimiter)]
-  for (const item of objects) {
-    lines.push(headers.map((header) => quote(cellToString(item?.[header]), delimiter)).join(delimiter))
+  for (const row of rows) {
+    lines.push(headers.map((header) => quote(row[header] ?? '', delimiter)).join(delimiter))
   }
   return { csv: lines.join('\n') }
 }

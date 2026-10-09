@@ -14,7 +14,7 @@ import {
 } from '../../core/components'
 import { el } from '../../core/dom'
 import type { Tool } from '../../core/types'
-import { generateMany, parseUuid, type IdFormat } from './id'
+import { decodeUlid, generateMany, isUlid, parseUuid, UlidError, type IdFormat } from './id'
 
 const FORMATS: { value: IdFormat; label: string; hint: string }[] = [
   { value: 'uuid-v4', label: 'UUID v4', hint: 'Random 128-bit identifier' },
@@ -28,9 +28,9 @@ const FORMATS: { value: IdFormat; label: string; hint: string }[] = [
 const tool: Tool = {
   slug: 'id-generator',
   name: 'ID Generator',
-  description: 'Generate UUIDs, ULIDs, Nano IDs, hex ids and ObjectIds, and validate a UUID.',
+  description: 'Generate UUIDs, ULIDs, Nano IDs, hex ids and ObjectIds, and validate a UUID or decode a ULID.',
   category: 'Data',
-  keywords: ['uuid', 'v4', 'v7', 'ulid', 'nanoid', 'objectid', 'guid', 'identifier', 'validate', 'validate uuid'],
+  keywords: ['uuid', 'v4', 'v7', 'ulid', 'nanoid', 'objectid', 'guid', 'identifier', 'validate', 'validate uuid', 'decode ulid'],
   render(root) {
     let format: IdFormat = 'uuid-v4'
     const count = textField({ type: 'number', value: '5', mono: true, onInput: () => run() })
@@ -61,21 +61,52 @@ const tool: Tool = {
       }
     }
 
-    const checkInput = textField({ placeholder: 'Paste a UUID to validate…', mono: true, onInput: () => check() })
+    const checkInput = textField({ placeholder: 'Paste a UUID or ULID to validate or decode…', mono: true, onInput: () => check() })
     const checkError = note('', 'danger')
     checkError.hidden = true
     const checkRows = kvList()
 
     function check() {
-      const result = parseUuid(checkInput.value)
-      if (!result.valid) {
+      const showError = (text: string) => {
         checkRows.replaceChildren()
-        checkError.textContent = result.error ?? 'Not a UUID.'
+        checkError.textContent = text
         checkError.hidden = false
+      }
+      const clearError = () => {
+        checkError.textContent = ''
+        checkError.hidden = true
+      }
+
+      const value = checkInput.value
+      if (!value.trim()) {
+        checkRows.replaceChildren()
+        clearError()
         return
       }
-      checkError.hidden = true
+      if (isUlid(value)) {
+        clearError()
+        try {
+          const decoded = decodeUlid(value)
+          checkRows.replaceChildren(
+            copyRow('Type', 'ULID', { copy: false }),
+            copyRow('Created', decoded.time.toISOString()),
+            copyRow('Epoch ms', String(decoded.timestamp)),
+            copyRow('Random part', decoded.random),
+          )
+        } catch (err) {
+          showError(err instanceof UlidError ? err.message : 'Could not decode that ULID.')
+        }
+        return
+      }
+
+      const result = parseUuid(value)
+      if (!result.valid) {
+        showError(result.error ?? 'Not a UUID or ULID.')
+        return
+      }
+      clearError()
       const rows = [
+        copyRow('Type', `UUID v${result.version ?? '?'}`, { copy: false }),
         copyRow('Canonical', result.canonical),
         copyRow('Variant', result.variant ?? 'Unknown', { copy: false }),
       ]
@@ -103,12 +134,12 @@ const tool: Tool = {
           onClick: () => download('ids.txt', list.body.textContent ?? ''),
         })),
         panel(
-          { title: 'Validate a UUID', icon: 'check' },
-          field(checkInput, { label: 'UUID', hint: 'Braces, a urn:uuid: prefix, upper case and the unhyphenated 32-character form all work.' }),
+          { title: 'Validate an ID', icon: 'check' },
+          field(checkInput, { label: 'UUID or ULID', hint: 'Braces, a urn:uuid: prefix, upper case and the unhyphenated 32-character form all work. A ULID decodes to its embedded time.' }),
           checkError,
           checkRows,
         ),
-              ),
+      ),
     )
 
     run()

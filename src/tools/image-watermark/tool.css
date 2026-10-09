@@ -1,0 +1,71 @@
+/* Image Watermark. The photo is the hero; the controls stack in a narrow
+   column beside it with a nine-dot position grid instead of a coordinate form. */
+
+.ts-wm-stage {
+  margin-top: 12px;
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-soft) 55%, transparent);
+}
+.ts-wm-frame { width: 100%; display: flex; justify-content: center; }
+.ts-wm-canvas {
+  max-width: 100%;
+  max-height: 62vh;
+  height: auto;
+  border-radius: calc(var(--radius) - 2px);
+  background:
+    repeating-conic-gradient(color-mix(in srgb, var(--fg) 8%, transparent) 0% 25%, transparent 0% 50%)
+    50% / 18px 18px;
+}
+.ts-wm-empty { color: var(--faint); font-size: var(--text-sm); margin: 0; padding: 40px 0; }
+
+.ts-wm-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 12px;
+}
+
+.ts-wm-subhead {
+  margin: 14px 0 6px;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+}
+
+.ts-wm-grid { display: flex; gap: 12px; margin-top: 8px; }
+.ts-wm-checks { display: flex; gap: 18px; margin: 8px 0; }
+
+/* The nine-dot position picker. */
+.ts-wm-anchors {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  width: 148px;
+  margin-top: 6px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--bg-soft) 45%, transparent);
+  transition: opacity 0.15s ease;
+}
+.ts-wm-anchors.is-off { opacity: 0.4; pointer-events: none; }
+.ts-wm-anchor {
+  aspect-ratio: 1;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--fg) 12%, transparent);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.ts-wm-anchor:hover { background: color-mix(in srgb, var(--fg) 22%, transparent); }
+.ts-wm-anchor.is-on {
+  background: var(--accent);
+  border-color: var(--accent-strong);
+}

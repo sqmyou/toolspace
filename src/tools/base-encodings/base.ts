@@ -1,7 +1,29 @@
 /** Base32 (RFC 4648), Base58 (Bitcoin) and hex/binary codecs, all over bytes. */
 
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
+const CROCKFORD_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
 const BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+
+export interface Base32Options {
+  variant?: 'rfc4648' | 'crockford'
+  /** Keep the "=" padding. Only applies to RFC 4648. */
+  padding?: boolean
+}
+
+function decodeTable(alphabet: string, crockford = false): Record<string, number> {
+  const table: Record<string, number> = {}
+  for (let i = 0; i < alphabet.length; i++) table[alphabet[i]] = i
+  if (crockford) {
+    // Crockford decoding folds the lookalike letters onto their canonical digit.
+    table['I'] = 1
+    table['L'] = 1
+    table['O'] = 0
+  }
+  return table
+}
+
+const RFC4648_DECODE = decodeTable(BASE32_ALPHABET)
+const CROCKFORD_DECODE = decodeTable(CROCKFORD_ALPHABET, true)
 
 const textEncoder = new TextEncoder()
 const textDecoder = new TextDecoder()
@@ -45,7 +67,9 @@ export function fromBinary(input: string): Uint8Array {
   return bytes
 }
 
-export function base32Encode(bytes: Uint8Array): string {
+export function base32Encode(bytes: Uint8Array, options: Base32Options = {}): string {
+  const variant = options.variant ?? 'rfc4648'
+  const alphabet = variant === 'crockford' ? CROCKFORD_ALPHABET : BASE32_ALPHABET
   let bits = 0
   let value = 0
   let output = ''
@@ -53,23 +77,28 @@ export function base32Encode(bytes: Uint8Array): string {
     value = (value << 8) | byte
     bits += 8
     while (bits >= 5) {
-      output += BASE32_ALPHABET[(value >>> (bits - 5)) & 31]
+      output += alphabet[(value >>> (bits - 5)) & 31]
       bits -= 5
     }
   }
-  if (bits > 0) output += BASE32_ALPHABET[(value << (5 - bits)) & 31]
-  while (output.length % 8 !== 0) output += '='
+  if (bits > 0) output += alphabet[(value << (5 - bits)) & 31]
+  // Crockford drops padding entirely; RFC 4648 pads to a multiple of eight.
+  if (variant === 'rfc4648' && (options.padding ?? true)) {
+    while (output.length % 8 !== 0) output += '='
+  }
   return output
 }
 
-export function base32Decode(input: string): Uint8Array {
+export function base32Decode(input: string, options: Base32Options = {}): Uint8Array {
+  const variant = options.variant ?? 'rfc4648'
+  const table = variant === 'crockford' ? CROCKFORD_DECODE : RFC4648_DECODE
   const clean = input.replace(/[=\s]/g, '').toUpperCase()
   let bits = 0
   let value = 0
   const bytes: number[] = []
   for (const char of clean) {
-    const index = BASE32_ALPHABET.indexOf(char)
-    if (index === -1) throw new Error(`Invalid Base32 character "${char}"`)
+    const index = table[char]
+    if (index === undefined) throw new Error(`Invalid Base32 character "${char}"`)
     value = (value << 5) | index
     bits += 5
     if (bits >= 8) {
@@ -77,6 +106,9 @@ export function base32Decode(input: string): Uint8Array {
       bits -= 8
     }
   }
+  // Any bits left over must be zero padding, or the input was truncated.
+  if (bits >= 5) throw new Error('That Base32 string is truncated')
+  if (bits > 0 && (value & ((1 << bits) - 1)) !== 0) throw new Error('That Base32 string has trailing data')
   return new Uint8Array(bytes)
 }
 

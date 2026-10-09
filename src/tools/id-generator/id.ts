@@ -110,6 +110,44 @@ export function generateMany(format: IdFormat, count: number): string[] {
   return Array.from({ length: safe }, () => generate(format))
 }
 
+export class UlidError extends Error {}
+
+const ULID_DECODE: Record<string, number> = {}
+for (let i = 0; i < BASE32.length; i++) ULID_DECODE[BASE32[i]] = i
+// Crockford decoding folds the lookalike letters onto their canonical digit.
+ULID_DECODE['I'] = 1
+ULID_DECODE['L'] = 1
+ULID_DECODE['O'] = 0
+
+export interface DecodedUlid {
+  time: Date
+  timestamp: number
+  random: string
+}
+
+/** True when the trimmed input is shaped like a 26-character ULID. */
+export function isUlid(input: string): boolean {
+  const text = input.trim().toUpperCase()
+  return text.length === 26 && [...text].every((char) => char in ULID_DECODE)
+}
+
+/** Decode a ULID back to its embedded timestamp and random part. */
+export function decodeUlid(input: string): DecodedUlid {
+  const text = input.trim().toUpperCase()
+  if (text.length !== 26) throw new UlidError('A ULID is exactly 26 characters')
+  let timestamp = 0
+  for (let i = 0; i < 10; i++) {
+    const value = ULID_DECODE[text[i]]
+    if (value === undefined) throw new UlidError(`"${text[i]}" is not a valid base32 character`)
+    timestamp = timestamp * 32 + value
+  }
+  if (timestamp > 0xffffffffffff) throw new UlidError('The timestamp part overflows 48 bits')
+  for (let i = 10; i < 26; i++) {
+    if (ULID_DECODE[text[i]] === undefined) throw new UlidError(`"${text[i]}" is not a valid base32 character`)
+  }
+  return { time: new Date(timestamp), timestamp, random: text.slice(10) }
+}
+
 /** The variant nibble of a UUID says who defined the rest of the layout. */
 export type UuidVariant = 'NCS' | 'RFC 4122' | 'Microsoft' | 'Future'
 

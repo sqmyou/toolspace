@@ -19,7 +19,7 @@ const tool: Tool = {
   name: 'CSV ↔ JSON Converter',
   description: 'Convert between CSV, JSON and Markdown tables (with column alignment) using delimiter sniffing and full quoting support.',
   category: 'Data',
-  keywords: ['csv', 'json', 'convert', 'delimiter', 'table', 'tsv', 'parse', 'markdown', 'markdown table', 'align'],
+  keywords: ['csv', 'json', 'convert', 'delimiter', 'table', 'tsv', 'parse', 'markdown', 'markdown table', 'align', 'flatten', 'nested'],
   render(root) {
     const input = textarea({ rows: 10, placeholder: 'Paste CSV, JSON or a Markdown table…', onInput: () => run() })
 
@@ -60,6 +60,9 @@ const tool: Tool = {
 
     let hasHeader = true
     const headerBox = checkbox({ label: 'First row is a header', checked: true, onChange: (checked) => { hasHeader = checked; run() } })
+
+    let flattenNested = false
+    const flattenBox = checkbox({ label: 'Flatten nested JSON', checked: false, onChange: (checked) => { flattenNested = checked; run() } })
 
     let alignment: Alignment = 'none'
     const alignmentControl = select({
@@ -126,7 +129,7 @@ const tool: Tool = {
         return { value: csv, error }
       }
       if (source === 'json') {
-        const { csv, error } = jsonToCsv(text, separator())
+        const { csv, error } = jsonToCsv(text, separator(), { flatten: flattenNested })
         return { value: csv, error }
       }
       return { value: text }
@@ -135,7 +138,7 @@ const tool: Tool = {
     function toMarkdown(text: string, source: Source): { value: string; error?: string } {
       if (source === 'markdown') return { value: text }
       if (source === 'json') {
-        const { csv, error } = jsonToCsv(text, separator())
+        const { csv, error } = jsonToCsv(text, separator(), { flatten: flattenNested })
         if (error) return { value: '', error }
         return { value: csvToMarkdown(csv, { delimiter: separator(), hasHeader, alignments: alignment }) }
       }
@@ -189,6 +192,7 @@ const tool: Tool = {
             field(formatControl, { label: 'Output format' }),
             alignmentField,
             headerBox,
+            flattenBox,
           ),
         ),
         panel({ title: 'Input', icon: 'braces' }, input, field(fileInput, { label: 'Or load a file' })),

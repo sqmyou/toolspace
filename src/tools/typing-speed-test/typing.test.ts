@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { buildText, characters, consistencyOf, keystrokeStats, shuffled, type KeyEvent } from './typing'
+import {
+  buildText, characters, consistencyFrom, consistencyOf, keystrokeStats, linearTrend, perSecondSeries, shuffled, weakKeys, type KeyEvent,
+} from './typing'
 
-function event(char: string | null, correct: boolean, at: number): KeyEvent {
-  return { char, correct, at }
+function event(char: string | null, correct: boolean, at: number, expected?: string | null): KeyEvent {
+  return { char, correct, at, expected }
 }
 
 describe('keystrokeStats', () => {
@@ -117,5 +119,89 @@ describe('shuffled', () => {
 describe('characters', () => {
   it('splits into code points, not UTF-16 units', () => {
     expect(characters('a😀b')).toEqual(['a', '😀', 'b'])
+  })
+})
+
+describe('perSecondSeries', () => {
+  it('scores each second as correct characters times twelve', () => {
+    // Five correct characters land in the first second, none in the second.
+    const events = [
+      event('a', true, 100), event('b', true, 200), event('c', true, 300),
+      event('d', true, 400), event('e', true, 500),
+      event('f', true, 1500),
+    ]
+    const series = perSecondSeries(events, 3000)
+    expect(series.map((s) => s.second)).toEqual([1, 2, 3])
+    expect(series[0].wpm).toBe(60)
+    expect(series[1].wpm).toBe(12)
+    expect(series[2].wpm).toBe(0)
+  })
+
+  it('counts errors and ignores backspaces per second', () => {
+    const events = [
+      event('x', false, 100), event('a', true, 200), event(null, true, 250),
+    ]
+    const series = perSecondSeries(events, 1000)
+    expect(series[0].errors).toBe(1)
+    expect(series[0].wpm).toBe(12)
+  })
+
+  it('returns nothing for a sub-second run', () => {
+    expect(perSecondSeries([event('a', true, 400)], 800)).toEqual([])
+  })
+})
+
+describe('weakKeys', () => {
+  it('ranks by miss rate then by count', () => {
+    const events = [
+      event('x', false, 1, 'q'), event('x', false, 2, 'q'), event('x', false, 3, 'q'),
+      event('x', false, 1, 'z'), event('z', true, 2, 'z'), event('z', true, 3, 'z'), event('z', true, 4, 'z'),
+    ]
+    const weak = weakKeys(events)
+    expect(weak[0].char).toBe('q')
+    expect(weak[0].rate).toBe(1)
+    expect(weak[1].char).toBe('z')
+    expect(weak[1].rate).toBeCloseTo(0.25, 6)
+  })
+
+  it('ignores keys below the attempt threshold and the space bar', () => {
+    const events = [event('x', false, 1, 'q'), event('x', false, 2, ' '), event('x', false, 3, ' ')]
+    expect(weakKeys(events, 3)).toEqual([])
+  })
+
+  it('ignores correct presses and backspaces', () => {
+    const events = [event('q', true, 1, 'q'), event(null, true, 2, 'q'), event('q', true, 3, 'q')]
+    expect(weakKeys(events, 1)).toEqual([])
+  })
+})
+
+describe('linearTrend', () => {
+  it('fits a rising line', () => {
+    expect(linearTrend([0, 10, 20, 30])).toEqual([0, 10, 20, 30])
+  })
+
+  it('fits a falling line', () => {
+    expect(linearTrend([40, 30, 20, 10])).toEqual([40, 30, 20, 10])
+  })
+
+  it('flattens a single sample and handles an empty input', () => {
+    expect(linearTrend([7])).toEqual([7])
+    expect(linearTrend([])).toEqual([])
+  })
+})
+
+describe('consistencyFrom', () => {
+  it('reads 100 for perfectly even gaps', () => {
+    expect(consistencyFrom([100, 100, 100, 100, 100]).score).toBe(100)
+  })
+
+  it('reads 0 for too few samples', () => {
+    expect(consistencyFrom([100, 100, 100, 100]).score).toBe(0)
+  })
+
+  it('lands between the extremes for a ragged run', () => {
+    const score = consistencyFrom([80, 120, 90, 110, 95, 105]).score
+    expect(score).toBeGreaterThan(0)
+    expect(score).toBeLessThan(100)
   })
 })

@@ -72,6 +72,22 @@ describe('jsonToCsv', () => {
     expect(csv).toContain('"[""a"",""b""]"')
   })
 
+  it('flattens nested objects to dotted columns when asked', () => {
+    const { csv } = jsonToCsv('[{"user":{"name":"Ada","city":"London"}}]', ',', { flatten: true })
+    expect(csv.split('\n')[0]).toBe('user.name,user.city')
+    expect(csv.split('\n')[1]).toBe('Ada,London')
+  })
+
+  it('joins arrays with a semicolon when flattening', () => {
+    const { csv } = jsonToCsv('[{"a":1,"tags":["x","y"]}]', ',', { flatten: true })
+    expect(csv.split('\n')[1]).toBe('1,x; y')
+  })
+
+  it('leaves nested values stringified without the flatten option', () => {
+    const { csv } = jsonToCsv('[{"user":{"name":"Ada"}}]')
+    expect(csv.split('\n')[0]).toBe('user')
+  })
+
   it('handles primitives and objects', () => {
     expect(jsonToCsv('[1,2,3]').csv).toBe('1\n2\n3')
     expect(jsonToCsv('{"a":1}').csv).toBe('key,value\na,1')

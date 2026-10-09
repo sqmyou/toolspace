@@ -3,7 +3,7 @@ import { categoryHue, MARK_FAMILIES, toolMarkSvg } from './identity'
 
 // A slug set big enough to exercise every mark family several times over.
 const SLUGS = [
-  'aes-gcm', 'base32', 'base64', 'binary-text', 'calculator', 'case-converter',
+  'aes-gcm', 'base-encodings', 'base64', 'binary-text', 'calculator', 'case-converter',
   'cidr', 'color-contrast', 'color-converter', 'cookie-parser', 'cron-explainer',
   'csv-json', 'date-math', 'duration-parser', 'env-converter', 'escape-toolkit',
   'fake-data', 'file-checksum', 'gitignore', 'hash-generator', 'hex-viewer',

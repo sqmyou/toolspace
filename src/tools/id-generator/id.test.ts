@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { generate, generateMany, hexId, nanoid, objectId, parseUuid, ulid, uuidV4, uuidV7 } from './id'
+import { decodeUlid, generate, generateMany, hexId, isUlid, nanoid, objectId, parseUuid, UlidError, ulid, uuidV4, uuidV7 } from './id'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
@@ -34,6 +34,34 @@ describe('ulid', () => {
     expect(first).toHaveLength(26)
     expect(first).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/)
     expect(second > first).toBe(true)
+  })
+
+  it('round-trips a known timestamp through decodeUlid', () => {
+    const time = Date.UTC(2024, 0, 1)
+    const decoded = decodeUlid(ulid(time))
+    expect(decoded.time.getTime()).toBe(time)
+    expect(decoded.timestamp).toBe(time)
+  })
+
+  it('folds the lookalike letters I, L and O when decoding', () => {
+    const id = ulid(1_700_000_000_000)
+    const swapped = id.replace(/0/g, 'O').replace(/1/g, 'I')
+    expect(decodeUlid(swapped).timestamp).toBe(1_700_000_000_000)
+  })
+
+  it('decodes a literal hand-typed ULID', () => {
+    expect(decodeUlid('01ARZ3NDEKTSV4RRFFQ69G5FAV').timestamp).toBe(1_469_922_850_259)
+  })
+
+  it('rejects a bad length or character', () => {
+    expect(() => decodeUlid('ABC')).toThrow(UlidError)
+    expect(() => decodeUlid('U'.repeat(26))).toThrow(UlidError)
+  })
+
+  it('reports whether a value is a ULID', () => {
+    expect(isUlid(ulid(1_700_000_000_000))).toBe(true)
+    expect(isUlid('not-a-ulid')).toBe(false)
+    expect(isUlid('U'.repeat(26))).toBe(false)
   })
 })
 
