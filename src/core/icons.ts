@@ -57,6 +57,8 @@ export const ICONS: Record<string, string> = {
   filter: '<path d="M4.5 6.2h15"/><path d="M7 12h10"/><path d="M10 17.8h4"/>',
   bolt: '<path d="M13.4 3.6 5.8 13h5l-1.2 7.4 7.6-9.4h-5z"/>',
   key2: '<circle cx="7.4" cy="16.6" r="3"/><path d="m9.6 14.4 8.4-8.4"/><path d="m15 9 2 2"/>',
+  chart: '<path d="M4.6 19.4h14.8"/><path d="M8 19.4v-6.2M12 19.4V8M16 19.4v-4"/>',
+  columns: '<rect x="3.8" y="4.6" width="7" height="14.8" rx="1.8"/><rect x="13.2" y="4.6" width="7" height="14.8" rx="1.8"/>',
 }
 
 export type IconName = keyof typeof ICONS

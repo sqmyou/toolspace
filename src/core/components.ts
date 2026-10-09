@@ -204,7 +204,7 @@ export interface CheckOptions {
 }
 
 export function checkbox(options: CheckOptions): HTMLLabelElement {
-  const box = el('input', { type: 'checkbox', checked: options.checked ?? false }) as HTMLInputElement
+  const box = el('input', { class: 'ts-k-check__box', type: 'checkbox', checked: options.checked ?? false }) as HTMLInputElement
   if (options.onChange) box.addEventListener('change', (event) => options.onChange!(box.checked, event))
   const text = el('span', { class: 'ts-k-check__text' }, options.label)
   if (options.hint) text.append(el('small', {}, ` ${options.hint}`))

@@ -1,11 +1,20 @@
-import { el } from '../../core/dom'
-import { copyChip } from '../../core/ui'
+import {
+  copyRow,
+  grid,
+  kvList,
+  note,
+  panel,
+  stats as statStrip,
+  textarea,
+  toolLayout,
+  field,
+  stat,
+} from '../../core/components'
 import type { Tool } from '../../core/types'
 import { parseNumbers, summarise, zScores } from './stats'
 
 function figure(value: number | null, decimals = 4): string {
-  if (value === null) return '—'
-  if (!Number.isFinite(value)) return '—'
+  if (value === null || !Number.isFinite(value)) return '—'
   return Number(value.toFixed(decimals)).toString()
 }
 
@@ -16,29 +25,33 @@ const tool: Tool = {
   category: 'Numbers',
   keywords: ['statistics', 'mean', 'median', 'mode', 'variance', 'standard deviation', 'quartile', 'outlier', 'percentile'],
   render(root) {
-    const input = el('textarea', { class: 'ts-textarea ts-mono', rows: 6, spellcheck: false }, '2, 4, 4, 4, 5, 5, 7, 9') as HTMLTextAreaElement
-    const error = el('p', { class: 'ts-error', hidden: true })
-    const list = el('div', { class: 'ts-copy-list' })
-    const zList = el('div', { class: 'ts-copy-list' })
+    const input = textarea({ rows: 6, value: '2, 4, 4, 4, 5, 5, 7, 9', onInput: () => run() })
+    const error = note('', 'danger')
+    error.hidden = true
+    const headline = statStrip()
+    const rows = kvList()
+    const zRows = kvList()
 
     function run() {
-      list.replaceChildren()
-      zList.replaceChildren()
+      rows.replaceChildren()
+      zRows.replaceChildren()
       try {
         const values = parseNumbers(input.value)
         const summary = summarise(values)
-        const rows: [string, string][] = [
-          ['Count', String(summary.count)],
+        headline.replaceChildren(
+          stat({ label: 'Count', value: String(summary.count) }),
+          stat({ label: 'Mean', value: figure(summary.mean) }),
+          stat({ label: 'Median', value: figure(summary.median) }),
+          stat({ label: 'Std dev (sample)', value: figure(summary.standardDeviationSample) }),
+        )
+        const entries: [string, string][] = [
           ['Sum', figure(summary.sum, 6)],
           ['Minimum', figure(summary.min, 6)],
           ['Maximum', figure(summary.max, 6)],
           ['Range', figure(summary.range, 6)],
-          ['Mean', figure(summary.mean)],
-          ['Median', figure(summary.median)],
           ['Mode', summary.mode.length ? summary.mode.join(', ') : 'none'],
           ['Variance (sample)', figure(summary.varianceSample)],
           ['Variance (population)', figure(summary.variancePopulation)],
-          ['Std deviation (sample)', figure(summary.standardDeviationSample)],
           ['Std deviation (population)', figure(summary.standardDeviationPopulation)],
           ['Q1', figure(summary.quartiles.q1)],
           ['Q3', figure(summary.quartiles.q3)],
@@ -48,11 +61,11 @@ const tool: Tool = {
           ['Geometric mean', figure(summary.geometricMean)],
           ['Harmonic mean', figure(summary.harmonicMean)],
         ]
-        for (const [label, value] of rows) list.append(el('div', { class: 'ts-copy-row' }, el('span', { class: 'ts-muted ts-stats-name' }, label), el('code', { class: 'ts-stats-value' }, value), copyChip(value, 'Copy')))
+        rows.replaceChildren(...entries.map(([label, value]) => copyRow(label, value)))
 
-        for (const [index, score] of zScores(values).entries()) {
-          zList.append(el('div', { class: 'ts-copy-row' }, el('span', { class: 'ts-muted ts-stats-name' }, `#${index + 1} = ${values[index]}`), el('code', { class: 'ts-stats-value' }, figure(score))))
-        }
+        zRows.replaceChildren(
+          ...zScores(values).map((score, index) => copyRow(`#${index + 1} = ${values[index]}`, figure(score))),
+        )
         error.hidden = true
       } catch (err) {
         error.textContent = err instanceof Error ? err.message : 'Could not read those numbers.'
@@ -60,16 +73,13 @@ const tool: Tool = {
       }
     }
 
-    input.addEventListener('input', run)
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'Numbers (any separator)'), input),
-        error,
-        el('div', { class: 'ts-stats-grid' }, list, el('div', {}, el('h3', { class: 'ts-subhead' }, 'Z-scores'), zList)),
-        el('p', { class: 'ts-note' }, 'Quartiles interpolate between ranks, matching a spreadsheet. Sample figures need two values, skewness three and kurtosis four; otherwise they show a dash.'),
+      toolLayout(
+        { wide: true },
+        panel({ title: 'Numbers', icon: 'hash' }, field(input, { label: 'Numbers (any separator)' }), error),
+        headline,
+        grid(320, panel({ title: 'Summary', icon: 'layers' }, rows), panel({ title: 'Z-scores', icon: 'chart' }, zRows)),
+        note('Quartiles interpolate between ranks, matching a spreadsheet. Sample figures need two values, skewness three and kurtosis four; otherwise they show a dash.'),
       ),
     )
 
