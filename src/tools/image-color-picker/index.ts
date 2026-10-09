@@ -1,5 +1,16 @@
+import {
+  actions,
+  button,
+  copyRow,
+  dropzone,
+  mediaFrame,
+  note,
+  panel,
+  stats,
+  stat,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
-import { copyChip } from '../../core/ui'
 import type { Tool } from '../../core/types'
 import { formatHsl, formatRgb, rgbToHsl, toHex } from '../color-converter/color'
 import { contrastWithWhite, dominantColors, formatPercent, paletteToCss, paletteToList, readableInk, type Sample } from './sample'
@@ -13,21 +24,23 @@ const tool: Tool = {
   render(root) {
     let image: HTMLImageElement | null = null
     let objectUrl = ''
-    let hover: Sample | null = null
 
-    const fileInput = el('input', { type: 'file', accept: 'image/*', class: 'ts-file-input' }) as HTMLInputElement
-    const status = el('p', { class: 'ts-muted' }, 'Choose an image, or drop one anywhere on this panel.')
-    const warning = el('p', { class: 'ts-error', hidden: true })
-
-    const stage = el('div', { class: 'ts-picker-stage' })
+    const frame = mediaFrame({ alt: 'Image to sample', maxHeight: 460 })
+    // The canvas is the visible preview; the frame's <img> is unused here.
+    frame.image.hidden = true
     const canvas = el('canvas', { class: 'ts-picker-canvas' }) as HTMLCanvasElement
-    const loupe = el('div', { class: 'ts-loupe' })
+    const loupe = el('div', { class: 'ts-loupe', hidden: true })
     const loupeCanvas = el('canvas', { class: 'ts-loupe-canvas', width: '1', height: '1' }) as HTMLCanvasElement
     const loupeReadout = el('div', { class: 'ts-loupe-readout' })
 
+    const status = note('Choose an image, or drop one anywhere on this panel.')
+    const warning = note('', 'danger')
+    warning.hidden = true
+
+    const pickedPanel = el('div', { class: 'ts-picked' })
+    const paletteStrip = stats()
     const swatchList = el('div', { class: 'ts-swatch-grid' })
-    const currentPanel = el('div', { class: 'ts-picked' })
-    const paletteActions = el('div', { class: 'ts-tool-actions' })
+    const paletteActions = actions()
 
     const context = canvas.getContext('2d', { willReadFrequently: true })
     const loupeContext = loupeCanvas.getContext('2d', { willReadFrequently: true })
@@ -68,48 +81,41 @@ const tool: Tool = {
               el('span', { class: 'ts-loupe-chip', style: `background:${sample.hex}` }),
               sample.hex.toUpperCase(),
             )
-          : el('span', { class: 'ts-muted' }, 'Outside the image'),
+          : el('span', { class: 'ts-k-hint' }, 'Outside the image'),
       )
     }
 
     function showCurrent(sample: Sample | null, label = 'Picked colour') {
       if (!sample) {
-        currentPanel.replaceChildren(el('p', { class: 'ts-muted' }, 'Hover the image to sample a colour, then click to pin it.'))
+        pickedPanel.replaceChildren(el('p', { class: 'ts-k-hint' }, 'Hover the image to sample a colour, then click or tap to pin it.'))
         return
       }
       const hsl = rgbToHsl(sample.rgb)
-      const contrast = contrastWithWhite(sample.rgb)
-      currentPanel.replaceChildren(
+      pickedPanel.replaceChildren(
         el('div', { class: 'ts-picked-chip', style: `background:${sample.hex}` }),
         el(
           'div',
           { class: 'ts-picked-meta' },
           el('span', { class: 'ts-picked-label' }, label),
-          el(
-            'div',
-            { class: 'ts-copy-list' },
-            el('div', { class: 'ts-copy-row' }, el('span', { class: 'ts-muted' }, 'HEX'), el('span', { class: 'ts-value ts-mono' }, sample.hex.toUpperCase())),
-            el('div', { class: 'ts-copy-row' }, el('span', { class: 'ts-muted' }, 'RGB'), el('span', { class: 'ts-value ts-mono' }, formatRgb(sample.rgb))),
-            el('div', { class: 'ts-copy-row' }, el('span', { class: 'ts-muted' }, 'HSL'), el('span', { class: 'ts-value ts-mono' }, formatHsl(hsl))),
-            el('div', { class: 'ts-copy-row' }, el('span', { class: 'ts-muted' }, 'Contrast vs white'), el('span', { class: 'ts-value ts-mono' }, `${contrast.toFixed(2)}:1`)),
-          ),
-          el(
-            'div',
-            { class: 'ts-tool-actions' },
-            copyChip(() => sample.hex, 'Copy HEX'),
-            copyChip(() => formatRgb(sample.rgb), 'Copy RGB'),
-            copyChip(() => formatHsl(hsl), 'Copy HSL'),
-          ),
+          copyRow('HEX', sample.hex.toUpperCase()),
+          copyRow('RGB', formatRgb(sample.rgb)),
+          copyRow('HSL', formatHsl(hsl)),
+          copyRow('Contrast vs white', `${contrastWithWhite(sample.rgb).toFixed(2)}:1`, { copy: false }),
         ),
       )
     }
 
     function renderPalette(samples: Sample[]) {
       if (samples.length === 0) {
-        swatchList.replaceChildren(el('p', { class: 'ts-muted' }, 'Load an image to see its palette.'))
+        paletteStrip.replaceChildren()
+        swatchList.replaceChildren(el('p', { class: 'ts-k-hint' }, 'Load an image to see its palette.'))
         paletteActions.replaceChildren()
         return
       }
+      paletteStrip.replaceChildren(
+        stat({ label: 'Colours', value: String(samples.length) }),
+        stat({ label: 'Top colour', value: samples[0].hex.toUpperCase() }),
+      )
       swatchList.replaceChildren(
         ...samples.map((sample) =>
           el(
@@ -130,8 +136,8 @@ const tool: Tool = {
         ),
       )
       paletteActions.replaceChildren(
-        copyChip(() => paletteToCss(samples), 'Copy CSS variables'),
-        copyChip(() => paletteToList(samples), 'Copy hex list'),
+        button('Copy CSS variables', { size: 'sm', onClick: () => void navigator.clipboard?.writeText(paletteToCss(samples)) }),
+        button('Copy hex list', { size: 'sm', onClick: () => void navigator.clipboard?.writeText(paletteToList(samples)) }),
       )
     }
 
@@ -188,10 +194,10 @@ const tool: Tool = {
 
     canvas.addEventListener('pointermove', (event) => {
       const { x, y } = toCanvasPoint(event)
-      hover = pixelAt(x, y)
+      const sample = pixelAt(x, y)
       loupe.hidden = false
       loupe.style.transform = `translate(${event.clientX + 16}px, ${event.clientY + 16}px)`
-      paintLoupe(x, y, hover)
+      paintLoupe(x, y, sample)
     })
     canvas.addEventListener('pointerleave', () => {
       loupe.hidden = true
@@ -202,52 +208,37 @@ const tool: Tool = {
       if (sample) showCurrent(sample)
     })
 
-    fileInput.addEventListener('change', () => {
-      const file = fileInput.files?.[0]
-      if (file) load(file)
-    })
-
-    stage.addEventListener('dragover', (event) => {
-      event.preventDefault()
-      stage.classList.add('is-dragging')
-    })
-    stage.addEventListener('dragleave', () => stage.classList.remove('is-dragging'))
-    stage.addEventListener('drop', (event) => {
-      event.preventDefault()
-      stage.classList.remove('is-dragging')
-      const file = event.dataTransfer?.files?.[0]
-      if (file && file.type.startsWith('image/')) load(file)
-      else if (file) fail('That file is not an image.')
+    const drop = dropzone({
+      label: 'Drop an image here',
+      hint: 'PNG, JPEG, WebP, GIF or SVG',
+      accept: 'image/*',
+      icon: 'image',
+      onFiles: (files) => {
+        const file = files[0]
+        if (!file) return
+        if (file.type && !file.type.startsWith('image/') && !file.name.toLowerCase().endsWith('.svg')) {
+          fail('That file is not an image.')
+          return
+        }
+        load(file)
+      },
     })
 
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool' },
-        el(
-          'div',
-          { class: 'ts-field' },
-          el(
-            'div',
-            { class: 'ts-row ts-between' },
-            el('label', {}, 'Image'),
-            el('div', { class: 'ts-tool-actions' }, fileInput),
-          ),
-          status,
-          warning,
-          stage,
-        ),
-        el('div', { class: 'ts-subhead' }, 'Picked colour'),
-        currentPanel,
-        el('div', { class: 'ts-subhead' }, 'Dominant palette'),
-        swatchList,
-        paletteActions,
+      toolLayout(
+        { wide: true },
+        panel({ title: 'Image', icon: 'uploadCloud' }, drop.root, status, warning, frame.root),
+        panel({ title: 'Picked colour', icon: 'pipette' }, pickedPanel),
+        panel({ title: 'Dominant palette', icon: 'palette' }, paletteStrip, swatchList, paletteActions),
+        note('Sampling and palette extraction run on a canvas in this tab. The image is never uploaded.'),
       ),
     )
 
-    stage.append(canvas, loupe)
+    frame.root.append(canvas)
     loupe.append(loupeCanvas, loupeReadout)
-    loupe.hidden = true
+    // The loupe is fixed to the viewport and the frame clips its contents.
+    document.body.append(loupe)
+
     showCurrent(null)
     renderPalette([])
   },

@@ -1,5 +1,14 @@
+import {
+  button,
+  chips,
+  copyRow,
+  imageBlock,
+  note,
+  panel,
+  textField,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
-import { copyChip } from '../../core/ui'
 import type { Tool } from '../../core/types'
 import {
   bestAvailable,
@@ -22,19 +31,21 @@ const tool: Tool = {
   category: 'Media',
   keywords: ['youtube', 'thumbnail', 'grabber', 'downloader', 'video', 'cover image', 'yt', 'shorts'],
   render(root) {
-    const input = el('input', {
-      class: 'ts-input',
-      type: 'text',
-      spellcheck: false,
-      placeholder: 'Paste a YouTube link or video ID…',
-      'aria-label': 'YouTube video link or id',
+    const input = textField({
       value: SAMPLE,
-    }) as HTMLInputElement
+      placeholder: 'Paste a YouTube link or video ID…',
+      onInput: () => update(),
+    })
+    input.spellcheck = false
+    input.setAttribute('aria-label', 'YouTube video link or id')
 
-    const warning = el('p', { class: 'ts-error', hidden: true })
-    const summary = el('div', { class: 'ts-yt-summary' })
-    const picker = el('div', { class: 'ts-yt-picker', role: 'radiogroup', 'aria-label': 'Thumbnail size' })
-    const panel = el('div', { class: 'ts-yt-panel' })
+    const warning = note('', 'danger')
+    warning.hidden = true
+    const links = el('div', { class: 'ts-k-kvlist' })
+    const preview = imageBlock({ title: 'Preview', alt: 'Thumbnail preview', maxHeight: 420 })
+    const picker = el('div', { class: 'ts-k-chips' })
+    const detail = el('div', { class: 'ts-k-kvlist' })
+    const previewActions = el('div', { class: 'ts-k-actions' })
 
     let currentId = ''
     let selected = 'maxresdefault'
@@ -47,10 +58,10 @@ const tool: Tool = {
     }
 
     /** Draw the image to a canvas and export a JPEG blob, so the file lands locally. */
-    async function downloadThumbnail(thumbnail: Thumbnail, button: HTMLButtonElement) {
-      const original = button.textContent
-      button.disabled = true
-      button.textContent = 'Fetching…'
+    async function downloadThumbnail(thumbnail: Thumbnail, node: HTMLButtonElement) {
+      const original = node.textContent
+      node.disabled = true
+      node.textContent = 'Fetching…'
       try {
         const response = await fetch(thumbnail.url, { mode: 'cors', cache: 'force-cache' })
         if (!response.ok) throw new Error(`HTTP ${response.status}`)
@@ -84,38 +95,30 @@ const tool: Tool = {
         link.click()
         link.remove()
       } finally {
-        button.disabled = false
-        button.textContent = original
+        node.disabled = false
+        node.textContent = original
       }
     }
 
-    /** Draw the size picker, then the preview for whichever size is selected. */
     function renderPicker() {
       picker.replaceChildren(
         ...thumbnailsFor(currentId).map((thumbnail) => {
           const on = thumbnail.name === selected
           const missing = available[thumbnail.name] === false
-          const button = el(
-            'button',
-            {
-              type: 'button',
-              class: 'ts-yt-option',
-              role: 'radio',
-              'aria-checked': on ? 'true' : 'false',
-              disabled: missing,
-              title: missing ? 'This video has no thumbnail at this size' : thumbnail.note,
-              onclick: () => {
-                selected = thumbnail.name
-                renderPicker()
-                renderPanel()
-              },
+          const node = button(thumbnail.label, {
+            variant: on ? 'primary' : 'default',
+            size: 'sm',
+            title: missing ? 'This video has no thumbnail at this size' : thumbnail.note,
+            disabled: missing,
+            onClick: () => {
+              selected = thumbnail.name
+              renderPicker()
+              renderPanel()
             },
-            el('span', { class: 'ts-yt-option-label' }, thumbnail.label),
-            el('span', { class: 'ts-yt-option-dim' }, `${thumbnail.width}×${thumbnail.height}`),
-          )
-          if (on) button.classList.add('is-on')
-          if (missing) button.classList.add('is-missing')
-          return button
+          })
+          node.append(el('span', { class: 'ts-k-hint' }, `${thumbnail.width}×${thumbnail.height}`))
+          if (missing) node.classList.add('is-missing')
+          return node
         }),
       )
     }
@@ -123,33 +126,30 @@ const tool: Tool = {
     function renderPanel() {
       const thumbnail = qualityByName(selected)
       if (!thumbnail) return
-      const url = thumbnailsFor(currentId).find((t) => t.name === selected)!.url
+      const url = thumbnailsFor(currentId).find((item) => item.name === selected)!.url
 
-      const image = el('img', {
-        class: 'ts-yt-image',
-        src: url,
-        alt: `${thumbnail.label} thumbnail`,
-        referrerpolicy: 'no-referrer',
-      }) as HTMLImageElement
+      preview.image.src = url
+      preview.image.referrerPolicy = 'no-referrer'
+      preview.image.alt = `${thumbnail.label} thumbnail`
+      preview.caption.textContent = ''
 
-      const status = el('span', { class: 'ts-yt-status' })
-      const downloadButton = el(
-        'button',
-        { type: 'button', class: 'ts-button ts-primary' },
-        'Download',
-      ) as HTMLButtonElement
+      const downloadButton = button('Download', { variant: 'primary', icon: 'download' })
       downloadButton.addEventListener('click', () => void downloadThumbnail({ ...thumbnail, url }, downloadButton))
 
-      const actions = el('div', { class: 'ts-yt-actions' }, copyChip(() => url, 'Copy URL'), downloadButton)
+      detail.replaceChildren(
+        copyRow('Size', `${thumbnail.width}×${thumbnail.height} · ${thumbnail.aspect}`, { copy: false }),
+        copyRow('URL', url),
+      )
+      previewActions.replaceChildren(downloadButton)
 
-      image.addEventListener('load', () => {
-        const missing = isPlaceholder(image.naturalWidth, image.naturalHeight)
+      preview.image.addEventListener('load', () => {
+        const missing = isPlaceholder(preview.image.naturalWidth, preview.image.naturalHeight)
         available[thumbnail.name] = !missing
         if (missing) {
-          status.textContent = 'Not available at this size'
+          preview.caption.textContent = 'Not available at this size'
           downloadButton.disabled = true
           downloadButton.title = 'This video has no thumbnail at this size'
-          panel.classList.add('is-missing')
+          preview.root.classList.add('is-missing')
           // Move to the best size that does exist rather than sit on a blank one.
           const fallback = bestAvailable(available)
           if (fallback !== selected) {
@@ -159,46 +159,26 @@ const tool: Tool = {
             return
           }
         } else {
-          panel.classList.remove('is-missing')
+          preview.root.classList.remove('is-missing')
           downloadButton.disabled = false
           downloadButton.removeAttribute('title')
         }
         renderPicker()
       })
-      image.addEventListener('error', () => {
+      preview.image.addEventListener('error', () => {
         available[thumbnail.name] = false
-        panel.classList.add('is-missing')
-        status.textContent = 'Not available at this size'
+        preview.root.classList.add('is-missing')
+        preview.caption.textContent = 'Not available at this size'
         downloadButton.disabled = true
         renderPicker()
       })
-
-      panel.replaceChildren(
-        el('div', { class: 'ts-yt-frame' }, image, status),
-        el(
-          'div',
-          { class: 'ts-yt-detail' },
-          el(
-            'div',
-            { class: 'ts-yt-meta' },
-            el('span', { class: 'ts-yt-label' }, thumbnail.label),
-            el(
-              'span',
-              { class: 'ts-yt-dim' },
-              `${thumbnail.width}×${thumbnail.height} · ${thumbnail.aspect} · ${thumbnail.note}`,
-            ),
-          ),
-          actions,
-        ),
-      )
     }
 
-    function renderSummary(id: string) {
-      summary.replaceChildren(
-        el('span', { class: 'ts-muted' }, 'Video ID'),
-        el('span', { class: 'ts-yt-id' }, id),
-        copyChip(() => watchUrl(id), 'Copy watch link'),
-        copyChip(() => shortUrl(id), 'Copy short link'),
+    function renderLinks(id: string) {
+      links.replaceChildren(
+        copyRow('Video ID', id),
+        copyRow('Watch link', watchUrl(id)),
+        copyRow('Short link', shortUrl(id)),
       )
     }
 
@@ -207,9 +187,11 @@ const tool: Tool = {
       const id = parseVideoId(input.value)
       if (!id) {
         currentId = ''
-        summary.replaceChildren()
+        links.replaceChildren()
         picker.replaceChildren()
-        panel.replaceChildren()
+        preview.image.removeAttribute('src')
+        preview.caption.textContent = ''
+        detail.replaceChildren()
         if (input.value.trim() !== '') fail('That does not look like a YouTube link or video ID.')
         return
       }
@@ -219,44 +201,35 @@ const tool: Tool = {
         for (const key of Object.keys(available)) delete available[key]
         selected = 'maxresdefault'
       }
-      renderSummary(id)
+      renderLinks(id)
       renderPicker()
       renderPanel()
     }
 
-    input.addEventListener('input', update)
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el(
-          'div',
-          { class: 'ts-field' },
-          el('label', {}, 'YouTube link or video ID'),
-          el(
-            'div',
-            { class: 'ts-yt-input-row' },
-            input,
-            el(
-              'button',
-              { type: 'button', class: 'ts-button', onclick: () => { input.value = ''; update(); input.focus() } },
-              'Clear',
-            ),
-          ),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Link', icon: 'link' },
+          input,
+          chips([{ label: 'Clear', onClick: () => {
+            input.value = ''
+            update()
+            input.focus()
+          } }]),
           warning,
+          links,
         ),
-        summary,
-        picker,
-        panel,
-        el(
-          'p',
-          { class: 'ts-yt-note' },
+        panel({ title: 'Size', icon: 'layers' }, picker),
+        preview.root,
+        panel({ title: 'Details', icon: 'info' }, detail),
+        note(
           'Pick a size, then copy its URL or download the image. Thumbnails are served from i.ytimg.com, so your browser fetches them directly from YouTube — toolspace never sees your link, and nothing is proxied. Downloading reads the image on a canvas and saves it locally; if the image cannot be read, the download falls back to the raw URL.',
         ),
       ),
     )
 
+    preview.frame.after(previewActions)
     update()
   },
 }

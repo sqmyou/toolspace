@@ -1,3 +1,14 @@
+import {
+  badge,
+  dropzone,
+  imageBlock,
+  note,
+  panel,
+  stat,
+  stats,
+  table,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
 import { readFileAsArrayBuffer } from '../../core/ui'
 import type { Tool } from '../../core/types'
@@ -10,29 +21,44 @@ const tool: Tool = {
   category: 'Media',
   keywords: ['exif', 'metadata', 'photo', 'camera', 'gps', 'jpeg', 'png', 'tiff', 'webp'],
   render(root) {
-    const input = el('input', { type: 'file', accept: 'image/*,.tif,.tiff', class: 'ts-input' }) as HTMLInputElement
-    const drop = el('div', { class: 'ts-dropzone' }, 'Drop an image here, or choose a file.')
-    const error = el('p', { class: 'ts-error', hidden: true })
-    const summary = el('p', { class: 'ts-muted' })
-    const output = el('div', { class: 'ts-exif-groups' })
+    const preview = imageBlock({ title: 'Photo', alt: 'Selected photo', maxHeight: 320 })
+    const error = note('', 'danger')
+    error.hidden = true
+    const readout = stats()
+    const meta = el('div', { class: 'ts-k-actions' })
+    const groups = el('div', { class: 'ts-k-stack' })
 
     async function handleFile(file: File) {
       error.hidden = true
-      output.replaceChildren()
-      summary.textContent = ''
+      groups.replaceChildren()
+      readout.replaceChildren()
+      meta.replaceChildren()
+      preview.caption.textContent = ''
       try {
         const buffer = await readFileAsArrayBuffer(file)
         const result = parseExif(new Uint8Array(buffer))
-        summary.textContent = `${file.name} — ${result.format.toUpperCase()}, ${result.byteOrder}-endian, ${result.entries.length} tags`
+        preview.image.src = URL.createObjectURL(file)
+        preview.caption.textContent = file.name
+        meta.replaceChildren(
+          badge(result.format.toUpperCase(), 'accent'),
+          badge(`${result.byteOrder}-endian`, 'neutral'),
+          badge(`${result.entries.length} tags`, result.entries.length ? 'ok' : 'neutral'),
+        )
         for (const group of groupEntries(result.entries)) {
-          const table = el('table', { class: 'ts-exif-table' })
-          table.append(el('thead', {}, el('tr', {}, el('th', {}, group.group), el('th', {}, 'Value'))))
-          const body = el('tbody')
-          for (const entry of group.entries) {
-            body.append(el('tr', {}, el('td', { class: 'ts-exif-key' }, entry.name), el('td', {}, entry.value)))
-          }
-          table.append(body)
-          output.append(el('section', { class: 'ts-exif-section' }, el('h3', { class: 'ts-subhead' }, `${group.group} · ${group.entries.length}`), table))
+          readout.append(stat({ label: group.group, value: String(group.entries.length) }))
+          const rows = group.entries.map((entry) => ({ name: entry.name, value: entry.value }))
+          groups.append(
+            panel(
+              { title: group.group, icon: 'camera', meta: `${group.entries.length} tags` },
+              table(
+                [
+                  { key: 'name', label: 'Tag', mono: true },
+                  { key: 'value', label: 'Value' },
+                ],
+                rows,
+              ),
+            ),
+          )
         }
       } catch (err) {
         error.textContent = err instanceof ExifError ? err.message : 'Could not read EXIF data from that file.'
@@ -40,38 +66,24 @@ const tool: Tool = {
       }
     }
 
-    input.addEventListener('change', () => {
-      const file = input.files?.[0]
-      if (file) void handleFile(file)
-    })
-
-    for (const event of ['dragenter', 'dragover']) {
-      drop.addEventListener(event, (e) => {
-        e.preventDefault()
-        drop.classList.add('ts-dropzone-active')
-      })
-    }
-    for (const event of ['dragleave', 'drop']) {
-      drop.addEventListener(event, (e) => {
-        e.preventDefault()
-        drop.classList.remove('ts-dropzone-active')
-      })
-    }
-    drop.addEventListener('drop', (e) => {
-      const file = (e as DragEvent).dataTransfer?.files?.[0]
-      if (file) void handleFile(file)
+    const drop = dropzone({
+      label: 'Drop a photo here',
+      hint: 'JPEG, PNG, WebP or TIFF',
+      accept: 'image/*,.tif,.tiff',
+      icon: 'image',
+      onFiles: (files) => {
+        if (files[0]) void handleFile(files[0])
+      },
     })
 
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'Image'), input),
-        drop,
-        error,
-        summary,
-        output,
-        el('p', { class: 'ts-note' }, 'The file is read in your browser with the File API. It is never uploaded.'),
+      toolLayout(
+        { wide: true },
+        panel({ title: 'Photo', icon: 'uploadCloud' }, drop.root, error),
+        panel({ title: 'Summary', icon: 'info' }, readout, meta),
+        preview.root,
+        groups,
+        note('The file is read in your browser with the File API. It is never uploaded.'),
       ),
     )
   },

@@ -1,33 +1,10 @@
-.ts-picker-stage {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 220px;
-  padding: 10px;
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius);
-  background: var(--bg-soft);
-  transition: border-color 0.15s ease, background 0.15s ease;
-}
-
-.ts-picker-stage.is-dragging { border-color: var(--accent); background: var(--bg-input); }
-
 .ts-picker-canvas {
   max-width: 100%;
-  max-height: 62vh;
+  max-height: 52vh;
   display: block;
   border-radius: var(--radius-sm);
   cursor: crosshair;
-  /* A checkerboard so transparent regions read as transparent, not black. */
-  background-color: #fff;
-  background-image:
-    linear-gradient(45deg, #d8d8d8 25%, transparent 25%),
-    linear-gradient(-45deg, #d8d8d8 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #d8d8d8 75%),
-    linear-gradient(-45deg, transparent 75%, #d8d8d8 75%);
-  background-size: 16px 16px;
-  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  touch-action: none;
 }
 
 .ts-loupe {
@@ -49,17 +26,7 @@
 .ts-loupe-hex { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11.5px; }
 .ts-loupe-chip { width: 10px; height: 10px; border-radius: 3px; border: 1px solid var(--border-strong); }
 
-.ts-picked {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  border: 1px solid var(--border);
-  background: var(--bg-soft);
-  border-radius: var(--radius);
-  padding: 14px;
-  margin-bottom: 22px;
-}
-
+.ts-picked { display: flex; gap: 16px; align-items: flex-start; }
 .ts-picked-chip {
   width: 84px;
   height: 84px;
@@ -67,19 +34,14 @@
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-strong);
 }
-
-.ts-picked-meta { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1; }
+.ts-picked-meta { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; }
 .ts-picked-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--faint); font-family: var(--mono); }
-.ts-picked .ts-copy-list { margin: 0; }
-.ts-picked .ts-tool-actions { margin-top: 0; }
 
 .ts-swatch-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
   gap: 8px;
-  margin-bottom: 14px;
 }
-
 .ts-swatch {
   aspect-ratio: 1 / 1;
   border: 1px solid var(--border-strong);
@@ -96,8 +58,6 @@
 .ts-swatch:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
 .ts-swatch-hex { font-family: var(--mono); font-size: 11px; font-weight: 600; }
 .ts-swatch-share { font-family: var(--mono); font-size: 10px; opacity: 0.75; }
-
-.ts-file-input { max-width: 240px; }
 
 @media (max-width: 620px) {
   .ts-picked { flex-direction: column; }
