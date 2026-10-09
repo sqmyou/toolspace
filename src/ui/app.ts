@@ -305,7 +305,7 @@ function home(): HTMLElement {
       const big = group.length >= BIG_FAMILY
       return el(
         'div',
-        { class: `ts-section ts-family${big ? ' is-feature' : ' is-dense'}` },
+        { class: `ts-section ts-family ts-reveal${big ? ' is-feature' : ' is-dense'}` },
         sectionHead(name, `${group.length}`, categoryHue(name)),
         big
           ? el('div', { class: 'ts-bento' }, ...group.map((tool, i) => toolCard(tool, i === 0)))
@@ -595,6 +595,35 @@ const MOON =
 const BRAND_MARK =
   '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"><path d="M12 2.6 20.4 7.4v9.2L12 21.4 3.6 16.6V7.4z"/><circle cx="12" cy="12" r="3.1" fill="currentColor" stroke="none"/></svg>'
 
+/**
+ * Reveal sections as they scroll in. The arming class is added from script
+ * *after* the observer is attached, so CSS keeps the visible resting state:
+ * without scripting or IntersectionObserver nothing is ever hidden. Under
+ * prefers-reduced-motion the reveal is skipped entirely.
+ */
+function revealOnScroll(root: HTMLElement): void {
+  if (typeof IntersectionObserver === 'undefined') return
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+  const targets = [...root.querySelectorAll<HTMLElement>('.ts-reveal')]
+  if (targets.length === 0) return
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue
+        entry.target.classList.add('is-in')
+        observer.unobserve(entry.target)
+      }
+    },
+    { rootMargin: '0px 0px -8% 0px', threshold: 0.05 },
+  )
+  for (const target of targets) {
+    // Anything already on screen shows immediately instead of being armed.
+    if (target.getBoundingClientRect().top < window.innerHeight) continue
+    target.classList.add('is-armed')
+    observer.observe(target)
+  }
+}
+
 export function mountApp(app: HTMLElement): void {
   const main = el('main', { class: 'ts-main', id: 'main' })
   const palette = commandPalette((slug) => {
@@ -676,10 +705,11 @@ export function mountApp(app: HTMLElement): void {
     window.scrollTo({ top: 0 })
     if (!slug) {
       main.append(home())
-      return
+    } else {
+      const tool = findTool(slug)
+      main.append(tool ? toolPage(tool, palette) : notFound(slug, palette))
     }
-    const tool = findTool(slug)
-    main.append(tool ? toolPage(tool, palette) : notFound(slug, palette))
+    revealOnScroll(main)
   }
 
   function fromHash() {

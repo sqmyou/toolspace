@@ -579,6 +579,9 @@ a { color: inherit; }
   transform: translateY(-2px);
   box-shadow: var(--shadow-sm);
 }
+/* Press answers the pointer with a small settle, so a tap reads as landed. */
+.ts-card:active { transform: translateY(0) scale(0.994); transition-duration: 0.06s; }
+.ts-card:focus-visible { border-color: var(--accent); }
 /* --- Starred tools ------------------------------------------------------- */
 .ts-star {
   margin-left: auto;
@@ -1003,10 +1006,26 @@ a { color: inherit; }
 
 input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 
-/* --- Motion --------------------------------------------------------------- */
+/* --- Motion ---------------------------------------------------------------
+   Motion here earns its place: it explains entry and answers a pointer. The
+   JS reveal only ever *adds* the `is-armed` class, so the CSS default (hidden
+   → shown) is the accessible resting state, and the blanket
+   prefers-reduced-motion rule at the end of this file turns all of it off. */
 @keyframes ts-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes ts-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes ts-card-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes ts-headline-in { from { transform: translateY(105%); } to { transform: translateY(0); } }
+@keyframes ts-shimmer { from { background-position: -160% 0; } to { background-position: 260% 0; } }
+
+/* The home masthead headline rises into view, one masked line at a time. */
+.ts-headline__inner { animation: ts-headline-in 0.62s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.ts-headline__line:nth-child(2) .ts-headline__inner { animation-delay: 0.09s; }
+
+/* Scroll reveal. Elements stay hidden only while `is-armed` is present, and
+   the observer removes it as each section enters — so nothing can be left
+   invisible if scripting or motion is off. */
+.ts-reveal.is-armed { opacity: 0; transform: translateY(16px); }
+.ts-reveal.is-armed.is-in { opacity: 1; transform: none; transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.16, 1, 0.3, 1); }
 
 /* One orchestrated reveal per grid — deliberately capped so long lists don't
    leave the tail invisible. */
@@ -1687,11 +1706,20 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
   display: grid;
   place-items: center;
   width: 100%;
+  min-height: 120px;
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg-input);
   overflow: hidden;
+}
+/* While an image decodes, the frame carries a moving sheen so a slow remote
+   fetch (the YouTube thumbnail) reads as loading rather than broken. */
+.ts-k-media.is-loading {
+  background-image: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--fg) 7%, transparent) 50%, transparent 70%);
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  animation: ts-shimmer 1.1s linear infinite;
 }
 .ts-k-media--checker {
   background-color: #fff;

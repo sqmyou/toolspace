@@ -244,16 +244,22 @@ const wave: Mark = (r) => {
 
 const MARKS: Mark[] = [arcs, bars, ladder, ringBeads, nodes, chevrons, burst, blocks, spiral, wave]
 
-/** A square badge holding the tool's mark, tinted with its category hue. */
-export function sigilTile(slug: string, category: string, size = 34): HTMLElement {
-  const seed = hash(slug)
-  const r = rng(seed)
+/**
+ * The inner SVG for a slug: a mark family plus its seeded parameters. Pure and
+ * exported so the mark set can be tested without a DOM.
+ */
+export function toolMarkSvg(slug: string): string {
+  const r = rng(hash(slug))
   // Draw the family from the PRNG rather than the low hash bits: the same
   // generator then governs the variant, so family and shape vary together.
-  const mark = MARKS[Math.floor(r() * MARKS.length)]
+  return MARKS[Math.floor(r() * MARKS.length)](r)
+}
+
+/** A square badge holding the tool's mark, tinted with its category hue. */
+export function sigilTile(slug: string, category: string, size = 34): HTMLElement {
   const svg =
     `<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" ` +
-    `stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${mark(r)}</svg>`
+    `stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${toolMarkSvg(slug)}</svg>`
   return el('span', {
     class: 'ts-sigil',
     'aria-hidden': 'true',

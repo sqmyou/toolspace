@@ -802,6 +802,20 @@ export function mediaFrame(options: MediaFrameOptions = {}): MediaFrame {
     },
     image,
   )
+
+  // Skeleton while a preview decodes. Tools set `image.src` themselves, so we
+  // watch for the attribute rather than changing the API: the moment a source
+  // appears and is not already decoded, the frame shimmers; load/error clears
+  // it. This matters most for the one tool that fetches a remote thumbnail.
+  const settle = () => root.classList.remove('is-loading')
+  const begin = () => {
+    if (image.complete) settle()
+    else if (image.getAttribute('src')) root.classList.add('is-loading')
+  }
+  image.addEventListener('load', settle)
+  image.addEventListener('error', settle)
+  new MutationObserver(begin).observe(image, { attributes: true, attributeFilter: ['src'] })
+
   return { root, image }
 }
 
