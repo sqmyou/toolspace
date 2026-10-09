@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { nextRuns, parseCron, parseField } from './cron'
+import { buildCron, nextRuns, parseCron, parseField, type ScheduleSpec } from './cron'
 
 const SPECS = {
   minute: { name: 'minute', min: 0, max: 59 },
@@ -70,3 +70,34 @@ describe('nextRuns', () => {
     expect(next.map((date) => date.getDay())).toEqual([1, 2, 3, 4]) // Mon-Thu
   })
 })
+
+describe('buildCron', () => {
+  const base: ScheduleSpec = { frequency: 'daily', minute: 30, hour: 8, weekdays: [1], dayOfMonth: 1 }
+
+  it('builds each frequency', () => {
+    expect(buildCron({ ...base, frequency: 'minutely' })).toBe('* * * * *')
+    expect(buildCron({ ...base, frequency: 'hourly' })).toBe('30 * * * *')
+    expect(buildCron({ ...base, frequency: 'daily' })).toBe('30 8 * * *')
+    expect(buildCron({ ...base, frequency: 'monthly', dayOfMonth: 15 })).toBe('30 8 15 * *')
+  })
+
+  it('lists weekdays sorted and de-duplicated', () => {
+    expect(buildCron({ ...base, frequency: 'weekly', weekdays: [5, 1, 1, 3] })).toBe('30 8 * * 1,3,5')
+    expect(buildCron({ ...base, frequency: 'weekly', weekdays: [] })).toBe('30 8 * * *')
+  })
+
+  it('clamps out-of-range values', () => {
+    expect(buildCron({ ...base, frequency: 'daily', minute: 99, hour: -5 })).toBe('59 0 * * *')
+    expect(buildCron({ ...base, frequency: 'monthly', dayOfMonth: 99 })).toBe('30 8 31 * *')
+  })
+
+  it('produces expressions the parser accepts', () => {
+    const expressions = ['minutely', 'hourly', 'daily', 'weekly', 'monthly'].map((frequency) =>
+      buildCron({ ...base, frequency: frequency as ScheduleSpec['frequency'] }),
+    )
+    for (const expression of expressions) {
+      expect(parseCron(expression).valid).toBe(true)
+    }
+  })
+})
+

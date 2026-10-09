@@ -484,16 +484,21 @@ a { color: inherit; }
 .ts-palette-foot { border-top: 1px solid var(--border); padding: 8px 14px; color: var(--muted); font-size: var(--text-sm); }
 
 /* --- Per-tool sigil -------------------------------------------------------
-   Every tool gets a generated mark, tinted with its category hue. The mark's
-   shape comes from `core/identity.ts`; the colour derives from the single
-   `--h` number each badge carries, so one variable drives the identity. */
+   Every tool gets a generated mark (see `core/identity.ts`) drawn in the
+   mark's own family. The colour is *derived* rather than fixed: the hue comes
+   from the tool's category (`--h`), but it is blended toward the theme accent,
+   so the whole set warms or cools with the palette and a light theme darkens
+   every mark for contrast. `--cat-l` is the per-ramp lightness token set at the
+   top of this file. Because both inputs are live custom properties, a theme
+   change repaints the sigils with no JavaScript. */
 .ts-sigil {
   flex: none;
   display: block;
-  color: hsl(var(--h) 82% 66%);
+  --sigil: color-mix(in srgb, hsl(var(--h) 68% var(--cat-l)) 66%, var(--accent));
+  color: var(--sigil);
   border-radius: 9px;
-  background: hsl(var(--h) 72% 55% / 0.12);
-  border: 1px solid hsl(var(--h) 66% 55% / 0.26);
+  background: color-mix(in srgb, var(--sigil) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--sigil) 34%, transparent);
 }
 .ts-sigil svg { display: block; }
 

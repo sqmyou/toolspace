@@ -184,3 +184,52 @@ const PRESETS: { label: string; expression: string }[] = [
 export function presets(): { label: string; expression: string }[] {
   return PRESETS
 }
+
+/* ------------------------------ visual builder ------------------------------ */
+
+export type Frequency = 'minutely' | 'hourly' | 'daily' | 'weekly' | 'monthly'
+
+export interface ScheduleSpec {
+  frequency: Frequency
+  /** Minute of the hour (0–59). */
+  minute: number
+  /** Hour of the day (0–23). */
+  hour: number
+  /** Weekday numbers (0 = Sunday) used by the weekly frequency. */
+  weekdays: number[]
+  /** Day of the month (1–31) used by the monthly frequency. */
+  dayOfMonth: number
+}
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, Math.trunc(value) || 0))
+
+/** Turn a structured schedule into a 5-field cron expression. */
+export function buildCron(spec: ScheduleSpec): string {
+  const minute = clamp(spec.minute, 0, 59)
+  const hour = clamp(spec.hour, 0, 23)
+  const day = clamp(spec.dayOfMonth, 1, 31)
+
+  switch (spec.frequency) {
+    case 'minutely':
+      return '* * * * *'
+    case 'hourly':
+      return `${minute} * * * *`
+    case 'daily':
+      return `${minute} ${hour} * * *`
+    case 'weekly': {
+      const days = [...new Set(spec.weekdays.map((value) => clamp(value, 0, 6)))].sort((a, b) => a - b)
+      return `${minute} ${hour} * * ${days.length ? days.join(',') : '*'}`
+    }
+    case 'monthly':
+      return `${minute} ${hour} ${day} * *`
+  }
+}
+
+export const FREQUENCIES: { value: Frequency; label: string }[] = [
+  { value: 'minutely', label: 'Every minute' },
+  { value: 'hourly', label: 'Hourly' },
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+]
+
