@@ -1,5 +1,18 @@
+import {
+  actions,
+  button,
+  copyButton,
+  download,
+  field,
+  grid,
+  note,
+  outputBlock,
+  panel,
+  segmented,
+  textarea,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
-import { copyChip, download } from '../../core/ui'
 import type { Tool } from '../../core/types'
 import { parseIni, toIni } from './ini'
 
@@ -32,27 +45,36 @@ const tool: Tool = {
   category: 'Data',
   keywords: ['ini', 'json', 'convert', 'config', 'conf', 'cfg', 'toml-ish', 'settings'],
   render(root) {
-    const direction = el(
-      'select',
-      { class: 'ts-select' },
-      el('option', { value: 'ini2json' }, 'INI → JSON'),
-      el('option', { value: 'json2ini' }, 'JSON → INI'),
-    ) as HTMLSelectElement
-
-    const input = el('textarea', { class: 'ts-textarea ts-mono', rows: 16, spellcheck: false }) as HTMLTextAreaElement
-    const output = el('textarea', { class: 'ts-textarea ts-mono', rows: 16, spellcheck: false, readonly: true }) as HTMLTextAreaElement
-    const error = el('p', { class: 'ts-error', hidden: true })
+    let direction: 'ini2json' | 'json2ini' = 'ini2json'
+    const input = textarea({ rows: 16, onInput: () => run() })
+    const error = note('', 'danger')
+    error.hidden = true
     const warnings = el('ul', { class: 'ts-ini-warnings' })
     let result = ''
+    const output = outputBlock('', { label: 'Output', copy: () => result })
+
+    const directionControl = segmented({
+      label: 'Direction',
+      value: direction,
+      items: [
+        { value: 'ini2json', label: 'INI → JSON' },
+        { value: 'json2ini', label: 'JSON → INI' },
+      ],
+      onChange: (value) => {
+        direction = value as 'ini2json' | 'json2ini'
+        sample()
+        run()
+      },
+    })
 
     function sample() {
-      input.value = direction.value === 'ini2json' ? INI_SAMPLE : JSON_SAMPLE
+      input.value = direction === 'ini2json' ? INI_SAMPLE : JSON_SAMPLE
     }
 
     function run() {
       warnings.replaceChildren()
       try {
-        if (direction.value === 'ini2json') {
+        if (direction === 'ini2json') {
           const parsed = parseIni(input.value)
           result = JSON.stringify(parsed.data, null, 2)
           for (const warning of parsed.warnings) warnings.append(el('li', {}, warning))
@@ -61,32 +83,37 @@ const tool: Tool = {
           if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('The top level must be a JSON object')
           result = toIni(parsed)
         }
-        output.value = result
+        output.body.replaceChildren(result)
+        output.setMeta(`${result.split('\n').length} lines`)
         error.hidden = true
       } catch (err) {
         result = ''
-        output.value = ''
+        output.body.replaceChildren('')
+        output.setMeta('')
         error.textContent = err instanceof Error ? err.message : 'Could not convert that input.'
         error.hidden = false
       }
     }
 
-    direction.addEventListener('change', () => {
-      sample()
-      run()
-    })
-    input.addEventListener('input', run)
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el('div', { class: 'ts-row ts-wrap' }, el('div', { class: 'ts-inline-field' }, el('label', {}, 'Direction'), direction), el('button', { class: 'ts-button', type: 'button', onclick: sample }, 'Load sample')),
-        el('div', { class: 'ts-two-col' }, el('div', { class: 'ts-field' }, el('label', {}, 'Input'), input), el('div', { class: 'ts-field' }, el('label', {}, 'Output'), output)),
-        error,
-        el('div', { class: 'ts-row ts-between' }, el('span', { class: 'ts-muted' }, 'Warnings'), el('div', { class: 'ts-tool-actions' }, copyChip(() => result, 'Copy'), el('button', { class: 'ts-button', type: 'button', onclick: () => download(direction.value === 'ini2json' ? 'config.json' : 'config.ini', result) }, 'Download'))),
-        warnings,
-        el('p', { class: 'ts-note' }, 'Only whole-line comments are ignored, so a "#" inside a value is kept. Conversion happens locally.'),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Convert', icon: 'refresh' },
+          directionControl,
+          actions(button('Load sample', { icon: 'refresh', onClick: () => { sample(); run() } })),
+          grid(320, field(input, { label: 'Input' }), field(output, { label: 'Output' })),
+          error,
+          warnings,
+        ),
+        actions(
+          copyButton(() => result, { label: 'Copy' }),
+          button('Download', {
+            icon: 'download',
+            onClick: () => download(direction === 'ini2json' ? 'config.json' : 'config.ini', result),
+          }),
+        ),
+        note('Only whole-line comments are ignored, so a "#" inside a value is kept. Conversion happens locally.'),
       ),
     )
 
