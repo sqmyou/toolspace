@@ -4,6 +4,7 @@ import { icon, iconEl } from '../core/icons'
 import { categoryHue, sigilTile } from '../core/identity'
 import { networkEnabled, onPreferencesChange, setNetworkEnabled } from '../core/preferences'
 import { findTool, searchTools, tools } from '../core/registry'
+import { PRESETS, activeTheme, applyThemeToDocument, useCustom, usePreset } from '../core/theme'
 import type { Tool } from '../core/types'
 
 /**
@@ -63,39 +64,14 @@ function tileEl(tool: Tool, size = 34): HTMLElement {
 }
 
 /* --------------------------------------------------------------------------
-   Theme. A stored choice wins; otherwise the OS preference decides. The
-   toggle only ever writes an explicit `data-theme`, so "system" is simply
-   the absence of a stored value.
+   Theme. Presets and custom themes live in core/theme.ts; this file only
+   paints them and offers the picker. The picker writes a preset id or a
+   custom theme, and the module owns every bit of the storage shape.
    -------------------------------------------------------------------------- */
-type Theme = 'dark' | 'light'
-const THEME_KEY = 'toolspace:theme'
 
-function storedTheme(): Theme | null {
-  try {
-    const value = localStorage.getItem(THEME_KEY)
-    return value === 'dark' || value === 'light' ? value : null
-  } catch {
-    return null
-  }
-}
-
-function effectiveTheme(): Theme {
-  return (
-    storedTheme() ??
-    (window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
-  )
-}
-
-function applyTheme(theme: Theme): void {
-  document.documentElement.dataset.theme = theme
-  document
-    .querySelector('meta[name="theme-color"]')
-    ?.setAttribute('content', theme === 'light' ? '#f4f1ea' : '#0b0e12')
-}
-
-/** Set the theme before first paint so there is no flash of the wrong one. */
+/** Paint the stored theme. Called before first paint by main.ts. */
 export function initTheme(): void {
-  applyTheme(effectiveTheme())
+  applyThemeToDocument(activeTheme())
 }
 
 interface Palette {
@@ -628,10 +604,211 @@ function toolPage(tool: Tool, palette: Palette): HTMLElement {
   return section
 }
 
-const SUN =
-  '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.2 5.2l1.6 1.6M17.2 17.2l1.6 1.6M18.8 5.2l-1.6 1.6M6.8 17.2l-1.6 1.6"/></svg>'
-const MOON =
-  '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.2 8.2 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></svg>'
+
+/**
+ * The theme picker: eight presets, a colour to build your own, and a save box
+ * for named themes. Everything it writes is one accent (and optionally a
+ * background), which is the whole theming surface — see core/theme.ts.
+ */
+function currentBg(): string {
+  const value = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()
+  return /^#[0-9a-f]{6}$/i.test(value) ? value : '#0b0d11'
+}
+
+function themePicker(): HTMLElement {
+  const wrap = el('div', { class: 'ts-theme-wrap' })
+
+  const panel = el('div', {
+    class: 'ts-theme-panel',
+    role: 'dialog',
+    'aria-label': 'Appearance',
+    hidden: true,
+  })
+
+  const trigger = el(
+    'button',
+    {
+      type: 'button',
+      class: 'ts-icon-btn',
+      'aria-label': 'Appearance',
+      'aria-haspopup': 'dialog',
+      'aria-expanded': 'false',
+      title: 'Colour theme',
+    },
+    iconEl('palette', 17),
+  )
+
+  function close() {
+    panel.hidden = true
+    trigger.setAttribute('aria-expanded', 'false')
+  }
+
+  function open() {
+    panel.hidden = false
+    trigger.setAttribute('aria-expanded', 'true')
+  }
+
+  document.addEventListener('click', (event) => {
+    if (!panel.hidden && !wrap.contains(event.target as Node)) close()
+  })
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !panel.hidden) {
+      close()
+      trigger.focus()
+    }
+  })
+
+  trigger.addEventListener('click', () => (panel.hidden ? open() : close()))
+
+  function paint() {
+    const active = activeTheme()
+    clear(panel)
+
+    const presetGrid = el('div', { class: 'ts-theme-presets', role: 'list' })
+    for (const preset of PRESETS) {
+      const isActive = active.presetId === preset.id
+      presetGrid.append(
+        el(
+          'button',
+          {
+            type: 'button',
+            class: `ts-theme-preset${isActive ? ' is-active' : ''}`,
+            role: 'listitem',
+            'aria-pressed': String(isActive),
+            title: preset.name,
+            onclick: () => {
+              usePreset(preset.id)
+              applyThemeToDocument(activeTheme())
+              paint()
+            },
+          },
+          el('span', { class: 'ts-theme-swatch', style: `--sw:${preset.accent}` }),
+          el('span', { class: 'ts-theme-preset__name' }, preset.name),
+        ),
+      )
+    }
+
+    panel.append(
+      el('p', { class: 'ts-theme-head' }, 'Appearance'),
+      el('p', { class: 'ts-theme-label' }, 'Preset'),
+      presetGrid,
+      el('p', { class: 'ts-theme-label' }, 'Your own'),
+    )
+
+    // A small custom builder: an accent, an optional background, and a name.
+    const custom = active.custom
+    const accent = el('input', {
+      type: 'color',
+      class: 'ts-theme-color',
+      'aria-label': 'Accent colour',
+      value: custom?.accent ?? active.accent,
+    }) as HTMLInputElement
+    const bgOn = el('input', {
+      type: 'checkbox',
+      class: 'ts-theme-toggle',
+      checked: Boolean(custom?.bg),
+      'aria-label': 'Set a background colour',
+    }) as HTMLInputElement
+    const bg = el('input', {
+      type: 'color',
+      class: 'ts-theme-color',
+      'aria-label': 'Background colour',
+      value: custom?.bg ?? currentBg(),
+    }) as HTMLInputElement
+    const name = el('input', {
+      type: 'text',
+      class: 'ts-theme-name',
+      placeholder: 'Untitled theme',
+      maxlength: '24',
+      'aria-label': 'Theme name',
+      value: custom?.name ?? '',
+    }) as HTMLInputElement
+    const darkOn = el('input', {
+      type: 'checkbox',
+      class: 'ts-theme-toggle',
+      checked: custom?.dark ?? active.dark,
+      'aria-label': 'Dark ramp',
+    }) as HTMLInputElement
+
+    function preview() {
+      applyThemeToDocument({
+        presetId: null,
+        custom: null,
+        dark: darkOn.checked,
+        accent: accent.value,
+        bg: bgOn.checked ? bg.value : null,
+        name: name.value || 'Custom',
+      })
+    }
+    accent.addEventListener('input', preview)
+    bg.addEventListener('input', preview)
+    bgOn.addEventListener('change', () => {
+      bg.disabled = !bgOn.checked
+      preview()
+    })
+    darkOn.addEventListener('change', preview)
+    bg.disabled = !bgOn.checked
+
+    panel.append(
+      el(
+        'div',
+        { class: 'ts-theme-builder' },
+        el('span', { class: 'ts-theme-label' }, 'Accent'),
+        accent,
+        el('label', { class: 'ts-theme-check' }, darkOn, el('span', {}, 'Dark background')),
+        el('label', { class: 'ts-theme-check' }, bgOn, el('span', {}, 'Custom background')),
+        bg,
+      ),
+      el(
+        'div',
+        { class: 'ts-theme-save' },
+        name,
+        el(
+          'button',
+          {
+            type: 'button',
+            class: 'ts-k-btn ts-k-btn--sm',
+            onclick: () => {
+              useCustom({
+                name: name.value.trim() || 'Custom',
+                dark: darkOn.checked,
+                accent: accent.value,
+                bg: bgOn.checked ? bg.value : null,
+              })
+              applyThemeToDocument(activeTheme())
+              paint()
+            },
+          },
+          'Save theme',
+        ),
+      ),
+      custom
+        ? el(
+            'p',
+            { class: 'ts-theme-active' },
+            `“${custom.name}” saved on this device. `,
+            el(
+              'button',
+              {
+                type: 'button',
+                class: 'ts-theme-reset',
+                onclick: () => {
+                  usePreset(PRESETS[0].id)
+                  applyThemeToDocument(activeTheme())
+                  paint()
+                },
+              },
+              'Reset to Voltage',
+            ),
+          )
+        : el('p', { class: 'ts-theme-active' }, 'Saved on this device only.'),
+    )
+  }
+
+  paint()
+  wrap.append(trigger, panel)
+  return wrap
+}
 
 const BRAND_MARK =
   '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"><path d="M12 2.6 20.4 7.4v9.2L12 21.4 3.6 16.6V7.4z"/><circle cx="12" cy="12" r="3.1" fill="currentColor" stroke="none"/></svg>'
@@ -704,30 +881,7 @@ export function mountApp(app: HTMLElement): void {
     el('kbd', {}, 'Ctrl K'),
   )
 
-  const themeBtn = el('button', {
-    type: 'button',
-    class: 'ts-icon-btn',
-    'aria-label': 'Toggle colour theme',
-    title: 'Toggle colour theme',
-  }) as HTMLButtonElement
-
-  function paintThemeButton() {
-    const dark = effectiveTheme() === 'dark'
-    themeBtn.innerHTML = dark ? SUN : MOON
-    themeBtn.title = dark ? 'Switch to light theme' : 'Switch to dark theme'
-  }
-
-  themeBtn.addEventListener('click', () => {
-    const next: Theme = effectiveTheme() === 'dark' ? 'light' : 'dark'
-    try {
-      localStorage.setItem(THEME_KEY, next)
-    } catch {
-      /* private mode: the theme still applies for this session */
-    }
-    applyTheme(next)
-    paintThemeButton()
-  })
-  paintThemeButton()
+  const themeBtn = themePicker()
 
   const brandMark = el('span', { class: 'ts-brand-mark', 'aria-hidden': 'true' })
   brandMark.innerHTML = BRAND_MARK

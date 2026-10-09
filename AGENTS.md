@@ -58,6 +58,17 @@ integration does the deploy, so pushing to `main` is what ships.
   slug. Categories are a fixed list — add new ones to `CATEGORY_HUES` there or
   they fall back to blue.
 
+## Theming
+
+There is one accent over a near-greyscale ramp, so a theme is `--accent` plus,
+for a custom background, `--bg`. `src/core/theme.ts` owns the presets, the
+storage (`toolspace:accent`, and the legacy `toolspace:theme` dark/light flag)
+and the colour maths: `--accent-strong`, `--accent-soft`, `--accent-line` and
+the chip ink are derived from the accent, so a new preset is one line. The
+picker in `src/ui/app.ts` is only paint; it never touches storage directly.
+`public/theme-init.js` mirrors the accent maths so the colour lands before the
+bundle paints — if you change the storage shape, change both.
+
 ## Commands
 
 ```

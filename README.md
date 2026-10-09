@@ -24,6 +24,8 @@ because there is nothing to host.
 - **Offline by default.** Install it as a PWA and it keeps working on a plane.
 - **Fast.** No framework at runtime, no third-party scripts. The whole app is a
   few kilobytes.
+- **Yours to theme.** Eight presets, or build your own from an accent and a
+  background. Saved on your device, like everything else.
 - **Easy to extend.** Drop a folder in `src/tools/` and it shows up in the
   catalogue. No central list to edit, so contributors never collide.
 
