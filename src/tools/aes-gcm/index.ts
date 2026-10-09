@@ -1,5 +1,17 @@
+import {
+  actions,
+  badge,
+  button,
+  download,
+  field,
+  note,
+  outputBlock,
+  panel,
+  textField,
+  textarea,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
-import { copyChip, download } from '../../core/ui'
 import type { Tool } from '../../core/types'
 import { decrypt, encrypt, isBundle } from './aes'
 
@@ -10,26 +22,31 @@ const tool: Tool = {
   category: 'Crypto',
   keywords: ['aes', 'gcm', 'encrypt', 'decrypt', 'pbkdf2', 'cipher', 'webcrypto'],
   render(root) {
-    const passphrase = el('input', { class: 'ts-input', type: 'password', placeholder: 'Passphrase', 'aria-label': 'Passphrase' }) as HTMLInputElement
-    const plaintext = el('textarea', { class: 'ts-textarea', rows: 5, placeholder: 'Text to encrypt…', 'aria-label': 'Plaintext' }) as HTMLTextAreaElement
-    const bundle = el('textarea', { class: 'ts-textarea ts-mono', rows: 5, placeholder: 'Bundle to decrypt (tsgcm1.…)', 'aria-label': 'Ciphertext' }) as HTMLTextAreaElement
-    const output = el('div', { class: 'ts-json-block' })
-    const outHead = el('div', { class: 'ts-json-head' })
-    const outText = el('textarea', { class: 'ts-textarea', rows: 5, readonly: true }) as HTMLTextAreaElement
-    const error = el('p', { class: 'ts-error', hidden: true })
+    const passphrase = textField({ type: 'password', placeholder: 'Passphrase', onInput: () => refreshHint() })
+    const plaintext = textarea({ rows: 5, placeholder: 'Text to encrypt…' })
+    const bundle = textarea({ rows: 5, mono: true, placeholder: 'Bundle to decrypt (tsgcm1.…)', onInput: () => refreshHint() })
+    const error = note('', 'danger')
+    error.hidden = true
+    const hint = el('div', { class: 'ts-k-actions' })
+    let result = ''
+    const output = outputBlock('', { label: 'Result', copy: () => result, meta: '' })
 
     function showError(err: unknown) {
       error.textContent = err instanceof Error ? err.message : 'Something went wrong.'
       error.hidden = false
     }
 
+    function refreshHint() {
+      hint.replaceChildren(...(isBundle(bundle.value) ? [badge('Bundle detected', 'ok')] : []))
+    }
+
     async function runEncrypt() {
       try {
-        const value = await encrypt(passphrase.value, plaintext.value)
+        result = await encrypt(passphrase.value, plaintext.value)
         error.hidden = true
-        output.hidden = false
-        outHead.replaceChildren(el('span', {}, 'Encrypted bundle'), copyChip(() => outText.value, 'Copy'))
-        outText.value = value
+        output.setLabel('Encrypted bundle')
+        output.body.replaceChildren(result)
+        output.setMeta(`${result.length} characters`)
       } catch (err) {
         showError(err)
       }
@@ -37,38 +54,45 @@ const tool: Tool = {
 
     async function runDecrypt() {
       try {
-        const value = await decrypt(passphrase.value, bundle.value)
+        result = await decrypt(passphrase.value, bundle.value)
         error.hidden = true
-        output.hidden = false
-        outHead.replaceChildren(el('span', {}, 'Decrypted text'), copyChip(() => outText.value, 'Copy'))
-        outText.value = value
+        output.setLabel('Decrypted text')
+        output.body.replaceChildren(result)
+        output.setMeta(`${result.length} characters`)
       } catch (err) {
         showError(err)
       }
     }
 
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'Passphrase'), passphrase),
-        el('div', { class: 'ts-field' }, el('label', {}, 'Encrypt'), plaintext),
-        el('div', { class: 'ts-row ts-wrap' }, el('button', { class: 'ts-button ts-primary', type: 'button', onclick: runEncrypt }, 'Encrypt')),
-        el('div', { class: 'ts-field' }, el('label', {}, 'Decrypt'), bundle),
-        el('div', { class: 'ts-row ts-wrap' }, el('button', { class: 'ts-button', type: 'button', onclick: runDecrypt }, 'Decrypt')),
+      toolLayout(
+        {},
+        panel(
+          { title: 'Passphrase', icon: 'key' },
+          field(passphrase, { label: 'Passphrase' }),
+          note('The same passphrase must be used to decrypt. It never leaves this page.'),
+        ),
+        panel(
+          { title: 'Encrypt', icon: 'lock' },
+          field(plaintext, { label: 'Plaintext' }),
+          actions(button('Encrypt', { variant: 'primary', icon: 'lock', onClick: runEncrypt })),
+        ),
+        panel(
+          { title: 'Decrypt', icon: 'key2' },
+          field(bundle, { label: 'Bundle' }),
+          hint,
+          actions(button('Decrypt', { icon: 'key2', onClick: runDecrypt })),
+        ),
         error,
         output,
-        outHead,
-        outText,
-        el('div', { class: 'ts-row ts-wrap' }, el('button', {
-          class: 'ts-button',
-          type: 'button',
-          onclick: () => download('encrypted.txt', outText.value),
-        }, 'Download result')),
-        el('p', { class: 'ts-note' }, 'AES-256-GCM with PBKDF2-SHA256 (250,000 iterations). The passphrase and text never leave this page.'),
-        isBundle(bundle.value) ? el('p', { class: 'ts-hint' }, 'Bundle detected.') : null,
+        actions(
+          button('Download result', { icon: 'download', onClick: () => download('encrypted.txt', result) }),
+        ),
+        note('AES-256-GCM with PBKDF2-SHA256 (250,000 iterations). The passphrase and text never leave this page.'),
       ),
     )
+
+    refreshHint()
   },
 }
 
