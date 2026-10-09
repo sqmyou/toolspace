@@ -168,27 +168,27 @@ export function settingsPage(): HTMLElement {
         row(
           'Network tools',
           'Tools that contact a third-party host. Off hides them completely, so nothing can leave the tab.',
-          switchControl(prefs.networkTools, (on) => setSetting('networkTools', on)),
+          switchControl('Network tools', prefs.networkTools, (on) => setSetting('networkTools', on)),
         ),
         row(
           'Row density',
           'How tightly tool rows pack into the index.',
-          segmentedControl('density', prefs.density, CHOICES.density),
+          segmentedControl('density', 'Row density', prefs.density, CHOICES.density),
         ),
         row(
           'Show sigils',
           'The little per-tool mark beside names in lists and headings.',
-          switchControl(prefs.showSigils, (on) => setSetting('showSigils', on)),
+          switchControl('Show sigils', prefs.showSigils, (on) => setSetting('showSigils', on)),
         ),
         row(
           'Content width',
           'The reading column on a tool page.',
-          segmentedControl('contentWidth', prefs.contentWidth, CHOICES.contentWidth),
+          segmentedControl('contentWidth', 'Content width', prefs.contentWidth, CHOICES.contentWidth),
         ),
         row(
           'Show stats',
           'The count strip under the home-page masthead.',
-          switchControl(prefs.showStats, (on) => setSetting('showStats', on)),
+          switchControl('Show stats', prefs.showStats, (on) => setSetting('showStats', on)),
         ),
       ),
 
@@ -199,12 +199,12 @@ export function settingsPage(): HTMLElement {
         row(
           'Recently opened',
           'Keep a short list of the tools you open and show it on the home page.',
-          switchControl(prefs.recents, (on) => setSetting('recents', on)),
+          switchControl('Recently opened', prefs.recents, (on) => setSetting('recents', on)),
         ),
         row(
           'Motion',
           'Animation follows the system by default, and is always reduced when you ask.',
-          segmentedControl('motion', prefs.motion, CHOICES.motion),
+          segmentedControl('motion', 'Motion', prefs.motion, CHOICES.motion),
         ),
       ),
 
@@ -441,12 +441,14 @@ function row(title: string, blurb: string, control: HTMLElement): HTMLElement {
   )
 }
 
-function switchControl(value: boolean, onChange: (next: boolean) => void): HTMLElement {
+function switchControl(name: string, value: boolean, onChange: (next: boolean) => void): HTMLElement {
   const box = el('input', {
     type: 'checkbox',
     class: 'ts-set-switch',
     checked: value,
-    'aria-label': 'Toggle',
+    // The visible row title names the control; without it every switch on the
+    // page was announced as "Toggle" and could not be told apart.
+    'aria-label': name,
   }) as HTMLInputElement
   box.addEventListener('change', () => onChange(box.checked))
   return el(
@@ -459,12 +461,13 @@ function switchControl(value: boolean, onChange: (next: boolean) => void): HTMLE
 
 function segmentedControl<K extends 'density' | 'motion' | 'contentWidth'>(
   name: K,
+  label: string,
   value: string,
   choices: readonly { value: string; label: string }[],
 ): HTMLElement {
   return el(
     'div',
-    { class: 'ts-set-seg', role: 'radiogroup', 'aria-label': name },
+    { class: 'ts-set-seg', role: 'radiogroup', 'aria-label': label },
     ...choices.map((choice) =>
       el(
         'button',
