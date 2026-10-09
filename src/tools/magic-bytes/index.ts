@@ -1,5 +1,18 @@
+import {
+  actions,
+  badge,
+  cards,
+  card,
+  copyButton,
+  dropzone,
+  field,
+  note,
+  outputBlock,
+  panel,
+  textarea,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
-import { copyChip, readFileAsArrayBuffer } from '../../core/ui'
 import type { Tool } from '../../core/types'
 import { detect, looksLikeText, parseHex, preview, toHex } from './magic'
 
@@ -12,40 +25,37 @@ const tool: Tool = {
   category: 'Media',
   keywords: ['magic bytes', 'file type', 'signature', 'mime', 'header', 'hex', 'detect'],
   render(root) {
-    const hex = el('textarea', { class: 'ts-textarea ts-mono', rows: 3, spellcheck: false }, SAMPLE) as HTMLTextAreaElement
-    const file = el('input', { class: 'ts-input', type: 'file' }) as HTMLInputElement
-    const error = el('p', { class: 'ts-error', hidden: true })
-    const verdict = el('div', { class: 'ts-magic-verdict' })
-    const list = el('div', { class: 'ts-magic-list' })
-    const ascii = el('code', { class: 'ts-magic-ascii' })
-    let detectedName = ''
+    const hex = textarea({ rows: 3, value: SAMPLE, onInput: () => runHex() })
+    const error = note('', 'danger')
+    error.hidden = true
+    const verdict = el('div', { class: 'ts-k-actions' })
+    const list = cards()
+    const ascii = outputBlock('', { label: 'As ASCII' })
 
     function run(bytes: Uint8Array) {
       error.hidden = true
       list.replaceChildren()
       verdict.replaceChildren()
-      ascii.textContent = preview(bytes)
+      ascii.body.replaceChildren(preview(bytes))
+      ascii.setMeta(`${bytes.length} bytes`)
       if (bytes.length === 0) return
 
       const matches = detect(bytes)
       const text = looksLikeText(bytes)
-      detectedName = matches[0]?.name ?? (text ? 'Plain text' : 'Unknown')
-
-      verdict.append(el('span', { class: 'ts-magic-badge' }, detectedName), el('span', { class: 'ts-muted' }, text ? 'looks like text' : 'looks binary'))
+      verdict.append(
+        badge(matches[0]?.name ?? (text ? 'Plain text' : 'Unknown'), matches.length ? 'accent' : 'neutral'),
+        badge(text ? 'looks like text' : 'looks binary', 'neutral'),
+      )
 
       if (matches.length === 0) {
-        list.append(el('p', { class: 'ts-muted' }, 'No known signature matched these bytes.'))
+        list.append(note('No known signature matched these bytes.'))
       }
       for (const match of matches) {
         list.append(
-          el(
-            'div',
-            { class: 'ts-magic-row' },
-            el('strong', {}, match.name),
-            el('code', { class: 'ts-magic-value' }, match.mime),
-            el('code', { class: 'ts-magic-value' }, match.extension ? `.${match.extension}` : 'no extension'),
-            el('span', { class: 'ts-muted' }, `${match.confidence} bytes pinned`),
-            copyChip(match.mime, 'Copy MIME'),
+          card(
+            { title: match.name, meta: match.mime },
+            el('div', { class: 'ts-k-actions' }, badge(`.${match.extension || 'no extension'}`, 'neutral'), note(`${match.confidence} bytes pinned`)),
+            actions(copyButton(match.mime, { label: 'Copy MIME', size: 'sm' })),
           ),
         )
       }
@@ -60,34 +70,31 @@ const tool: Tool = {
       }
     }
 
-    hex.addEventListener('input', runHex)
-    file.addEventListener('change', () => {
-      const selected = file.files?.[0]
-      if (!selected) return
-      void (async () => {
-        try {
-          const data = new Uint8Array(await readFileAsArrayBuffer(selected))
-          const head = data.subarray(0, 512)
-          hex.value = toHex(head, 32)
-          run(head)
-        } catch (err) {
-          error.textContent = err instanceof Error ? err.message : 'Could not read that file.'
-          error.hidden = false
-        }
-      })()
+    const drop = dropzone({
+      label: 'Drop a file to read its header',
+      hint: 'or choose one',
+      icon: 'file',
+      readAs: 'buffer',
+      onFiles: () => {},
+      onBuffers: (buffers) => {
+        const head = new Uint8Array(buffers[0]).subarray(0, 512)
+        hex.value = toHex(head, 32)
+        run(head)
+      },
     })
 
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'Leading bytes as hex'), hex),
-        el('div', { class: 'ts-field' }, el('label', {}, 'Or load a file'), file),
-        error,
-        verdict,
-        el('div', { class: 'ts-field' }, el('label', {}, 'As ASCII'), ascii),
-        list,
-        el('p', { class: 'ts-note' }, 'Several formats share a prefix, so every match is listed with the number of bytes its signature pinned down. Reading the file stays on the machine.'),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Leading bytes', icon: 'hash' },
+          field(hex, { label: 'Leading bytes as hex' }),
+          drop.root,
+          error,
+        ),
+        panel({ title: 'Detected', icon: 'search' }, verdict, list),
+        ascii,
+        note('Several formats share a prefix, so every match is listed with the number of bytes its signature pinned down. Reading the file stays on the machine.'),
       ),
     )
 

@@ -1,9 +1,0 @@
-.ts-magic-verdict { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
-
-.ts-magic-badge { font-weight: 700; font-size: 15px; padding: 4px 10px; border-radius: 999px; background: var(--accent); color: #fff; }
-
-.ts-magic-list { display: flex; flex-direction: column; gap: 6px; }
-.ts-magic-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-input); }
-.ts-magic-value { font-family: var(--mono); font-size: 12px; }
-
-.ts-magic-ascii { display: block; font-family: var(--mono); font-size: 13px; overflow-wrap: anywhere; }

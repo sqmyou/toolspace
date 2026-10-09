@@ -1,12 +1,21 @@
-import { el } from '../../core/dom'
-import { copyChip, download, readFileAsArrayBuffer } from '../../core/ui'
+import {
+  actions,
+  button,
+  copyRow,
+  dropzone,
+  field,
+  kvList,
+  note,
+  panel,
+  textarea,
+  textField,
+  toolLayout,
+} from '../../core/components'
+import { download } from '../../core/ui'
 import type { Tool } from '../../core/types'
 import { checksumBytes, checksumText, type ChecksumResult } from './checksum'
 
-interface Entry {
-  name: string
-  value: string
-}
+const LENGTHS: Record<number, string> = { 8: 'CRC-32', 40: 'SHA-1', 64: 'SHA-256', 96: 'SHA-384', 128: 'SHA-512' }
 
 const tool: Tool = {
   slug: 'file-checksum',
@@ -15,33 +24,30 @@ const tool: Tool = {
   category: 'Crypto',
   keywords: ['checksum', 'hash', 'sha256', 'sha1', 'sha512', 'crc32', 'digest', 'verify'],
   render(root) {
-    const text = el('textarea', { class: 'ts-textarea', rows: 4, placeholder: 'Text to hash…', 'aria-label': 'Text' }) as HTMLTextAreaElement
-    const expected = el('input', { class: 'ts-input ts-mono', placeholder: 'Paste a known hash to compare (optional)', 'aria-label': 'Expected hash' }) as HTMLInputElement
-    const fileInput = el('input', { type: 'file' }) as HTMLInputElement
-    const status = el('span', { class: 'ts-muted' })
-    const rows = el('div', { class: 'ts-hash-list' })
-    const verdict = el('p', { class: 'ts-verdict', hidden: true })
-
+    const text = textarea({ rows: 4, placeholder: 'Text to hash…', onInput: () => void hashText() })
+    const expected = textField({ placeholder: 'Paste a known hash to compare (optional)', mono: true, onInput: () => updateVerdict() })
+    const verdict = note('')
+    verdict.hidden = true
+    const source = note('')
+    const digests = kvList()
     let latest: Record<string, string> = {}
 
-    function renderResults(label: string, size: number, entries: Entry[]) {
-      latest = Object.fromEntries(entries.map((entry) => [entry.name, entry.value]))
-      rows.replaceChildren(
-        el('p', { class: 'ts-muted' }, `${label} · ${size.toLocaleString()} bytes`),
-        ...entries.map((entry) =>
-          el(
-            'div',
-            { class: 'ts-hash-row' },
-            el('span', { class: 'ts-muted' }, entry.name),
-            el('code', { class: 'ts-mono ts-value' }, entry.value),
-            copyChip(() => entry.value),
-          ),
-        ),
-      )
-      updateVerdict()
+    function entriesOf(result: ChecksumResult): [string, string][] {
+      return [
+        ['CRC-32', result.crc32],
+        ['SHA-1', result.sha1],
+        ['SHA-256', result.sha256],
+        ['SHA-384', result.sha384],
+        ['SHA-512', result.sha512],
+      ]
     }
 
-    const LENGTHS: Record<number, string> = { 8: 'CRC-32', 40: 'SHA-1', 64: 'SHA-256', 96: 'SHA-384', 128: 'SHA-512' }
+    function renderResults(label: string, size: number, entries: [string, string][]) {
+      latest = Object.fromEntries(entries)
+      source.textContent = `${label} · ${size.toLocaleString()} bytes`
+      digests.replaceChildren(...entries.map(([name, value]) => copyRow(name, value)))
+      updateVerdict()
+    }
 
     function updateVerdict() {
       const want = expected.value.trim().toLowerCase()
@@ -50,11 +56,10 @@ const tool: Tool = {
         return
       }
       const name = LENGTHS[want.length]
-      const actual = name ? latest[name]?.toLowerCase() : undefined
-      const match = actual === want
+      const match = name ? latest[name]?.toLowerCase() === want : false
       verdict.hidden = false
-      verdict.className = `ts-verdict ${match ? 'ts-verdict-ok' : 'ts-verdict-bad'}`
-      verdict.textContent = match ? `✓ Matches the expected ${name}` : '✗ Does not match the expected hash'
+      verdict.className = `ts-k-note ts-k-note--${match ? 'ok' : 'danger'}`
+      verdict.textContent = match ? `Matches the expected ${name}` : 'Does not match the expected hash'
     }
 
     async function hashText() {
@@ -62,46 +67,35 @@ const tool: Tool = {
       renderResults('Text', result.size, entriesOf(result))
     }
 
-    function entriesOf(result: ChecksumResult): Entry[] {
-      return [
-        { name: 'CRC-32', value: result.crc32 },
-        { name: 'SHA-1', value: result.sha1 },
-        { name: 'SHA-256', value: result.sha256 },
-        { name: 'SHA-384', value: result.sha384 },
-        { name: 'SHA-512', value: result.sha512 },
-      ]
-    }
-
-    text.addEventListener('input', () => void hashText())
-    expected.addEventListener('input', updateVerdict)
-
-    fileInput.addEventListener('change', async () => {
-      const file = fileInput.files?.[0]
-      if (!file) return
-      status.textContent = `Hashing ${file.name}…`
-      const buffer = await readFileAsArrayBuffer(file)
-      const result = await checksumBytes(new Uint8Array(buffer))
-      renderResults(file.name, result.size, entriesOf(result))
-      status.textContent = ''
+    const drop = dropzone({
+      label: 'Drop a file to hash',
+      hint: 'or choose one',
+      icon: 'file',
+      readAs: 'buffer',
+      onFiles: () => {},
+      onBuffers: async (buffers, files) => {
+        source.textContent = `Hashing ${files[0].name}…`
+        const result = await checksumBytes(new Uint8Array(buffers[0]))
+        renderResults(files[0].name, result.size, entriesOf(result))
+      },
     })
 
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'Text'), text),
-        el('div', { class: 'ts-field' }, el('label', {}, 'Verify against a hash'), expected),
-        verdict,
-        el('h3', { class: 'ts-subhead' }, 'Hash a file'),
-        el('div', { class: 'ts-row ts-wrap' }, fileInput, status),
-        el('h3', { class: 'ts-subhead' }, 'Digests'),
-        rows,
-        el('div', { class: 'ts-row ts-wrap' }, el('button', {
-          class: 'ts-button',
-          type: 'button',
-          onclick: () => download('sha256.txt', latest['SHA-256'] ?? ''),
-        }, 'Download SHA-256')),
-        el('p', { class: 'ts-note' }, 'Hashing happens in your browser. Files are read locally and never uploaded.'),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Input', icon: 'file' },
+          field(text, { label: 'Text' }),
+          field(expected, { label: 'Verify against a hash' }),
+          verdict,
+        ),
+        drop.root,
+        panel(
+          { title: 'Digests', icon: 'hash' },
+          actions(source, button('Download SHA-256', { icon: 'download', onClick: () => download('sha256.txt', latest['SHA-256'] ?? '') })),
+          digests,
+        ),
+        note('Hashing happens in your browser. Files are read locally and never uploaded.'),
       ),
     )
 
