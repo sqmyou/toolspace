@@ -117,3 +117,11 @@ is actionable:
   to an `<img>` as an object URL. Without `blob:` the load is refused and the
   file looks corrupt. `createImageBitmap(blob)` is not governed by `img-src`, so
   a canvas path can work while the preview stays blank.
+- **The privacy page's host table is generated**, not written by hand: it reads
+  `Tool.remote` off the registry in `src/ui/privacy.ts`, so it cannot go stale
+  when a tool is added. `public/_headers` is still the manual list — those two
+  are the only places a network origin is declared.
+- **Per-route metadata lives in `src/core/meta.ts`.** A hash-router SPA has one
+  static `<head>`, so `applyMeta()` sets `document.title`, the description and a
+  `<link rel="canonical">` on every route change. `SITE_ORIGIN` is a hardcoded
+  production URL — change it in the same commit as any domain move.

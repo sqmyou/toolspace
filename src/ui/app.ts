@@ -2,11 +2,13 @@ import { clear, el } from '../core/dom'
 import { favourites, isFavourite, onFavouritesChange, toggleFavourite } from '../core/favourites'
 import { icon, iconEl } from '../core/icons'
 import { categoryHue, sigilTile } from '../core/identity'
+import { applyMeta } from '../core/meta'
 import { remember } from '../core/recents'
 import { findTool, searchTools, tools } from '../core/registry'
 import { networkEnabled, onSettingsChange, setting } from '../core/settings'
 import { activeTheme, applyThemeToDocument } from '../core/theme'
 import type { Tool } from '../core/types'
+import { privacyPage } from './privacy'
 import { settingsPage } from './settings'
 
 /**
@@ -483,6 +485,45 @@ function settingsLink(): HTMLElement {
   )
 }
 
+/** The one footer: where the promise, the source and the settings all live. */
+function footer(): HTMLElement {
+  const remote = tools.filter((tool) => tool.remote).length
+  return el(
+    'footer',
+    { class: 'ts-footer' },
+    el(
+      'div',
+      { class: 'ts-footer__brand' },
+      el('span', { class: 'ts-footer__mark', 'aria-hidden': 'true', innerHTML: BRAND_MARK }),
+      el(
+        'span',
+        {},
+        el('strong', {}, 'toolspace'),
+        el('span', { class: 'ts-footer__note' }, 'Nothing you paste is ever uploaded.'),
+      ),
+    ),
+    el(
+      'nav',
+      { class: 'ts-footer__nav', 'aria-label': 'About toolspace' },
+      el('a', { href: '#/privacy' }, 'Privacy'),
+      el('a', { href: '#/settings' }, 'Settings'),
+      el(
+        'a',
+        { href: 'https://github.com/sqmyou/toolspace', rel: 'noopener' },
+        'Source',
+      ),
+      el('span', { class: 'ts-footer__sep', 'aria-hidden': 'true' }, '·'),
+      el('span', {}, `${tools.length} tools`),
+      el('span', {}, `${tools.length - remote} offline`),
+      el(
+        'a',
+        { href: '#/privacy' },
+        remote === 0 ? 'network off' : `${remote} need the network`,
+      ),
+    ),
+  )
+}
+
 function notFound(slug: string, palette: Palette): HTMLElement {
   return el(
     'section',
@@ -715,14 +756,32 @@ export function mountApp(app: HTMLElement): void {
     clear(main)
     window.scrollTo({ top: 0 })
     if (!slug) {
+      applyMeta({ path: '/' })
       main.append(home())
     } else if (slug === 'settings') {
+      applyMeta({
+        title: 'Settings',
+        description: 'Themes, tool preferences and the network switch. Everything is saved on this device.',
+        path: '/settings',
+      })
       main.append(settingsPage())
+    } else if (slug === 'privacy') {
+      applyMeta({
+        title: 'Privacy',
+        description: 'What toolspace does with your input: nothing. No backend, no analytics, and the exact list of network hosts.',
+        path: '/privacy',
+      })
+      main.append(privacyPage())
     } else {
       const tool = findTool(slug)
       // A network tool that is switched off is treated as if it does not
       // exist, so a stale link cannot quietly make a cross-origin request.
       const hidden = tool != null && Boolean(tool.remote) && !networkEnabled()
+      if (tool && !hidden) {
+        applyMeta({ title: tool.name, description: tool.description, path: `/${tool.slug}` })
+      } else {
+        applyMeta({ title: 'Not found', path: `/${slug}` })
+      }
       main.append(tool && !hidden ? toolPage(tool, palette) : notFound(slug, palette))
       if (tool && !hidden && setting('recents')) remember(tool.slug)
     }
@@ -745,6 +804,6 @@ export function mountApp(app: HTMLElement): void {
   // tool cannot linger on the page and the counts stay truthful.
   onSettingsChange(fromHash)
 
-  app.append(offlineBanner(), header, main, toTop)
+  app.append(offlineBanner(), header, main, footer(), toTop)
   fromHash()
 }

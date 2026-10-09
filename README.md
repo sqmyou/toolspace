@@ -5,6 +5,10 @@
 No account. No tracking. No build step to use them. Open a tool, use it, close
 the tab. Most of them never touch the network at all.
 
+[![CI](https://github.com/sqmyou/toolspace/actions/workflows/ci.yml/badge.svg)](https://github.com/sqmyou/toolspace/actions/workflows/ci.yml)
+![runtime dependencies: 2](https://img.shields.io/badge/runtime%20deps-2-blue)
+![offline: yes](https://img.shields.io/badge/works-offline-brightgreen)
+
 ---
 
 ## Why
@@ -24,8 +28,8 @@ because there is nothing to host.
 - **Offline by default.** Install it as a PWA and it keeps working on a plane.
 - **Fast.** No framework at runtime, no third-party scripts. The whole app is a
   few kilobytes.
-- **Yours to theme.** Eight presets, or build your own from an accent and a
-  background. Saved on your device, like everything else.
+- **Yours to theme.** Twelve presets, or build your own from a palette and an
+  accent. Saved on your device, like everything else.
 - **Easy to extend.** Drop a folder in `src/tools/` and it shows up in the
   catalogue. No central list to edit, so contributors never collide.
 
@@ -64,8 +68,13 @@ src/
     registry.ts   # auto-discovers tools via import.meta.glob
     dom.ts        # tiny `el()` helper, so tools need no framework
     components.ts # the shared UI kit
+    settings.ts   # one store for every preference (localStorage)
+    theme.ts      # presets and the custom-theme builder
+    meta.ts       # per-route title, description and canonical URL
   ui/
-    app.ts        # shell, search, theme, hash routing
+    app.ts        # shell, search, hash routing, home and tool pages
+    settings.ts   # the Settings page
+    privacy.ts    # the Privacy page (host table from Tool.remote)
   tools/
     password-generator/
       index.ts    # UI: render(root)
@@ -113,20 +122,20 @@ wherever it is listed. The origins the CSP allows are:
 | `api.open-meteo.com`, `geocoding-api.open-meteo.com` | Weather | the place name you type |
 
 Those are the only third-party origins the policy permits, and none of them
-need more than this. They are also optional: the home page has a **Network
+need more than this. They are also optional: **Settings** has a **Network
 tools** switch, and turning it off hides every network-backed tool from the
 index, the search and the command palette and blocks deep links to them. The
-app becomes strictly offline.
+app becomes strictly offline. The same table is on the `/#/privacy` page,
+generated from the tools themselves so it cannot drift.
 
 *A tool that needs more than this does not belong here.* Roblox is the worked
 example: its JSON APIs allow only Roblox's own origin, and per-user images sit
 behind the same wall, so a Roblox tool is impossible rather than merely absent.
 
 A tool declares its network use in code (`Tool.remote`), and the shell derives
-the tag, the notice on the tool page and the offline counts from that
-declaration. You cannot add a network tool by omission — the origin has to go
-in `public/_headers`, in this README, and in the home-page copy in the same
-change.
+the tag, the notice on the tool page, the privacy-page table and the offline
+counts from that declaration. You cannot add a network tool by omission — the
+origin has to go in `public/_headers` and in this README in the same change.
 
 ## Contributing
 
