@@ -125,6 +125,10 @@
   --container: 1320px;
   --read: 68ch;
 
+  /* The one horizontal rhythm: content inset, the app's outer margin and the
+     header/footer's own edge all derive from it. */
+  --gutter: clamp(18px, 4vw, 34px);
+
   /* Tight tracking for display/headings, open tracking for mono eyebrows. */
   --tracking-display: -0.045em;
   --tracking-tight: -0.022em;
@@ -267,6 +271,24 @@ a { color: inherit; }
   min-height: 100vh;
 }
 
+/* The one content container. Everything lives inside it so the page has
+   gutters instead of running to the screen edge. */
+.ts-main {
+  flex: 1;
+  width: 100%;
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: clamp(20px, 3.2vw, 40px) var(--gutter) 80px;
+}
+
+/* Chrome sits outside .ts-main, so it re-derives the content edge itself:
+   the container's outer margin plus the same gutter. Under the container
+   width the margin term goes negative and max() leaves just the gutter. */
+.ts-header,
+.ts-footer {
+  padding-inline: max(var(--gutter), calc((100% - var(--container)) / 2 + var(--gutter)));
+}
+
 /* The bar itself is a hairline over a blurred backdrop, so content scrolls
    under it rather than into it. */
 .ts-header {
@@ -276,7 +298,6 @@ a { color: inherit; }
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 clamp(14px, 2.6vw, 26px);
   min-height: var(--header-h);
   background: color-mix(in srgb, var(--bg) 82%, transparent);
   -webkit-backdrop-filter: blur(14px) saturate(1.3);
@@ -1942,7 +1963,12 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 
 :root[data-stats="off"] .ts-masthead-stats { display: none; }
 
-:root[data-width="narrow"] .ts-toolpage { max-width: 760px; margin-inline: auto; }
+/* Content width sets the tool body's own reading column. It has to target
+   `.ts-k-tool` rather than `.ts-toolpage`, because the cap lives on the inner
+   column — a max-width on the outer wrapper cannot loosen it. */
+:root[data-width="narrow"] .ts-k-tool { max-width: 760px; }
+:root[data-width="wide"] .ts-k-tool { max-width: none; }
+:root[data-width="narrow"] .ts-toolpage,
 :root[data-width="wide"] .ts-toolpage { max-width: none; }
 
 /* Sigils off: the tile is left out of the DOM, so this is only a guard. */
@@ -1951,7 +1977,7 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 /* --- Settings page -------------------------------------------------------
    A real page, not a popover. It composes the shared markup and the ts-set-*
    classes below; the theme module owns every value it writes. */
-.ts-set { max-width: 900px; margin: 0 auto; padding: clamp(24px, 4vw, 48px) clamp(14px, 4vw, 32px) 96px; }
+.ts-set { max-width: 900px; padding: clamp(24px, 4vw, 48px) 0 96px; }
 .ts-set-title { margin-bottom: 40px; }
 .ts-set-title h1 { font-size: var(--text-2xl); letter-spacing: var(--tracking-display); margin: 0 0 10px; }
 .ts-set-title .ts-eyebrow { margin-bottom: 10px; }
@@ -2074,7 +2100,7 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
   justify-content: space-between;
   gap: 14px 24px;
   margin-top: auto;
-  padding: 22px clamp(14px, 4vw, 32px);
+  padding-block: 22px;
   border-top: 1px solid var(--border);
   background: var(--bg-soft);
 }
@@ -2098,7 +2124,7 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 
 /* --- Prose page (privacy) ------------------------------------------------
    A reading column, not a tool. Same tokens and mono, no new components. */
-.ts-prose { max-width: var(--read); margin: 0 auto; padding: clamp(24px, 5vw, 56px) clamp(14px, 4vw, 32px) 96px; }
+.ts-prose { max-width: var(--read); padding: clamp(24px, 5vw, 56px) 0 96px; }
 .ts-prose__head { margin-bottom: 30px; }
 .ts-prose__head h1 {
   font-size: var(--text-2xl);
