@@ -1,4 +1,5 @@
 import {
+  colorField,
   copyRow,
   field,
   kvList,
@@ -23,9 +24,9 @@ const tool: Tool = {
   category: 'Design',
   keywords: ['color', 'colour', 'palette', 'shades', 'tints', 'tailwind', 'css', 'contrast', 'hsl'],
   render(root) {
-    const picker = el('input', { class: 'ts-k-input', type: 'color', value: '#3b82f6', 'aria-label': 'Base colour' }) as HTMLInputElement
-    const hexInput = textField({ value: '#3b82f6', mono: true, onInput: () => update(hexInput.value, false) })
-    const nameInput = textField({ value: 'brand', onInput: () => update(hexInput.value, false) })
+    let current: Rgb = parseHex('#3b82f6')
+    const hex = colorField({ value: '#3b82f6', label: 'Base colour', onInput: (value) => update(value) })
+    const prefix = textField({ value: 'brand', onInput: () => renderPalette() })
     const error = note('', 'danger')
     error.hidden = true
     const info = kvList()
@@ -34,10 +35,15 @@ const tool: Tool = {
     let css = ''
     const cssBlock = outputBlock('', { label: 'CSS variables', copy: () => css })
 
-    function renderShades(rgb: Rgb) {
+    function renderPalette() {
       swatches.replaceChildren(
-        ...generateShades(rgb).map((swatch) => {
-          const chip = el('button', { class: 'ts-swatch-chip', type: 'button', title: `Copy ${swatch.hex}`, onClick: () => navigator.clipboard?.writeText(swatch.hex) })
+        ...generateShades(current).map((swatch) => {
+          const chip = el('button', {
+            class: 'ts-swatch-chip',
+            type: 'button',
+            title: `Copy ${swatch.hex}`,
+            onclick: () => void navigator.clipboard?.writeText(swatch.hex),
+          })
           chip.style.background = swatch.hex
           chip.style.color = swatch.ink
           chip.append(el('span', { class: 'ts-swatch-step' }, `${swatch.step}`))
@@ -52,49 +58,40 @@ const tool: Tool = {
       )
 
       harmoniesRow.replaceChildren(
-        ...harmonies(rgb).map((harmony) => {
+        ...harmonies(current).map((harmony) => {
           const dot = el('span', { class: 'ts-harmony-dot' })
           dot.style.background = harmony.hex
           return el('div', { class: 'ts-harmony' }, dot, el('span', {}, harmony.name), el('code', { class: 'ts-mono-sm' }, harmony.hex))
         }),
       )
 
-      css = toCssVariables(generateShades(rgb), nameInput.value)
+      css = toCssVariables(generateShades(current), prefix.value)
       cssBlock.body.replaceChildren(css)
       cssBlock.setMeta('')
     }
 
-    function update(base: string, fromPicker: boolean) {
+    function update(base: string) {
       try {
-        const rgb = parseHex(base)
+        current = parseHex(base)
         error.hidden = true
-        if (!fromPicker) picker.value = toHex(rgb)
-        hexInput.value = toHex(rgb)
-        const hsl = rgbToHsl(rgb)
+        const hsl = rgbToHsl(current)
         info.replaceChildren(
+          copyRow('Hex', toHex(current)),
           copyRow('HSL', `hsl(${round(hsl.h)}, ${round(hsl.s)}%, ${round(hsl.l)}%)`),
-          copyRow('Contrast vs white', `${contrastRatio(rgb, { r: 255, g: 255, b: 255 }).toFixed(2)}:1`),
-          copyRow('Contrast vs black', `${contrastRatio(rgb, { r: 0, g: 0, b: 0 }).toFixed(2)}:1`),
+          copyRow('Contrast vs white', `${contrastRatio(current, { r: 255, g: 255, b: 255 }).toFixed(2)}:1`, { copy: false }),
+          copyRow('Contrast vs black', `${contrastRatio(current, { r: 0, g: 0, b: 0 }).toFixed(2)}:1`, { copy: false }),
         )
-        renderShades(rgb)
+        renderPalette()
       } catch (err) {
         error.textContent = err instanceof ColorError ? err.message : 'Enter a hex colour like #3b82f6.'
         error.hidden = false
       }
     }
 
-    picker.addEventListener('input', () => update(picker.value, true))
-
     root.append(
       toolLayout(
         { wide: true },
-        panel(
-          { title: 'Base colour', icon: 'palette' },
-          el('div', { class: 'ts-k-actions' }, el('div', { class: 'ts-grow' }, picker)),
-          field(hexInput, { label: 'Hex' }),
-          field(nameInput, { label: 'CSS prefix' }),
-          error,
-        ),
+        panel({ title: 'Base colour', icon: 'palette' }, hex.root, field(prefix, { label: 'CSS prefix' }), error),
         panel({ title: 'Base details', icon: 'info' }, info),
         panel({ title: 'Shade ramp', icon: 'layers' }, swatches),
         panel({ title: 'Harmonies', icon: 'sparkle' }, harmoniesRow),
@@ -103,7 +100,7 @@ const tool: Tool = {
       ),
     )
 
-    update('#3b82f6', false)
+    update('#3b82f6')
   },
 }
 

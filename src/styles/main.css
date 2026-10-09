@@ -1210,6 +1210,19 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 .ts-k-label { font-size: 12px; font-weight: 500; letter-spacing: 0.02em; color: var(--muted); }
 .ts-k-hint { margin: 0; font-size: 12px; line-height: 1.5; color: var(--faint); }
 
+/* A colour swatch and its hex field, kept on one row. */
+.ts-k-colorfield__row { display: flex; align-items: center; gap: 8px; }
+.ts-k-color {
+  flex: none;
+  width: 46px;
+  height: 38px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+  cursor: pointer;
+}
+
 .ts-k-input,
 .ts-k-textarea,
 .ts-k-select {

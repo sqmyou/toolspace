@@ -685,6 +685,54 @@ export function copyRow(label: string, value: string | (() => string), options: 
   return row
 }
 
+export interface ColorFieldOptions {
+  value: string
+  label?: string
+  /**
+   * Accept any CSS colour in the text field (e.g. `rgba(...)`), not just hex.
+   * `onInput` then receives the raw text and the swatch only follows valid hex.
+   */
+  text?: boolean
+  /** Called as the user picks or types a colour. */
+  onInput?: (value: string, event: Event) => void
+}
+
+export interface ColorField {
+  /** The labelled row, ready to append. */
+  root: HTMLElement
+  swatch: HTMLInputElement
+  hex: HTMLInputElement
+}
+
+/**
+ * A colour swatch paired with a text field. The two controls are easy to wire
+ * up slightly differently in every tool, so they are built together here and
+ * kept in sync.
+ */
+export function colorField(options: ColorFieldOptions): ColorField {
+  const valid = /^#[0-9a-f]{6}$/i
+  const swatch = el('input', { class: 'ts-k-color', type: 'color', value: options.value, 'aria-label': options.label ?? 'Colour' }) as HTMLInputElement
+  const hex = textField({
+    value: options.value,
+    mono: true,
+    onInput: (value, event) => {
+      if (!valid.test(value)) {
+        if (!options.text) return
+        options.onInput?.(value, event)
+        return
+      }
+      swatch.value = value
+      options.onInput?.(value, event)
+    },
+  })
+  swatch.addEventListener('input', (event) => {
+    hex.value = swatch.value
+    options.onInput?.(swatch.value, event)
+  })
+  const row = el('div', { class: 'ts-k-colorfield__row' }, swatch, hex)
+  return { root: options.label ? field(row, { label: options.label }) : row, swatch, hex }
+}
+
 export interface StatOptions {
   label: string
   value: string
