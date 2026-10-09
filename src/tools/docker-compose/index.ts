@@ -1,6 +1,20 @@
+import {
+  actions,
+  button,
+  copyButton,
+  field,
+  findingRow,
+  findings,
+  note,
+  panel,
+  stat,
+  stats,
+  textarea,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
-import { copyChip, download } from '../../core/ui'
 import type { Tool } from '../../core/types'
+import { download } from '../../core/ui'
 import { validateCompose } from './compose'
 
 const SAMPLE = `services:
@@ -30,57 +44,67 @@ const tool: Tool = {
   category: 'DevOps',
   keywords: ['docker', 'compose', 'yaml', 'containers', 'validate', 'services', 'ports', 'volumes'],
   render(root) {
-    const input = el('textarea', { class: 'ts-textarea ts-mono', rows: 18, spellcheck: false }, SAMPLE) as HTMLTextAreaElement
-    const counts = el('p', { class: 'ts-muted' })
-    const overview = el('div', { class: 'ts-compose-overview' })
-    const list = el('div', { class: 'ts-compose-list' })
+    const input = textarea({ rows: 18, value: SAMPLE, onInput: () => run() })
+    const error = note('', 'danger')
+    error.hidden = true
+    const readout = stats()
+    const issueList = findings()
+    const groups = el('div', { class: 'ts-k-cards' })
     let report = ''
 
     function run() {
-      overview.replaceChildren()
-      list.replaceChildren()
+      error.hidden = true
+      groups.replaceChildren()
+      issueList.replaceChildren()
       const result = validateCompose(input.value)
-      counts.textContent = `${result.errorCount} error${result.errorCount === 1 ? '' : 's'} · ${result.warningCount} warning${result.warningCount === 1 ? '' : 's'}`
+      readout.replaceChildren(
+        stat({ label: 'Services', value: String(result.services.length) }),
+        stat({ label: 'Networks', value: String(result.networks.length) }),
+        stat({ label: 'Volumes', value: String(result.volumes.length) }),
+        stat({ label: 'Errors', value: String(result.errorCount) }),
+        stat({ label: 'Warnings', value: String(result.warningCount) }),
+      )
 
-      const chips: [string, string[]][] = [
-        ['Services', result.services],
-        ['Networks', result.networks],
-        ['Volumes', result.volumes],
-      ]
-      for (const [label, values] of chips) {
-        overview.append(el('div', { class: 'ts-compose-chip' }, el('strong', {}, `${label} (${values.length})`), el('code', { class: 'ts-compose-names' }, values.join(', ') || '—')))
+      for (const [label, values] of [['Services', result.services], ['Networks', result.networks], ['Volumes', result.volumes]] as [string, string[]][]) {
+        groups.append(
+          el(
+            'div',
+            { class: 'ts-k-card' },
+            el('div', { class: 'ts-k-card__head' }, el('strong', { class: 'ts-k-card__title' }, `${label} (${values.length})`)),
+            el('code', { class: 'ts-k-card__body' }, values.join(', ') || '—'),
+          ),
+        )
       }
 
       if (result.issues.length === 0) {
-        list.append(el('p', { class: 'ts-muted' }, 'No problems found in what this checker inspects.'))
+        issueList.append(note('No problems found in what this checker inspects.', 'ok'))
         report = 'Compose check: no problems found.\n'
         return
       }
       for (const issue of result.issues) {
-        list.append(
-          el(
-            'div',
-            { class: `ts-compose-issue ts-compose-${issue.level}` },
-            el('span', { class: `ts-compose-level ts-compose-level-${issue.level}` }, issue.level === 'error' ? 'Error' : 'Warning'),
-            el('div', { class: 'ts-compose-body' }, el('code', { class: 'ts-compose-path' }, issue.path || '(file)'), el('span', { class: 'ts-compose-message' }, issue.message)),
-          ),
+        issueList.append(
+          findingRow({
+            status: issue.level === 'error' ? 'Error' : 'Warning',
+            tone: issue.level === 'error' ? 'danger' : 'warn',
+            name: issue.path || '(file)',
+            message: issue.message,
+          }),
         )
       }
       report = result.issues.map((issue) => `${issue.level === 'error' ? 'ERROR' : 'WARN'} ${issue.path || '(file)'}: ${issue.message}`).join('\n') + '\n'
     }
 
-    input.addEventListener('input', run)
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'docker-compose.yml'), input),
-        counts,
-        overview,
-        list,
-        el('div', { class: 'ts-row ts-wrap' }, copyChip(() => report, 'Copy report'), el('button', { class: 'ts-button', type: 'button', onclick: () => download('compose-check.txt', report) }, 'Download report')),
-        el('p', { class: 'ts-note' }, 'The YAML subset Compose files use is parsed here, so nothing is uploaded. Errors would stop the file working; warnings are things worth a second look.'),
+      toolLayout(
+        { wide: true },
+        panel({ title: 'docker-compose.yml', icon: 'file' }, field(input, { label: 'docker-compose.yml' }), error),
+        panel({ title: 'Overview', icon: 'layers' }, readout, groups),
+        panel(
+          { title: 'Findings', icon: 'alert' },
+          actions(copyButton(() => report, { label: 'Copy report', size: 'sm' }), button('Download report', { icon: 'download', onClick: () => download('compose-check.txt', report) })),
+          issueList,
+        ),
+        note('The YAML subset Compose files use is parsed here, so nothing is uploaded. Errors would stop the file working; warnings are things worth a second look.'),
       ),
     )
 

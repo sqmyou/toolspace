@@ -1,3 +1,13 @@
+import {
+  actions,
+  button,
+  checkbox,
+  field,
+  note,
+  panel,
+  textField,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
 import type { Tool } from '../../core/types'
 import { CalcError, evaluate, formatNumber, FUNCTION_NAMES } from './calc'
@@ -12,8 +22,6 @@ const KEYS: string[][] = [
 
 const LABELS: Record<string, string> = {
   clear: 'AC',
-  '=': '=',
-  sqrt: '√',
   'sqrt(': '√',
 }
 
@@ -24,18 +32,24 @@ const tool: Tool = {
   category: 'Math',
   keywords: ['calculator', 'math', 'arithmetic', 'expression', 'evaluate', 'scientific', 'sin', 'cos', 'log'],
   render(root) {
-    const input = el('input', {
-      class: 'ts-input ts-mono ts-calc-input',
-      type: 'text',
-      inputmode: 'text',
-      spellcheck: false,
-      autocomplete: 'off',
+    const input = textField({
+      value: '',
+      mono: true,
       placeholder: 'e.g. 2 + 3 * 4, sqrt(2), sin(30) degrees…',
-      'aria-label': 'Expression',
-    }) as HTMLInputElement
+      onInput: () => compute(),
+    })
+    input.setAttribute('inputmode', 'text')
+    input.autocomplete = 'off'
+    input.spellcheck = false
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault()
+        commit()
+      }
+    })
 
-    const degrees = el('input', { type: 'checkbox', id: 'ts-calc-degrees' }) as HTMLInputElement
-    const result = el('div', { class: 'ts-calc-result', 'aria-live': 'polite' }, '0')
+    let degreesOn = false
+    const result = el('div', { class: 'ts-calc-result ts-k-mono', 'aria-live': 'polite' }, '0')
     const detail = el('div', { class: 'ts-calc-detail' })
     const history = el('div', { class: 'ts-calc-history' })
     const pad = el('div', { class: 'ts-calc-pad' })
@@ -43,9 +57,9 @@ const tool: Tool = {
     let entries: { expression: string; value: string }[] = []
     let lastValue = 0
 
-    function compute() {
+    function compute(): string | null {
       try {
-        const value = evaluate(input.value, { degrees: degrees.checked, variables: { ans: lastValue } })
+        const value = evaluate(input.value, { degrees: degreesOn, variables: { ans: lastValue } })
         const text = formatNumber(value)
         result.textContent = text
         result.classList.remove('is-error')
@@ -93,7 +107,7 @@ const tool: Tool = {
                 el('span', { class: 'ts-calc-entry-val' }, `= ${entry.value}`),
               ),
             )
-          : [el('p', { class: 'ts-muted ts-calc-empty' }, 'Results you commit are listed here. Click one to reuse it.')]),
+          : [el('p', { class: 'ts-k-hint ts-calc-empty' }, 'Results you commit are listed here. Click one to reuse it.')]),
       )
     }
 
@@ -110,51 +124,51 @@ const tool: Tool = {
     for (const row of KEYS) {
       for (const key of row) {
         const isEquals = key === '='
-        const button = el(
-          'button',
-          { class: `ts-calc-key${isEquals ? ' ts-calc-key-eq' : ''}`, type: 'button' },
-          LABELS[key] ?? key,
-        )
-        button.addEventListener('click', () => {
-          if (key === 'clear') {
-            input.value = ''
-            compute()
-            input.focus()
-          } else if (isEquals) {
-            commit()
-          } else {
-            insert(key)
-          }
+        const keyButton = button(LABELS[key] ?? key, {
+          variant: isEquals ? 'primary' : 'default',
+          onClick: () => {
+            if (key === 'clear') {
+              input.value = ''
+              compute()
+              input.focus()
+            } else if (isEquals) {
+              commit()
+            } else {
+              insert(key)
+            }
+          },
         })
-        pad.append(button)
+        keyButton.classList.add('ts-calc-key')
+        pad.append(keyButton)
       }
     }
 
-    input.addEventListener('input', compute)
-    degrees.addEventListener('change', compute)
-    input.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') {
-        event.preventDefault()
-        commit()
-      }
-    })
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'Expression'), input),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Expression', icon: 'calculator' },
+          field(input, { label: 'Expression' }),
+          actions(
+            checkbox({
+              label: 'Trig in degrees',
+              onChange: (checked) => {
+                degreesOn = checked
+                compute()
+              },
+            }),
+            button('Calculate', { variant: 'primary', icon: 'check', onClick: commit }),
+          ),
+          el('div', { class: 'ts-calc-readout' }, result, detail),
+        ),
         el(
           'div',
-          { class: 'ts-calc-controls' },
-          el('label', { class: 'ts-check', for: 'ts-calc-degrees' }, degrees, ' Trig in degrees'),
-          el('button', { class: 'ts-button', type: 'button', onclick: commit }, 'Calculate'),
+          { class: 'ts-k-split' },
+          panel({ title: 'Keypad', icon: 'grid' }, pad),
+          panel({ title: 'History', icon: 'clock', flush: true }, history),
         ),
-        result,
-        detail,
-        el('div', { class: 'ts-calc-columns' }, pad, el('div', { class: 'ts-json-block' }, el('div', { class: 'ts-json-head' }, el('span', {}, 'History')), history)),
-        el('p', { class: 'ts-note' }, `Functions: ${FUNCTION_NAMES.join(', ')}. Constants: pi, tau, e, phi. Use "ans" to reuse the last committed result.`),
-        el('p', { class: 'ts-note' }, 'Everything is evaluated in your browser.'),
+        note(`Functions: ${FUNCTION_NAMES.join(', ')}. Constants: pi, tau, e, phi. Use "ans" to reuse the last committed result.`),
+        note('Everything is evaluated in your browser.'),
       ),
     )
 

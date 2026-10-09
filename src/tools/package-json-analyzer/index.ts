@@ -1,6 +1,23 @@
+import {
+  actions,
+  badge,
+  button,
+  card,
+  cards,
+  copyButton,
+  field,
+  findings,
+  findingRow,
+  note,
+  panel,
+  stat,
+  stats,
+  textarea,
+  toolLayout,
+} from '../../core/components'
 import { el } from '../../core/dom'
-import { copyChip, download } from '../../core/ui'
 import type { Tool } from '../../core/types'
+import { download } from '../../core/ui'
 import { analysePackage, groupByKind, suggestions, type PackageReport } from './package'
 
 const SAMPLE = JSON.stringify(
@@ -16,10 +33,6 @@ const SAMPLE = JSON.stringify(
   2,
 )
 
-function badge(label: string, present: boolean) {
-  return el('span', { class: `ts-pkg-badge ${present ? 'ts-pkg-present' : 'ts-pkg-absent'}` }, `${present ? '✓' : '✕'} ${label}`)
-}
-
 const tool: Tool = {
   slug: 'package-json-analyzer',
   name: 'package.json Analyzer',
@@ -27,69 +40,66 @@ const tool: Tool = {
   category: 'DevOps',
   keywords: ['npm', 'package.json', 'dependencies', 'semver', 'scripts', 'node', 'audit'],
   render(root) {
-    const input = el('textarea', { class: 'ts-textarea ts-mono', rows: 16, spellcheck: false }, SAMPLE) as HTMLTextAreaElement
-    const error = el('p', { class: 'ts-error', hidden: true })
-    const overview = el('div', { class: 'ts-pkg-overview' })
-    const riskList = el('div', { class: 'ts-pkg-risks' })
-    const groups = el('div', { class: 'ts-pkg-groups' })
-    const scripts = el('div', { class: 'ts-pkg-scripts' })
-    const advice = el('div', { class: 'ts-pkg-advice' })
+    const input = textarea({ rows: 16, value: SAMPLE, onInput: () => run() })
+    const error = note('', 'danger')
+    error.hidden = true
+    const readout = stats()
+    const meta = el('div', { class: 'ts-k-actions' })
+    const riskList = findings()
+    const groups = cards()
+    const scripts = cards()
+    const advice = cards()
     let report = ''
 
     function render(current: PackageReport) {
-      overview.replaceChildren()
-      const heading = el('div', { class: 'ts-pkg-head' }, el('strong', {}, current.name ?? 'unnamed'), el('code', { class: 'ts-pkg-version' }, current.version ?? 'no version'))
-      overview.append(
-        heading,
-        el('p', { class: 'ts-muted' }, `${current.counts.dependencies} dependencies · ${current.counts.devDependencies} dev · ${current.counts.peerDependencies} peer · ${current.counts.optionalDependencies} optional`),
-        el(
-          'div',
-          { class: 'ts-row ts-wrap' },
-          badge('private', current.private),
-          badge('license', current.license !== null),
-          badge('engines', current.metadata.engines),
-          badge('repository', current.metadata.repository),
-          badge('files', current.metadata.files),
-          badge('types', current.metadata.types),
-          badge('exports', current.metadata.exports),
-          badge('packageManager', current.packageManager !== null),
+      readout.replaceChildren(
+        stat({ label: 'Dependencies', value: String(current.counts.dependencies) }),
+        stat({ label: 'Dev', value: String(current.counts.devDependencies) }),
+        stat({ label: 'Peer', value: String(current.counts.peerDependencies) }),
+        stat({ label: 'Optional', value: String(current.counts.optionalDependencies) }),
+      )
+
+      const present: [string, boolean][] = [
+        ['private', current.private],
+        ['license', current.license !== null],
+        ['engines', current.metadata.engines],
+        ['repository', current.metadata.repository],
+        ['files', current.metadata.files],
+        ['types', current.metadata.types],
+        ['exports', current.metadata.exports],
+        ['packageManager', current.packageManager !== null],
+      ]
+      meta.replaceChildren(
+        el('span', { class: 'ts-k-card__title' }, `${current.name ?? 'unnamed'} ${current.version ?? ''}`.trim()),
+        ...present.map(([label, has]) => badge(`${has ? '' : 'no '}${label}`, has ? 'ok' : 'neutral')),
+      )
+
+      riskList.replaceChildren(
+        ...(current.risks.length
+          ? current.risks.map((risk) => findingRow({ status: 'Check', tone: 'warn', name: risk, message: 'Loose range or risky install hook.' }))
+          : [note('No loose ranges or risky scripts found.', 'ok')]),
+      )
+
+      groups.replaceChildren(
+        ...groupByKind(current.dependencies).map((group) =>
+          card({ title: group.kind, meta: String(group.count) }, el('code', {}, group.names.join(', '))),
         ),
       )
 
-      riskList.replaceChildren()
-      if (current.risks.length === 0) riskList.append(el('p', { class: 'ts-muted' }, 'No loose ranges or risky scripts found.'))
-      for (const risk of current.risks) riskList.append(el('div', { class: 'ts-pkg-risk' }, el('span', { class: 'ts-pkg-warn' }, '!'), el('span', {}, risk)))
+      scripts.replaceChildren(
+        ...(current.scripts.length
+          ? current.scripts.map((script) =>
+              card(
+                { title: script.name, meta: script.lifecycle ? 'lifecycle' : undefined },
+                el('code', { class: 'ts-k-hint' }, script.command),
+                ...script.risks.map((risk) => note(risk, 'warn')),
+              ),
+            )
+          : [note('No scripts.')]),
+      )
 
-      groups.replaceChildren()
-      for (const group of groupByKind(current.dependencies)) {
-        groups.append(
-          el(
-            'div',
-            { class: 'ts-pkg-group' },
-            el('div', { class: 'ts-row ts-between' }, el('strong', {}, group.kind), el('span', { class: 'ts-muted' }, String(group.count))),
-            el('code', { class: 'ts-pkg-names' }, group.names.join(', ')),
-          ),
-        )
-      }
-
-      scripts.replaceChildren()
-      if (current.scripts.length === 0) scripts.append(el('p', { class: 'ts-muted' }, 'No scripts.'))
-      for (const script of current.scripts) {
-        scripts.append(
-          el(
-            'div',
-            { class: `ts-pkg-script${script.risks.length ? ' ts-pkg-script-risky' : ''}` },
-            el('div', { class: 'ts-row ts-between' }, el('code', { class: 'ts-pkg-script-name' }, script.name), script.lifecycle ? el('span', { class: 'ts-pkg-tag' }, 'lifecycle') : el('span')),
-            el('code', { class: 'ts-pkg-command' }, script.command),
-            ...script.risks.map((risk) => el('span', { class: 'ts-pkg-script-risk' }, risk)),
-          ),
-        )
-      }
-
-      advice.replaceChildren()
       const tips = suggestions(current)
-      if (tips.length === 0) advice.append(el('p', { class: 'ts-muted' }, 'Nothing obvious to add.'))
-      for (const suggestion of tips) advice.append(el('div', { class: `ts-pkg-tip ts-pkg-tip-${suggestion.level}` }, suggestion.message))
+      advice.replaceChildren(...(tips.length ? tips.map((tip) => note(tip.message, tip.level === 'warning' ? 'warn' : 'neutral')) : [note('Nothing obvious to add.', 'ok')]))
 
       report = [
         `${current.name ?? 'unnamed'} ${current.version ?? ''}`.trim(),
@@ -113,25 +123,20 @@ const tool: Tool = {
       }
     }
 
-    input.addEventListener('input', run)
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'package.json'), input),
-        error,
-        overview,
-        el('h3', { class: 'ts-subhead' }, 'Worth a look'),
-        riskList,
-        el('h3', { class: 'ts-subhead' }, 'Version ranges'),
-        groups,
-        el('h3', { class: 'ts-subhead' }, 'Scripts'),
-        scripts,
-        el('h3', { class: 'ts-subhead' }, 'Suggestions'),
-        advice,
-        el('div', { class: 'ts-row ts-wrap' }, copyChip(() => report, 'Copy report'), el('button', { class: 'ts-button', type: 'button', onclick: () => download('package-report.txt', report) }, 'Download report')),
-        el('p', { class: 'ts-note' }, 'No registry is contacted, so version ranges are judged on how they are written rather than what exists. Scripts are scanned for install hooks that fetch and run remote code.'),
+      toolLayout(
+        { wide: true },
+        panel({ title: 'package.json', icon: 'file' }, field(input, { label: 'package.json' }), error),
+        panel({ title: 'Summary', icon: 'info' }, readout, meta),
+        panel({ title: 'Worth a look', icon: 'alert' }, riskList),
+        panel({ title: 'Version ranges', icon: 'layers' }, groups),
+        panel({ title: 'Scripts', icon: 'terminal' }, scripts),
+        panel(
+          { title: 'Suggestions', icon: 'sparkle' },
+          advice,
+          actions(copyButton(() => report, { label: 'Copy report', size: 'sm' }), button('Download report', { icon: 'download', onClick: () => download('package-report.txt', report) })),
+        ),
+        note('No registry is contacted, so version ranges are judged on how they are written rather than what exists. Scripts are scanned for install hooks that fetch and run remote code.'),
       ),
     )
 

@@ -1,21 +1,36 @@
-.ts-calc-input { font-size: 16px; padding: 12px 14px; }
-.ts-calc-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0; flex-wrap: wrap; }
-.ts-calc-result { font-family: var(--mono); font-size: 30px; line-height: 1.2; word-break: break-all; margin: 4px 0; }
-.ts-calc-result.is-error { color: #ff8a80; }
-.ts-calc-detail { color: #f5c26b; font-size: 13px; min-height: 18px; margin-bottom: 12px; }
-.ts-calc-columns { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr); gap: 16px; align-items: start; }
+.ts-calc-readout {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-input);
+}
+
+.ts-calc-result { font-size: 30px; line-height: 1.2; word-break: break-all; }
+.ts-calc-result.is-error { color: var(--danger); }
+.ts-calc-detail { min-height: 18px; color: var(--warn); font-size: 13px; }
+
 .ts-calc-pad { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-.ts-calc-key { font-family: var(--mono); font-size: 15px; padding: 14px 0; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-soft); color: var(--fg); cursor: pointer; }
-.ts-calc-key:hover { border-color: var(--accent); }
-.ts-calc-key:active { background: var(--bg-input); }
-.ts-calc-key-eq { background: var(--accent-strong); border-color: var(--accent-strong); color: #fff; }
+.ts-calc-key { font-family: var(--mono); font-size: 15px; padding: 14px 0; }
+
 .ts-calc-history { display: flex; flex-direction: column; max-height: 320px; overflow-y: auto; }
-.ts-calc-entry { display: flex; flex-direction: column; gap: 3px; text-align: left; padding: 10px 12px; background: none; border: none; border-bottom: 1px solid var(--border); color: inherit; cursor: pointer; font: inherit; }
+.ts-calc-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
 .ts-calc-entry:hover { background: var(--bg-input); }
 .ts-calc-entry-expr { color: var(--muted); font-size: 12.5px; }
 .ts-calc-entry-val { font-family: var(--mono); font-size: 14px; }
-.ts-calc-empty { padding: 12px; margin: 0; font-size: 13px; }
-
-@media (max-width: 620px) {
-  .ts-calc-columns { grid-template-columns: 1fr; }
-}
+.ts-calc-empty { padding: 12px; margin: 0; }
