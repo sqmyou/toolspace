@@ -1,5 +1,5 @@
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://i.ytimg.com https://avatars.githubusercontent.com; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://i.ytimg.com https://dns.google https://api.github.com; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://i.ytimg.com https://avatars.githubusercontent.com https://cdn.cloudflare.steamstatic.com https://upload.wikimedia.org https://thumb.wikimedia.org https://cdn.bsky.app; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://i.ytimg.com https://dns.google https://api.github.com https://cdn.cloudflare.steamstatic.com https://en.wikipedia.org https://api.frankfurter.dev https://registry.npmjs.org https://api.npmjs.org https://public.api.bsky.app https://geocoding-api.open-meteo.com https://api.open-meteo.com; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
   Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=(), usb=()
@@ -24,6 +24,16 @@
 #   dns.google             - DNS Lookup (the domain name you type)
 #   api.github.com         - GitHub profile lookup (public profile data)
 #   avatars.githubusercontent.com - the GitHub avatar image (img-src only)
+#   cdn.cloudflare.steamstatic.com - Steam Artwork (public store images only)
+#   en.wikipedia.org       - Wikipedia Summary (the article title you type;
+#                            its images come from upload.wikimedia.org / thumb.wikimedia.org)
+#   api.frankfurter.dev    - Currency Converter (ECB reference rates)
+#   registry.npmjs.org     - npm Package (the package name you type)
+#   api.npmjs.org          - npm Package (its weekly download count)
+#   public.api.bsky.app    - Bluesky Profile (public profile data; the avatar
+#                            and banner come from cdn.bsky.app in img-src)
+#   api.open-meteo.com     - Weather forecast (coordinates of the place)
+#   geocoding-api.open-meteo.com - Weather place search (the name you type)
 # There is no proxy, no API key and no first-party server in front of any of
 # them. Adding another origin means updating this list, the README and the
 # home-page copy in the same change.

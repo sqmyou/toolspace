@@ -1,0 +1,27 @@
+/* Now-line and seven-day strip for the weather tool. */
+.ts-k-current { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.ts-k-current:empty { display: none; }
+.ts-k-current__glyph { font-size: 28px; line-height: 1; }
+.ts-k-current__label { font-size: var(--text-lg); font-weight: 600; letter-spacing: -0.01em; }
+
+.ts-k-forecast { display: grid; gap: 6px; }
+.ts-k-day {
+  display: grid;
+  grid-template-columns: 3.2rem 1.75rem 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--bg-elevated) 40%, transparent);
+}
+.ts-k-day__name { font-weight: 600; font-size: var(--text-sm); }
+.ts-k-day__glyph { font-size: 16px; text-align: center; }
+.ts-k-day__label { color: var(--muted); font-size: var(--text-sm); overflow-wrap: anywhere; }
+.ts-k-day__temp { font-family: var(--mono); font-size: var(--text-sm); white-space: nowrap; }
+.ts-k-day__rain { color: var(--faint); font-size: var(--text-2xs); white-space: nowrap; }
+
+@media (max-width: 480px) {
+  .ts-k-day { grid-template-columns: 2.6rem 1.5rem 1fr auto; }
+  .ts-k-day__rain { display: none; }
+}

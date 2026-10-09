@@ -24,13 +24,24 @@ integration does the deploy, so pushing to `main` is what ships.
   so the app can be strictly offline. Adding an origin means updating
   `public/_headers` (CSP), the README and the home-page copy together — see
   README "Network tools". Currently allowed: `i.ytimg.com`, `dns.google`,
-  `api.github.com` (+ `avatars.githubusercontent.com` for images).
+  `api.github.com` (+ `avatars.githubusercontent.com` for images),
+  `cdn.cloudflare.steamstatic.com` (images only), `en.wikipedia.org`
+  (+ `upload.wikimedia.org` / `thumb.wikimedia.org`), `api.frankfurter.dev`, `registry.npmjs.org`,
+  `api.npmjs.org`, `public.api.bsky.app` (+ `cdn.bsky.app`),
+  `api.open-meteo.com` (+ `geocoding-api.open-meteo.com`). Pair each JSON host
+  with its image host; they are separate CSP directives.
 - **CORS is the real limit, not CSP.** A static SPA can only call an API that
-  sends `access-control-allow-origin`. Roblox (`users.roblox.com`,
-  `thumbnails.roblox.com`, `badges.roblox.com`) and Steam
-  (`api.steampowered.com`) send *none*, so those tools cannot be built here at
-  all — the browser discards the response before the app sees it. Verify with
-  `curl -D - -H "Origin: https://x" <url>` before promising a network tool.
+  sends `access-control-allow-origin`. Roblox is a closed case: every JSON API
+  (`users.roblox.com`, `badges.roblox.com`, ...) reflects ACAO *only* for
+  Roblox's own origin, and the only per-user image URL lives behind
+  `thumbnails.roblox.com`, which sends none — so Roblox cannot be built here at
+  all, for data or images. Steam is half-open: `api.steampowered.com` and
+  `store.steampowered.com/api` send no ACAO, but the image CDN
+  (`cdn.cloudflare.steamstatic.com/steam/apps/<id>/<file>`) sends
+  `access-control-allow-origin: *`, so an *image* tool is buildable even though
+  a JSON tool is not. Verify with `curl -D - -H "Origin: https://x" <url>`
+  before promising a network tool — and probe the image host and the API host
+  separately, they can differ.
 
 ## Layout
 

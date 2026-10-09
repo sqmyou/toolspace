@@ -101,6 +101,23 @@ are:
 - **`api.github.com`** (and `avatars.githubusercontent.com` for the image) —
   the GitHub profile lookup reads the *public* profile and repository data for
   the username you type. No token, no sign-in, no personal data.
+- **`cdn.cloudflare.steamstatic.com`** — the Steam artwork grabber loads the
+  public store images (header, capsule, library, hero) for the app id you type,
+  straight from Steam's CDN. There is no API key and no account data involved.
+- **`en.wikipedia.org`** (and `upload.wikimedia.org` / `thumb.wikimedia.org` for its images) — the
+  Wikipedia summary tool reads the public article summary for the title you
+  type, and loads its lead image.
+- **`api.frankfurter.dev`** — the currency converter reads the European Central
+  Bank's daily reference rates for the currency pair you pick. No key, no
+  account.
+- **`registry.npmjs.org`** (and `api.npmjs.org`) — the npm package tool reads
+  the public metadata and download count for the package name you type.
+- **`public.api.bsky.app`** (and `cdn.bsky.app` for images) — the Bluesky
+  profile tool reads the public profile, avatar and banner for the handle you
+  type. No sign-in, no token.
+- **`api.open-meteo.com`** (and `geocoding-api.open-meteo.com`) — the weather
+  tool turns the place name you type into coordinates and reads the forecast.
+  No key, no cookies.
 
 These are the only third-party origins the CSP allows, and any tool that needs
 more than this does not belong here. Crucially, they are all optional: the home
@@ -109,6 +126,11 @@ network-backed tool from the index, the search and the command palette, and
 blocks deep links to them, so the app becomes strictly offline. The switch is
 the reason the privacy promise still holds — a user who wants zero requests
 gets zero requests.
+
+*What cannot be built here is part of the promise too:* Roblox serves no
+cross-origin data at all — its JSON APIs allow only Roblox's own origin, and
+per-user images sit behind that same wall — so a Roblox tool is impossible
+rather than merely absent.
 
 A tool declares its network use in code (`Tool.remote` in `src/core/types.ts`),
 and the shell derives the tag, the tool-page notice, the offline counts and the
