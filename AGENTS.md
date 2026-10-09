@@ -130,3 +130,12 @@ is actionable:
   static `<head>`, so `applyMeta()` sets `document.title`, the description and a
   `<link rel="canonical">` on every route change. `SITE_ORIGIN` is a hardcoded
   production URL — change it in the same commit as any domain move.
+- **Check for an existing tool before adding one.** Several tools grew into
+  neighbours of each other: `csv-json` already converts CSV ↔ JSON ↔ Markdown
+  (and `site-files` covers robots.txt *and* sitemap, `cron-explainer` explains
+  *and* builds, `id-generator` does the UUID/ULID/NanoID family). A "missing
+  tool" list compiled from flags or memory will re-propose these, so grep
+  `src/tools/*/index.ts` for the keywords first. When a new tool does overlap,
+  fold its one extra capability into the existing tool rather than shipping a
+  second page — that is how column alignment moved into `csv-json` and
+  `csv-markdown` was removed.

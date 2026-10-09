@@ -149,14 +149,61 @@ export function jsonToCsv(input: string, delimiter: Delimiter = ','): { csv: str
    CSV <-> Markdown table
    ------------------------------------------------------------------------- */
 
-/** Escape the characters that would break a Markdown table cell. */
-function mdCell(value: string): string {
+export class TableError extends Error {}
+
+export type Alignment = 'none' | 'left' | 'center' | 'right'
+
+const SEPARATOR_CELL = /^:?-+:?$/
+
+/** Escape a cell for a Markdown row: pipes and newlines need encoding. */
+function escapeCell(value: string): string {
   return value.replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>')
+}
+
+function unescapeCell(value: string): string {
+  return value.replace(/\\\|/g, '|').replace(/<br\s*\/?>/gi, '\n').trim()
+}
+
+/** Serialise rows as RFC 4180 CSV. */
+export function toCsv(rows: string[][], delimiter: Delimiter = ','): string {
+  const escape = (field: string): string =>
+    field.includes(delimiter) || field.includes('"') || /[\n\r]/.test(field)
+      ? `"${field.replace(/"/g, '""')}"`
+      : field
+  return rows.map((row) => row.map(escape).join(delimiter)).join('\n')
+}
+
+/**
+ * Render rows as a GitHub-flavoured Markdown table. The first row is the
+ * header. Columns are padded to their widest cell so the raw Markdown lines up,
+ * which also makes generated tables diff cleanly. `alignments` sets the `:--`
+ * markers in the separator row.
+ */
+export function toMarkdownTable(rows: string[][], alignments: Alignment[] = []): string {
+  if (rows.length === 0) return ''
+  const columns = Math.max(...rows.map((row) => row.length))
+  const pad = (row: string[]): string[] => [...row, ...Array(columns - row.length).fill('')]
+  const cells = rows.map((row) => pad(row).map(escapeCell))
+  const widths = Array.from({ length: columns }, (_, c) => Math.max(3, ...cells.map((row) => row[c].length)))
+
+  const format = (row: string[]): string => `| ${row.map((cell, c) => cell.padEnd(widths[c])).join(' | ')} |`
+  const separator = Array.from({ length: columns }, (_, c) => {
+    const alignment = alignments[c] ?? 'none'
+    // The separator must be exactly `widths[c]` characters so the row lines up.
+    if (alignment === 'left') return `:${'-'.repeat(widths[c] - 1)}`
+    if (alignment === 'right') return `${'-'.repeat(widths[c] - 1)}:`
+    if (alignment === 'center') return `:${'-'.repeat(widths[c] - 2)}:`
+    return '-'.repeat(widths[c])
+  })
+
+  return [format(cells[0]), `| ${separator.join(' | ')} |`, ...cells.slice(1).map(format)].join('\n')
 }
 
 export interface CsvToMarkdownOptions {
   delimiter?: Delimiter
   hasHeader?: boolean
+  /** One alignment for every column, or a per-column list. */
+  alignments?: Alignment[] | Alignment
 }
 
 /** Render CSV (or TSV) as a Markdown table. */
@@ -165,39 +212,66 @@ export function csvToMarkdown(input: string, options: CsvToMarkdownOptions = {})
   const rows = parseCsv(input, delimiter)
   if (rows.length === 0) return ''
 
-  const hasHeader = options.hasHeader ?? true
-  const width = Math.max(...rows.map((row) => row.length))
-  const heading = hasHeader ? rows[0] : Array.from({ length: width }, (_, i) => `Column ${i + 1}`)
-  const body = hasHeader ? rows.slice(1) : rows
-
-  const line = (cells: string[]) => `| ${Array.from({ length: width }, (_, i) => mdCell(cells[i] ?? '')).join(' | ')} |`
-  const separator = `| ${Array.from({ length: width }, () => '---').join(' | ')} |`
-
-  return [line(heading), separator, ...body.map(line)].join('\n')
+  const table = options.hasHeader === false ? withPlaceholderHeader(rows) : rows
+  const columns = Math.max(...table.map((row) => row.length))
+  const alignments =
+    typeof options.alignments === 'string'
+      ? Array<Alignment>(columns).fill(options.alignments)
+      : options.alignments
+  return toMarkdownTable(table, alignments)
 }
 
-/** Split a Markdown table row on unescaped pipes. */
-function splitMarkdownRow(row: string): string[] {
-  let text = row.trim()
-  if (text.startsWith('|')) text = text.slice(1)
-  if (text.endsWith('|')) text = text.slice(0, -1)
+/** Prepend `Column 1..n` so a headerless CSV still becomes a valid table. */
+function withPlaceholderHeader(rows: string[][]): string[][] {
+  const width = Math.max(...rows.map((row) => row.length))
+  return [Array.from({ length: width }, (_, i) => `Column ${i + 1}`), ...rows]
+}
 
-  const cells: string[] = []
-  let current = ''
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i]
-    if (char === '\\' && text[i + 1] === '|') {
-      current += '|'
-      i++
-    } else if (char === '|') {
-      cells.push(current.trim())
-      current = ''
-    } else {
-      current += char
+/** Read a GitHub-flavoured Markdown table back into rows. Throws on no table. */
+export function fromMarkdownTable(markdown: string): string[][] {
+  const lines = markdown
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.includes('|'))
+  if (lines.length === 0) throw new TableError('No table rows found.')
+
+  const splitRow = (line: string): string[] => {
+    let body = line
+    if (body.startsWith('|')) body = body.slice(1)
+    if (body.endsWith('|') && !body.endsWith('\\|')) body = body.slice(0, -1)
+    const out: string[] = []
+    let field = ''
+    for (let i = 0; i < body.length; i++) {
+      const char = body[i]
+      if (char === '\\' && body[i + 1] === '|') {
+        field += '|'
+        i++
+        continue
+      }
+      if (char === '|') {
+        out.push(field)
+        field = ''
+        continue
+      }
+      field += char
     }
+    out.push(field)
+    return out.map(unescapeCell)
   }
-  cells.push(current.trim())
-  return cells
+
+  const rows: string[][] = []
+  let sawSeparator = false
+  for (const line of lines) {
+    const cells = splitRow(line)
+    if (!sawSeparator && cells.length > 0 && cells.every((cell) => SEPARATOR_CELL.test(cell))) {
+      sawSeparator = true
+      continue
+    }
+    rows.push(cells)
+  }
+  if (rows.length === 0) throw new TableError('The table has a header but no rows.')
+  const columns = Math.max(...rows.map((row) => row.length))
+  return rows.map((row) => [...row, ...Array(columns - row.length).fill('')])
 }
 
 export interface MarkdownToCsvResult {
@@ -207,18 +281,9 @@ export interface MarkdownToCsvResult {
 
 /** Convert a Markdown table back to CSV. */
 export function markdownToCsv(input: string, delimiter: Delimiter = ','): MarkdownToCsvResult {
-  const lines = input
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.startsWith('|') || line.endsWith('|'))
-  if (lines.length === 0) return { csv: '', error: 'No Markdown table rows found (a row starts or ends with "|").' }
-
-  const isSeparator = (row: string) => row.split('|').every((cell) => /^[\s:=-]*$/.test(cell))
-  const rows = lines.map(splitMarkdownRow).filter((_, index) => !(index === 1 && isSeparator(lines[index])))
-  if (rows.length === 0) return { csv: '', error: 'The table has no rows.' }
-
-  const csv = rows
-    .map((cells) => cells.map((cell) => quote(cell.replace(/<br\s*\/?>/gi, '\n'), delimiter)).join(delimiter))
-    .join('\n')
-  return { csv }
+  try {
+    return { csv: toCsv(fromMarkdownTable(input), delimiter) }
+  } catch (err) {
+    return { csv: '', error: err instanceof Error ? err.message : 'No table rows found.' }
+  }
 }

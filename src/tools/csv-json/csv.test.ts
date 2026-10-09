@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { csvToJson, csvToMarkdown, detectDelimiter, jsonToCsv, markdownToCsv, parseCsv } from './csv'
+import {
+  csvToJson,
+  csvToMarkdown,
+  detectDelimiter,
+  fromMarkdownTable,
+  jsonToCsv,
+  markdownToCsv,
+  parseCsv,
+  TableError,
+  toCsv,
+  toMarkdownTable,
+} from './csv'
 
 describe('parseCsv', () => {
   it('parses simple rows', () => {
@@ -73,8 +84,8 @@ describe('jsonToCsv', () => {
 })
 
 describe('csvToMarkdown', () => {
-  it('renders a header, separator and body rows', () => {
-    expect(csvToMarkdown('a,b\n1,2\n3,4')).toBe('| a | b |\n| --- | --- |\n| 1 | 2 |\n| 3 | 4 |')
+  it('renders a padded header, separator and body rows', () => {
+    expect(csvToMarkdown('a,b\n1,2\n3,4')).toBe('| a   | b   |\n| --- | --- |\n| 1   | 2   |\n| 3   | 4   |')
   })
 
   it('escapes pipes and newlines inside cells', () => {
@@ -85,7 +96,12 @@ describe('csvToMarkdown', () => {
   it('generates placeholder headers when asked and pads short rows', () => {
     const table = csvToMarkdown('1,2,3\n4', { delimiter: ',', hasHeader: false })
     expect(table.split('\n')[0]).toBe('| Column 1 | Column 2 | Column 3 |')
-    expect(table.split('\n')[3]).toBe('| 4 |  |  |')
+    expect(table.split('\n')[3]).toBe('| 4        |          |          |')
+  })
+
+  it('renders column alignment', () => {
+    const table = csvToMarkdown('a,b,c\n1,2,3', { alignments: ['left', 'center', 'right'] })
+    expect(table.split('\n')[1]).toBe('| :-- | :-: | --: |')
   })
 
   it('sniffs the delimiter', () => {
@@ -94,6 +110,55 @@ describe('csvToMarkdown', () => {
 
   it('returns an empty string for empty input', () => {
     expect(csvToMarkdown('')).toBe('')
+  })
+})
+
+describe('toMarkdownTable', () => {
+  it('pads each column to its widest cell', () => {
+    expect(toMarkdownTable([['a', 'b'], ['1', '2']])).toBe('| a   | b   |\n| --- | --- |\n| 1   | 2   |')
+  })
+
+  it('pads short rows to the widest one', () => {
+    expect(toMarkdownTable([['a', 'b', 'c'], ['1']]).split('\n')[2]).toBe('| 1   |     |     |')
+  })
+
+  it('returns an empty string for no rows', () => {
+    expect(toMarkdownTable([])).toBe('')
+  })
+})
+
+describe('fromMarkdownTable', () => {
+  it('reads a table back', () => {
+    const markdown = ['| a   | b   |', '| --- | --- |', '| 1   | 2   |'].join('\n')
+    expect(fromMarkdownTable(markdown)).toEqual([['a', 'b'], ['1', '2']])
+  })
+
+  it('reads alignment separators and inline pipes', () => {
+    expect(fromMarkdownTable('| a | b |\n| :-- | --: |\n| x\\|y | z |')).toEqual([['a', 'b'], ['x|y', 'z']])
+  })
+
+  it('tolerates a table without outer pipes', () => {
+    expect(fromMarkdownTable('a | b\n--- | ---\n1 | 2')).toEqual([['a', 'b'], ['1', '2']])
+  })
+
+  it('rejects input with no table', () => {
+    expect(() => fromMarkdownTable('just prose')).toThrow(TableError)
+  })
+
+  it('round-trips awkward cells', () => {
+    const rows = [['name', 'value'], ['a', '1'], ['pipe|name', 'multi\nline']]
+    expect(fromMarkdownTable(toMarkdownTable(rows))).toEqual(rows)
+  })
+})
+
+describe('toCsv', () => {
+  it('quotes only the fields that need it', () => {
+    expect(toCsv([['a', 'b,c', 'say "hi"', 'line\nbreak']])).toBe('a,"b,c","say ""hi""","line\nbreak"')
+  })
+
+  it('round-trips through parseCsv', () => {
+    const rows = [['name', 'note'], ['Smith, John', 'multi\nline'], ['quote"d', 'pipe|inside']]
+    expect(parseCsv(toCsv(rows))).toEqual(rows)
   })
 })
 

@@ -12,14 +12,14 @@ import {
 } from '../../core/components'
 import { download } from '../../core/ui'
 import type { Tool } from '../../core/types'
-import { csvToJson, csvToMarkdown, detectDelimiter, jsonToCsv, markdownToCsv, type Delimiter } from './csv'
+import { csvToJson, csvToMarkdown, detectDelimiter, jsonToCsv, markdownToCsv, type Alignment, type Delimiter } from './csv'
 
 const tool: Tool = {
   slug: 'csv-json',
   name: 'CSV ↔ JSON Converter',
-  description: 'Convert between CSV, JSON and Markdown tables with delimiter sniffing and full quoting support.',
+  description: 'Convert between CSV, JSON and Markdown tables (with column alignment) using delimiter sniffing and full quoting support.',
   category: 'Data',
-  keywords: ['csv', 'json', 'convert', 'delimiter', 'table', 'tsv', 'parse', 'markdown', 'markdown table'],
+  keywords: ['csv', 'json', 'convert', 'delimiter', 'table', 'tsv', 'parse', 'markdown', 'markdown table', 'align'],
   render(root) {
     const input = textarea({ rows: 10, placeholder: 'Paste CSV, JSON or a Markdown table…', onInput: () => run() })
 
@@ -60,6 +60,23 @@ const tool: Tool = {
 
     let hasHeader = true
     const headerBox = checkbox({ label: 'First row is a header', checked: true, onChange: (checked) => { hasHeader = checked; run() } })
+
+    let alignment: Alignment = 'none'
+    const alignmentControl = select({
+      options: [
+        { value: 'none', label: 'Default' },
+        { value: 'left', label: 'Left' },
+        { value: 'center', label: 'Center' },
+        { value: 'right', label: 'Right' },
+      ],
+      value: 'none',
+      onChange: (value) => {
+        alignment = value as Alignment
+        run()
+      },
+    })
+    const alignmentField = field(alignmentControl, { label: 'Markdown alignment' })
+    alignmentField.hidden = true
 
     const fileInput = document.createElement('input')
     fileInput.type = 'file'
@@ -120,10 +137,10 @@ const tool: Tool = {
       if (source === 'json') {
         const { csv, error } = jsonToCsv(text, separator())
         if (error) return { value: '', error }
-        return { value: csvToMarkdown(csv, { delimiter: separator(), hasHeader }) }
+        return { value: csvToMarkdown(csv, { delimiter: separator(), hasHeader, alignments: alignment }) }
       }
       const sep = delimiter.value === 'auto' ? detectDelimiter(text) : separator()
-      return { value: csvToMarkdown(text, { delimiter: sep, hasHeader }) }
+      return { value: csvToMarkdown(text, { delimiter: sep, hasHeader, alignments: alignment }) }
     }
 
     function run() {
@@ -146,6 +163,9 @@ const tool: Tool = {
               : 'csv'
           : (outputFormat as 'json' | 'csv' | 'markdown')
 
+      // Alignment only affects Markdown output, so only offer it then.
+      alignmentField.hidden = outputFormat !== 'markdown'
+
       const labels = { json: 'JSON', csv: 'CSV', markdown: 'Markdown' }
       try {
         const { value, error: convertError } =
@@ -167,6 +187,7 @@ const tool: Tool = {
           actions(
             field(delimiter, { label: 'Delimiter' }),
             field(formatControl, { label: 'Output format' }),
+            alignmentField,
             headerBox,
           ),
         ),

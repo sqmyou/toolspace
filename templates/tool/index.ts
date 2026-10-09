@@ -4,6 +4,7 @@ import { yourLogic } from './tool'
 
 /**
  * Starter tool. Copy this folder to `src/tools/<slug>/`, then:
+ *   0. check no existing tool already does this (grep `src/tools/*/index.ts`)
  *   1. rename `slug` below to the folder name
  *   2. fill in the metadata
  *   3. move the real work into `tool.ts` and test it there
@@ -37,7 +38,7 @@ const tool: Tool = {
           actions(button('Run', { variant: 'primary', icon: 'play', onClick: run })),
         ),
         panel({ title: 'Result', icon: 'check' }, output),
-        note('This tool runs entirely in your browser. Nothing is uploaded.'),
+        note('Replace this with a tip about the tool, or delete it. Do not add a privacy note unless the tool is network-backed — see the copy rules in AGENTS.md.'),
       ),
     )
 
