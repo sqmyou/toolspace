@@ -20,7 +20,8 @@ because there is no backend to host.
 ## What makes it different
 
 - **Your data stays put.** Every tool is a pure function over your input. There
-  is no network request after the page loads.
+  is no network request after the page loads (see the one exception below, which
+  you can switch off).
 - **Offline by default.** Install it as a PWA and it keeps working on a plane.
 - **Actually fast.** No framework at runtime, no analytics, no third-party
   scripts. The whole app is a few kilobytes.
@@ -86,12 +87,34 @@ The `slug` must match the folder name. The folder is picked up automatically.
 The hard rule: **nothing you paste is ever uploaded.** A tool runs entirely in
 the browser, and there is no backend to send anything to.
 
-There is exactly one documented exception: the **YouTube thumbnail grabber**
-loads the public thumbnail image from `i.ytimg.com`, because that is where
-YouTube stores it. That is a direct browser-to-YouTube request for the image
-the user asked for — it sets no cookies, needs no key, and carries no user
-data beyond the video id already in the URL. It is the only third-party origin
-allowed by the CSP, and any tool needing more than that does not belong here.
+There is a small, documented set of network tools. Each one is a *direct
+browser-to-service request* for a public lookup the user explicitly asked for;
+none of them go through a proxy, carry a token, or send cookies, and all of
+them are marked with a `network` tag everywhere they are listed. The origins
+are:
+
+- **`i.ytimg.com`** — the YouTube thumbnail grabber loads the public thumbnail
+  image, because that is where YouTube stores it. It carries no user data
+  beyond the video id already in the URL.
+- **`dns.google`** — the DNS lookup asks Google's public resolver for the
+  records of the domain you type. The domain name is the only thing sent.
+- **`api.github.com`** (and `avatars.githubusercontent.com` for the image) —
+  the GitHub profile lookup reads the *public* profile and repository data for
+  the username you type. No token, no sign-in, no personal data.
+
+These are the only third-party origins the CSP allows, and any tool that needs
+more than this does not belong here. Crucially, they are all optional: the home
+page has a **Network tools** switch, and turning it off hides every
+network-backed tool from the index, the search and the command palette, and
+blocks deep links to them, so the app becomes strictly offline. The switch is
+the reason the privacy promise still holds — a user who wants zero requests
+gets zero requests.
+
+A tool declares its network use in code (`Tool.remote` in `src/core/types.ts`),
+and the shell derives the tag, the tool-page notice, the offline counts and the
+switch behaviour from that declaration. Adding a network tool without
+disclosing it is not possible by omission — you must add the origin here, in
+the CSP (`public/_headers`), and in the home-page copy in the same change.
 
 ## Contributing
 

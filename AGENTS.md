@@ -16,9 +16,21 @@ integration does the deploy, so pushing to `main` is what ships.
 - **No new runtime dependencies** beyond the two already allowed
   (`qrcode-generator`, `sql-formatter`). A tool must be implementable with the
   platform and what is already here.
-- The single documented exception to "no network" is the YouTube thumbnail
-  grabber loading public images from `i.ytimg.com`. See README. Do not add a
-  second one without saying so on the home page and in the README.
+- Network tools are allowed but must be *opt-out* and disclosed. A tool that
+  talks to a third party declares it in `Tool.remote: { host, note }`; the shell
+  derives the tag, the tool-page notice, the offline counts and the
+  `networkEnabled()` switch from that. The home-page **Network tools** switch
+  hides every network-backed tool (index, search, palette, deep links) when off,
+  so the app can be strictly offline. Adding an origin means updating
+  `public/_headers` (CSP), the README and the home-page copy together — see
+  README "Network tools". Currently allowed: `i.ytimg.com`, `dns.google`,
+  `api.github.com` (+ `avatars.githubusercontent.com` for images).
+- **CORS is the real limit, not CSP.** A static SPA can only call an API that
+  sends `access-control-allow-origin`. Roblox (`users.roblox.com`,
+  `thumbnails.roblox.com`, `badges.roblox.com`) and Steam
+  (`api.steampowered.com`) send *none*, so those tools cannot be built here at
+  all — the browser discards the response before the app sees it. Verify with
+  `curl -D - -H "Origin: https://x" <url>` before promising a network tool.
 
 ## Layout
 

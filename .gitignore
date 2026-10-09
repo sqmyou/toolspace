@@ -29,3 +29,7 @@ coverage/
 *.log
 npm-debug.log*
 pnpm-debug.log*
+
+# Local dev scratch (puppeteer sweeps, CSP harness)
+*.mjs
+serve-csp.py

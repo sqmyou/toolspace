@@ -1,5 +1,5 @@
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://i.ytimg.com; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://i.ytimg.com https://avatars.githubusercontent.com; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://i.ytimg.com https://dns.google https://api.github.com; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
   Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=(), usb=()
@@ -14,12 +14,19 @@
 # default-src in the directive list above, so without this the element has no
 # permitted source at all. Same in-tab object URL, never a remote fetch.
 
-# i.ytimg.com is the single third-party origin toolspace is allowed to talk to,
-# and only for the YouTube thumbnail grabber. The app is a hash-routed SPA, so
-# there is no per-page path for _headers to scope to — this exception is global
-# by necessity, and documented in the README. It is a narrow, anonymous image
-# fetch: i.ytimg.com sets no cookies, needs no API key, and receives only the
-# video id the user pasted. No other page or tool issues a cross-origin request.
+# Network origins. toolspace is a static, serverless SPA, so a tool can only
+# reach an API that serves `Access-Control-Allow-Origin`; the browser refuses
+# the rest no matter what this policy says. Every origin here is a narrow,
+# anonymous public lookup, is listed on the tool that uses it (`Tool.remote`)
+# and in the README, is disabled by default when the user turns network tools
+# off, and carries no cookies and no credentials:
+#   i.ytimg.com            - YouTube thumbnail grabber (public images only)
+#   dns.google             - DNS Lookup (the domain name you type)
+#   api.github.com         - GitHub profile lookup (public profile data)
+#   avatars.githubusercontent.com - the GitHub avatar image (img-src only)
+# There is no proxy, no API key and no first-party server in front of any of
+# them. Adding another origin means updating this list, the README and the
+# home-page copy in the same change.
 
 # Hashed assets are immutable; cache them hard. HTML is revalidated.
 /assets/*

@@ -501,6 +501,60 @@ a { color: inherit; }
 .ts-mstat-value { font-family: var(--mono); font-size: var(--text-xl); font-weight: 600; letter-spacing: var(--tracking-tight); }
 .ts-mstat-label { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.1em; color: var(--faint); font-family: var(--mono); }
 
+/* The network-tools switch. A real checkbox under a styled track, so it stays
+   keyboard-reachable and screen-reader labelled while looking like a switch. */
+.ts-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 26px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  cursor: pointer;
+  width: fit-content;
+  max-width: 100%;
+}
+.ts-switch:hover { border-color: var(--border-strong); }
+.ts-switch-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.ts-switch-track {
+  position: relative;
+  flex: none;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-strong);
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.ts-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--faint);
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+.ts-switch-input:checked + .ts-switch-track { background: var(--accent-soft); border-color: var(--accent-line); }
+.ts-switch-input:checked + .ts-switch-track .ts-switch-thumb { transform: translateX(16px); background: var(--accent); }
+.ts-switch-input:focus-visible + .ts-switch-track { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ts-switch-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ts-switch-text strong { font-size: var(--text-sm); font-weight: 600; }
+.ts-switch-hint { font-size: var(--text-xs); color: var(--faint); }
+
 .ts-browse { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
 .ts-browse-label {
   flex: none;

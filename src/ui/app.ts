@@ -2,8 +2,24 @@ import { clear, el } from '../core/dom'
 import { favourites, isFavourite, onFavouritesChange, toggleFavourite } from '../core/favourites'
 import { icon, iconEl } from '../core/icons'
 import { categoryHue, sigilTile } from '../core/identity'
-import { categories, findTool, searchTools, tools } from '../core/registry'
+import { networkEnabled, onPreferencesChange, setNetworkEnabled } from '../core/preferences'
+import { findTool, searchTools, tools } from '../core/registry'
 import type { Tool } from '../core/types'
+
+/**
+ * The tools currently on offer. A user who has switched network tools off sees
+ * a strictly offline toolspace: the network-backed tools disappear from the
+ * index, the search, the counts and the palette, so there is nothing to click
+ * that would leave the page.
+ */
+function visibleTools(): Tool[] {
+  return networkEnabled() ? tools : tools.filter((tool) => !tool.remote)
+}
+
+/** Categories that still have at least one visible tool. */
+function visibleCategories(): string[] {
+  return [...new Set(visibleTools().map((tool) => tool.category))].sort()
+}
 
 const STAR_OFF = icon('star', 15)
 const STAR_ON = STAR_OFF.replace('fill="none"', 'fill="currentColor"')
@@ -163,7 +179,8 @@ function commandPalette(onSelect: (slug: string) => void): Palette {
   }
 
   function update(query: string) {
-    matches = searchTools(query, { limit: 40 })
+    const allowed = new Set(visibleTools().map((tool) => tool.slug))
+    matches = searchTools(query, { limit: 40 }).filter((tool) => allowed.has(tool.slug))
     active = 0
     paint()
   }
@@ -278,7 +295,10 @@ function toolRow(tool: Tool): HTMLElement {
 /** The pinned "Starred" strip, shown above everything when it has entries. */
 function starredSection(): HTMLElement | null {
   const slugs = favourites()
-  const starred = slugs.map(findTool).filter((tool): tool is Tool => Boolean(tool))
+  const allowed = new Set(visibleTools().map((tool) => tool.slug))
+  const starred = slugs
+    .map(findTool)
+    .filter((tool): tool is Tool => Boolean(tool) && allowed.has(tool!.slug))
   if (starred.length === 0) return null
   return el(
     'div',
@@ -308,7 +328,7 @@ function home(): HTMLElement {
   const search = el('input', {
     class: 'ts-input ts-masthead-input',
     type: 'search',
-    placeholder: `Search ${tools.length} tools… try “jwt”, “colour” or “base 64”`,
+    placeholder: `Search ${visibleTools().length} tools… try “jwt”, “colour” or “base 64”`,
     'aria-label': 'Search tools',
     autocomplete: 'off',
   }) as HTMLInputElement
@@ -318,8 +338,8 @@ function home(): HTMLElement {
 
   /** The no-query view: big families as a bento, the long tail as dense rows. */
   function familySections(): HTMLElement[] {
-    return categories().map((name) => {
-      const group = tools.filter((tool) => tool.category === name)
+    return visibleCategories().map((name) => {
+      const group = visibleTools().filter((tool) => tool.category === name)
       const big = group.length >= BIG_FAMILY
       return el(
         'div',
@@ -334,7 +354,8 @@ function home(): HTMLElement {
 
   function renderGrid() {
     clear(results)
-    const items = searchTools(search.value, category ? { category } : {})
+    const allowed = new Set(visibleTools().map((tool) => tool.slug))
+    const items = searchTools(search.value, category ? { category } : {}).filter((tool) => allowed.has(tool.slug))
     if (items.length === 0) {
       results.append(el('p', { class: 'ts-empty' }, 'No tools match that search.'))
       return
@@ -365,11 +386,11 @@ function home(): HTMLElement {
           },
         },
         'All',
-        el('small', {}, String(tools.length)),
+        el('small', {}, String(visibleTools().length)),
       ),
     )
-    for (const name of categories()) {
-      const count = tools.filter((tool) => tool.category === name).length
+    for (const name of visibleCategories()) {
+      const count = visibleTools().filter((tool) => tool.category === name).length
       catBar.append(
         el(
           'button',
@@ -394,9 +415,11 @@ function home(): HTMLElement {
   renderChips()
   renderGrid()
 
-  const catCount = categories().length
-  const remoteHosts = new Set(tools.filter((t) => t.remote).map((t) => t.remote!.host))
-  const remoteTools = tools.filter((t) => t.remote).length
+  const shown = visibleTools()
+  const catCount = visibleCategories().length
+  const remoteHosts = new Set(shown.filter((t) => t.remote).map((t) => t.remote!.host))
+  const remoteTools = shown.filter((t) => t.remote).length
+  const offlineTools = shown.length - remoteTools
 
   // The pinned strip lives above the search, so it is re-rendered on every
   // change rather than being rebuilt with the rest of the page.
@@ -418,13 +441,21 @@ function home(): HTMLElement {
     el(
       'span',
       { class: 'ts-headline__line' },
-      el('span', { class: 'ts-headline__inner' }, el('em', { class: 'ts-accent' }, `${tools.length} tools`), ' that never'),
+      el('span', { class: 'ts-headline__inner' }, el('em', { class: 'ts-accent' }, `${shown.length} tools`), ' that never'),
     ),
     el(
       'span',
       { class: 'ts-headline__line' },
       el('span', { class: 'ts-headline__inner' }, 'leave your browser.'),
     ),
+  )
+
+  const lede = el(
+    'p',
+    { class: 'ts-lede' },
+    networkEnabled()
+      ? `No ads, no sign-up, no server. ${offlineTools} of ${shown.length} tools run entirely offline — nothing you paste is ever uploaded. The ${remoteTools} that need the network are marked, and the only thing they send is the public lookup you type.`
+      : `No ads, no sign-up, no server — and with network tools switched off, not a single request leaves this page. All ${shown.length} tools below run entirely offline.`,
   )
 
   return el(
@@ -435,18 +466,14 @@ function home(): HTMLElement {
       { class: 'ts-masthead' },
       el('p', { class: 'ts-eyebrow' }, 'Privacy-first developer tools'),
       headline,
-      el(
-        'p',
-        { class: 'ts-lede' },
-        `No ads, no sign-up, no server. ${tools.length - remoteTools} of ${tools.length} tools run entirely offline — nothing you paste is ever uploaded. The ${remoteTools} that need the network are marked, and the only thing they send is the public lookup you type.`,
-      ),
+      lede,
       el('div', { class: 'ts-masthead-search' }, search),
       el(
         'div',
         { class: 'ts-masthead-stats' },
-        el('div', { class: 'ts-mstat' }, el('span', { class: 'ts-mstat-value' }, String(tools.length)), el('span', { class: 'ts-mstat-label' }, 'tools')),
+        el('div', { class: 'ts-mstat' }, el('span', { class: 'ts-mstat-value' }, String(shown.length)), el('span', { class: 'ts-mstat-label' }, 'tools')),
         el('div', { class: 'ts-mstat' }, el('span', { class: 'ts-mstat-value' }, String(catCount)), el('span', { class: 'ts-mstat-label' }, 'categories')),
-        el('div', { class: 'ts-mstat' }, el('span', { class: 'ts-mstat-value' }, String(tools.length - remoteTools)), el('span', { class: 'ts-mstat-label' }, 'run fully offline')),
+        el('div', { class: 'ts-mstat' }, el('span', { class: 'ts-mstat-value' }, String(offlineTools)), el('span', { class: 'ts-mstat-label' }, 'run fully offline')),
         el(
           'div',
           { class: 'ts-mstat' },
@@ -454,11 +481,39 @@ function home(): HTMLElement {
           el('span', { class: 'ts-mstat-label' }, remoteHosts.size === 1 ? 'needs one host' : 'need the network'),
         ),
       ),
+      networkToggle(),
     ),
     pinned,
     el('div', { class: 'ts-browse' }, el('span', { class: 'ts-browse-label' }, 'Browse'), catBar),
     results,
   )
+}
+
+/**
+ * The network-tools switch. Off means the site behaves as if every network
+ * tool did not exist, so a user who wants a strictly offline toolspace can
+ * have one without relying on the CSP or their connection.
+ */
+function networkToggle(): HTMLElement {
+  const box = el('input', { type: 'checkbox', class: 'ts-switch-input' }) as HTMLInputElement
+  box.checked = networkEnabled()
+  box.setAttribute('aria-label', 'Allow tools that use the network')
+  const root = el(
+    'label',
+    { class: 'ts-switch' },
+    box,
+    el('span', { class: 'ts-switch-track', 'aria-hidden': 'true' }, el('span', { class: 'ts-switch-thumb' })),
+    el(
+      'span',
+      { class: 'ts-switch-text' },
+      el('strong', {}, 'Network tools'),
+      el('span', { class: 'ts-switch-hint' }, networkEnabled() ? 'shown, and marked' : 'hidden — nothing can reach the network'),
+    ),
+  )
+  box.addEventListener('change', () => {
+    setNetworkEnabled(box.checked)
+  })
+  return root
 }
 
 function notFound(slug: string, palette: Palette): HTMLElement {
@@ -542,9 +597,10 @@ function toolRail(tool: Tool): HTMLElement {
 }
 
 function toolPage(tool: Tool, palette: Palette): HTMLElement {
-  const index = tools.findIndex((entry) => entry.slug === tool.slug)
-  const previous = index > 0 ? tools[index - 1] : undefined
-  const next = index >= 0 && index < tools.length - 1 ? tools[index + 1] : undefined
+  const ordered = visibleTools()
+  const index = ordered.findIndex((entry) => entry.slug === tool.slug)
+  const previous = index > 0 ? ordered[index - 1] : undefined
+  const next = index >= 0 && index < ordered.length - 1 ? ordered[index + 1] : undefined
 
   const body = el('div', { class: 'ts-tool-body' })
   const nav = el(
@@ -819,7 +875,10 @@ export function mountApp(app: HTMLElement): void {
       main.append(home())
     } else {
       const tool = findTool(slug)
-      main.append(tool ? toolPage(tool, palette) : notFound(slug, palette))
+      // A network tool that is switched off is treated as if it does not
+      // exist, so a stale link cannot quietly make a cross-origin request.
+      const hidden = tool != null && Boolean(tool.remote) && !networkEnabled()
+      main.append(tool && !hidden ? toolPage(tool, palette) : notFound(slug, palette))
     }
     revealOnScroll(main)
   }
@@ -836,6 +895,9 @@ export function mountApp(app: HTMLElement): void {
   })
   window.addEventListener('scroll', updateToTop, { passive: true })
   window.addEventListener('hashchange', fromHash)
+  // Switching network tools off or on rebuilds the current view, so a hidden
+  // tool cannot linger on the page and the counts stay truthful.
+  onPreferencesChange(fromHash)
 
   app.append(offlineBanner(), header, main, toTop)
   fromHash()
