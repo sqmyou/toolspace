@@ -27,7 +27,7 @@ interface Entry {
 const tool: Tool = {
   slug: 'pdf-merger',
   name: 'PDF Merger',
-  description: 'Combine several PDFs into one, reorder them and drop pages — entirely in your browser.',
+  description: 'Combine several PDFs into one, reorder them and drop pages.',
   category: 'Documents',
   keywords: ['pdf', 'merge', 'combine', 'join', 'append', 'documents', 'pages'],
   render(root) {

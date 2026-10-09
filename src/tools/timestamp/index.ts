@@ -89,8 +89,7 @@ const tool: Tool = {
         error,
         panel({ title: 'Same instant', icon: 'calendar' }, summary),
         panel({ title: 'Around the world', icon: 'globe' }, zones),
-        note('Conversion uses your browser timezone data. Nothing is sent anywhere.'),
-      ),
+              ),
     )
 
     update()

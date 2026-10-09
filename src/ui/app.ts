@@ -417,7 +417,6 @@ function home(): HTMLElement {
 
   const shown = visibleTools()
   const catCount = visibleCategories().length
-  const remoteHosts = new Set(shown.filter((t) => t.remote).map((t) => t.remote!.host))
   const remoteTools = shown.filter((t) => t.remote).length
   const offlineTools = shown.length - remoteTools
 
@@ -441,12 +440,12 @@ function home(): HTMLElement {
     el(
       'span',
       { class: 'ts-headline__line' },
-      el('span', { class: 'ts-headline__inner' }, el('em', { class: 'ts-accent' }, `${shown.length} tools`), ' that never'),
+      el('span', { class: 'ts-headline__inner' }, el('em', { class: 'ts-accent' }, `${shown.length} small tools`), ', one'),
     ),
     el(
       'span',
       { class: 'ts-headline__line' },
-      el('span', { class: 'ts-headline__inner' }, 'leave your browser.'),
+      el('span', { class: 'ts-headline__inner' }, 'fast tab.'),
     ),
   )
 
@@ -454,8 +453,8 @@ function home(): HTMLElement {
     'p',
     { class: 'ts-lede' },
     networkEnabled()
-      ? `No ads, no sign-up, no server. ${offlineTools} of ${shown.length} tools run entirely offline — nothing you paste is ever uploaded. The ${remoteTools} that need the network are marked, and the only thing they send is the public lookup you type.`
-      : `No ads, no sign-up, no server — and with network tools switched off, not a single request leaves this page. All ${shown.length} tools below run entirely offline.`,
+      ? `No account, no tracking, nothing to sign up for. ${offlineTools} of ${shown.length} open instantly and never touch the network; the ${remoteTools} that do are marked with the host they talk to.`
+      : `No account, no tracking, nothing to sign up for. All ${shown.length} tools run without touching the network.`,
   )
 
   return el(
@@ -464,7 +463,7 @@ function home(): HTMLElement {
     el(
       'div',
       { class: 'ts-masthead' },
-      el('p', { class: 'ts-eyebrow' }, 'Privacy-first developer tools'),
+      el('p', { class: 'ts-eyebrow' }, 'Fast tools, nothing to install'),
       headline,
       lede,
       el('div', { class: 'ts-masthead-search' }, search),
@@ -473,12 +472,11 @@ function home(): HTMLElement {
         { class: 'ts-masthead-stats' },
         el('div', { class: 'ts-mstat' }, el('span', { class: 'ts-mstat-value' }, String(shown.length)), el('span', { class: 'ts-mstat-label' }, 'tools')),
         el('div', { class: 'ts-mstat' }, el('span', { class: 'ts-mstat-value' }, String(catCount)), el('span', { class: 'ts-mstat-label' }, 'categories')),
-        el('div', { class: 'ts-mstat' }, el('span', { class: 'ts-mstat-value' }, String(offlineTools)), el('span', { class: 'ts-mstat-label' }, 'run fully offline')),
         el(
           'div',
           { class: 'ts-mstat' },
-          el('span', { class: 'ts-mstat-value' }, String(remoteTools)),
-          el('span', { class: 'ts-mstat-label' }, remoteHosts.size === 1 ? 'needs one host' : 'need the network'),
+          el('span', { class: 'ts-mstat-value' }, remoteTools === 0 ? '0' : String(remoteTools)),
+          el('span', { class: 'ts-mstat-label' }, 'use the network'),
         ),
       ),
       networkToggle(),
@@ -507,7 +505,7 @@ function networkToggle(): HTMLElement {
       'span',
       { class: 'ts-switch-text' },
       el('strong', {}, 'Network tools'),
-      el('span', { class: 'ts-switch-hint' }, networkEnabled() ? 'shown, and marked' : 'hidden — nothing can reach the network'),
+      el('span', { class: 'ts-switch-hint' }, networkEnabled() ? 'available, and marked' : 'hidden'),
     ),
   )
   box.addEventListener('change', () => {
@@ -541,58 +539,19 @@ function navCard(direction: 'prev' | 'next', tool: Tool): HTMLElement {
   )
 }
 
-/** The narrow info rail beside a tool body: facts, the network note, a link. */
-function toolRail(tool: Tool): HTMLElement {
-  const remote = tool.remote
-  const facts = el(
-    'div',
-    { class: 'ts-rail-facts' },
-    el(
-      'div',
-      { class: 'ts-rail-fact' },
-      el('span', { class: 'ts-rail-fact__label' }, 'Category'),
-      el('span', { class: 'ts-rail-fact__value is-hue' }, tool.category),
-    ),
-    el(
-      'div',
-      { class: 'ts-rail-fact' },
-      el('span', { class: 'ts-rail-fact__label' }, 'Runs'),
-      el('span', { class: 'ts-rail-fact__value' }, 'Entirely in your browser'),
-    ),
-    el(
-      'div',
-      { class: 'ts-rail-fact' },
-      el('span', { class: 'ts-rail-fact__label' }, 'Network'),
-      el(
-        'span',
-        { class: 'ts-rail-fact__value' },
-        remote ? `One request to ${remote.host}` : 'None — nothing is uploaded',
-      ),
-    ),
-  )
-
+/** One terse marker for a tool that leaves the tab. Local tools get none. */
+function toolNetworkBadge(tool: Tool): HTMLElement | null {
+  if (!tool.remote) return null
   return el(
-    'aside',
-    { class: 'ts-tool-rail', 'aria-label': 'Tool details' },
-    facts,
-    remote
-      ? el(
-          'p',
-          { class: 'ts-rail-note ts-rail-note--remote' },
-          el('strong', {}, 'Needs the network. '),
-          remote.note,
-        )
-      : el(
-          'p',
-          { class: 'ts-rail-note' },
-          'There is no backend and no analytics. Everything you paste stays on this device.',
-        ),
+    'p',
+    { class: 'ts-tool-remote' },
     el(
-      'a',
-      { class: 'ts-rail-link', href: '#/' },
-      iconEl('layers', 14),
-      el('span', {}, 'Back to all tools'),
+      'span',
+      { class: 'ts-tool-remote__head' },
+      iconEl('globe', 13),
+      el('span', { class: 'ts-tool-remote__host' }, tool.remote.host),
     ),
+    el('span', { class: 'ts-tool-remote__note' }, tool.remote.note),
   )
 }
 
@@ -608,6 +567,12 @@ function toolPage(tool: Tool, palette: Palette): HTMLElement {
     { class: 'ts-tool-nav', 'aria-label': 'Tool navigation' },
     previous ? navCard('prev', previous) : el('span', {}),
     next ? navCard('next', next) : el('span', {}),
+    el(
+      'a',
+      { class: 'ts-tool-nav__back', href: '#/' },
+      iconEl('layers', 14),
+      el('span', {}, 'All tools'),
+    ),
   )
 
   // The hue travels down from the header so a tool's panels, focus rings and
@@ -626,15 +591,7 @@ function toolPage(tool: Tool, palette: Palette): HTMLElement {
     el('span', {}, 'Find a tool'),
   )
 
-  // Body on the left, an info rail on the right. The rail carries the one
-  // thing every tool page has in common — its category and the privacy fact —
-  // so individual bodies are not forced to repeat it as a stacked panel.
-  const layout = el(
-    'div',
-    { class: 'ts-tool-layout' },
-    el('div', { class: 'ts-tool-layout__main' }, body),
-    toolRail(tool),
-  )
+  const badge = toolNetworkBadge(tool)
 
   const section = el(
     'section',
@@ -656,8 +613,9 @@ function toolPage(tool: Tool, palette: Palette): HTMLElement {
         el('p', { class: 'ts-tool-desc' }, tool.description),
       ),
       el('div', { class: 'ts-tool-actions' }, findButton, starButton(tool.slug, tool.name)),
+      badge,
     ),
-    layout,
+    body,
     nav,
   )
 

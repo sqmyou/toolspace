@@ -65,8 +65,7 @@ const tool: Tool = {
         panel({ title: 'In plain English', icon: 'text' }, summary),
         panel({ title: 'Fields', icon: 'layers' }, fields),
         panel({ title: 'Upcoming runs', icon: 'calendar' }, nextRuns),
-        note('Parsing and the next-run search run entirely in your browser.'),
-      ),
+              ),
     )
 
     run()

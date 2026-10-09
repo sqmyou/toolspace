@@ -83,8 +83,7 @@ const tool: Tool = {
         panel({ title: 'Summary', icon: 'info' }, readout, meta),
         preview.root,
         groups,
-        note('The file is read in your browser with the File API. It is never uploaded.'),
-      ),
+              ),
     )
   },
 }

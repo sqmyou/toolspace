@@ -148,8 +148,7 @@ const tool: Tool = {
           button('Generate another', { variant: 'primary', icon: 'refresh', onClick: run }),
           copyButton(() => password, { label: 'Copy' }),
         ),
-        note('Generated with your browser’s secure random number generator. Nothing leaves this page.'),
-      ),
+              ),
     )
 
     run()

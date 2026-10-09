@@ -66,7 +66,7 @@ function seek(video: HTMLVideoElement, time: number): Promise<void> {
 const tool: Tool = {
   slug: 'gif-maker',
   name: 'GIF Maker',
-  description: 'Turn a video into an animated GIF in your browser — trim, resize, set the frame rate and colours.',
+  description: 'Turn a video into an animated GIF — trim, resize, set the frame rate and colours.',
   category: 'Media',
   keywords: [
     'gif', 'animate', 'animation', 'video', 'mp4', 'webm', 'convert', 'frames',
@@ -498,8 +498,7 @@ const tool: Tool = {
           progress,
           actions(makeButton, downloadButton),
         ),
-        note('Frames are sampled from the video and encoded by a GIF writer that runs in this tab. Nothing is uploaded.'),
-      ),
+              ),
     )
 
     readForm()

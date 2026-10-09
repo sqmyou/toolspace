@@ -5,7 +5,6 @@ import {
   field,
   kvList,
   meter,
-  note,
   panel,
   stat,
   stats,
@@ -72,8 +71,7 @@ const tool: Tool = {
         figures,
         panel({ title: 'Weaknesses', icon: 'shield' }, weaknesses),
         panel({ title: 'Suggestions', icon: 'sparkle' }, suggestions),
-        note('Analysis runs locally. The password is never sent anywhere and is not stored.'),
-      ),
+              ),
     )
 
     run()

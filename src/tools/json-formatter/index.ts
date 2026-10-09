@@ -117,8 +117,7 @@ const tool: Tool = {
         ),
         error,
         output,
-        note('Your JSON is parsed in the browser and never uploaded.'),
-      ),
+              ),
     )
 
     run()

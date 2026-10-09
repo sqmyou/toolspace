@@ -60,8 +60,7 @@ const tool: Tool = {
           error,
         ),
         output,
-        note('Inference runs locally. Your JSON never leaves the browser.'),
-      ),
+              ),
     )
 
     run()

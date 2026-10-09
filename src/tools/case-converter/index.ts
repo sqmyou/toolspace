@@ -3,7 +3,6 @@ import {
   button,
   checkbox,
   copyButton,
-  note,
   outputBlock,
   panel,
   textarea,
@@ -116,8 +115,7 @@ const tool: Tool = {
           ),
           linesBlock,
         ),
-        note('Everything is transformed locally in your browser.'),
-      ),
+              ),
     )
 
     input.value = SAMPLE

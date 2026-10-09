@@ -95,8 +95,7 @@ const tool: Tool = {
           actions(source, button('Download SHA-256', { icon: 'download', onClick: () => download('sha256.txt', latest['SHA-256'] ?? '') })),
           digests,
         ),
-        note('Hashing happens in your browser. Files are read locally and never uploaded.'),
-      ),
+              ),
     )
 
     void hashText()

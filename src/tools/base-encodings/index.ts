@@ -104,8 +104,7 @@ const tool: Tool = {
           button('Decode', { icon: 'arrowUp', onClick: () => void run('decode') }),
           button('Download', { icon: 'download', onClick: () => download('encoded.txt', outText.value) }),
         ),
-        note('Conversions run locally. Base58Check uses your browser’s SHA-256.'),
-      ),
+              ),
     )
   },
 }

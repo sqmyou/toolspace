@@ -113,7 +113,7 @@ const tool: Tool = {
             onClick: () => download(direction === 'ini2json' ? 'config.json' : 'config.ini', result),
           }),
         ),
-        note('Only whole-line comments are ignored, so a "#" inside a value is kept. Conversion happens locally.'),
+        note('Only whole-line comments are ignored, so a "#" inside a value is kept.'),
       ),
     )
 

@@ -143,7 +143,7 @@ const tool: Tool = {
           if (alg !== currentAlg) return
           signed.body.replaceChildren(jwt)
           signed.setMeta(`${alg} · ${jwt.length} chars`)
-          verifyOut.replaceChildren(badge('Signed locally in your browser. The secret never left this page.', 'ok'))
+          verifyOut.replaceChildren(badge('Signature created.', 'ok'))
         } catch (err) {
           signError.textContent = err instanceof Error ? err.message : 'Could not sign this payload.'
           signError.hidden = false
@@ -171,8 +171,7 @@ const tool: Tool = {
           actions(button('Sign token', { icon: 'sparkle', variant: 'primary', onClick: signIt })),
           signed,
         ),
-        note('Decoding, verification and signing all happen in your browser. Your token, payload and key are never uploaded.'),
-      ),
+              ),
     )
 
     decode()

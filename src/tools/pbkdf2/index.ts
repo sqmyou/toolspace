@@ -89,8 +89,7 @@ const tool: Tool = {
           error,
         ),
         panel({ title: 'Derived key', icon: 'lock' }, rows),
-        note('Derivation happens in your browser with the WebCrypto API. The password and salt never leave the page.'),
-      ),
+              ),
     )
 
     run()

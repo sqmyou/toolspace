@@ -25,7 +25,7 @@ A short **Markdown** sample with a [link](https://example.com) and \`inline code
 - New tool: \`markdown-preview\`
 - Fixed a bug in \`escape\`
 
-> Everything renders locally in your browser.
+> Render locally, then export.
 
 | Tool | Status |
 | :--- | ---: |
@@ -78,7 +78,7 @@ const tool: Tool = {
         el('div', { class: 'ts-k-split' }, source, rendered),
         readout,
         panel({ title: 'Outline', icon: 'list' }, outlineList),
-        note('Markdown is parsed and rendered entirely in your browser. Raw HTML in the source is escaped, never executed.'),
+        note('Raw HTML in the source is escaped, never executed.'),
       ),
     )
 

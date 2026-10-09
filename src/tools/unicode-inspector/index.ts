@@ -4,7 +4,6 @@ import {
   cards,
   copyButton,
   copyRow,
-  note,
   panel,
   textarea,
   toolLayout,
@@ -44,7 +43,7 @@ const tool: Tool = {
     root.append(
       toolLayout(
         {},
-        panel({ title: 'Text', icon: 'text' }, input, note('Inspection happens in your browser.')),
+        panel({ title: 'Text', icon: 'text' }, input),
         panel({ title: 'HTML entities', icon: 'code' }, entities),
         panel({ title: 'Code points', icon: 'list' }, grid),
         actions(copyButton(() => encodeHtml(input.value), { label: 'Copy encoded' })),

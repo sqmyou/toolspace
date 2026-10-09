@@ -90,7 +90,7 @@ const tool: Tool = {
             onClick: () => download(mode === 'xml' ? 'converted.json' : 'converted.xml', result, mode === 'xml' ? 'application/json' : 'application/xml'),
           }),
         ),
-        note('Attributes map to keys beginning with @. Conversion happens in your browser.'),
+        note('Attributes map to keys beginning with @.'),
       ),
     )
 

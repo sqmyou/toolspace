@@ -91,7 +91,7 @@ const tool: Tool = {
           ),
         ),
         panel({ title: 'Changes', icon: 'braces' }, summary, list),
-        note('Key order is ignored. Arrays are compared by position. Nothing is uploaded.'),
+        note('Key order is ignored. Arrays are compared by position.'),
       ),
     )
 

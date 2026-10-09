@@ -345,8 +345,7 @@ const tool: Tool = {
           resultInfo,
         ),
         actions(downloadButton),
-        note('The image is decoded, redrawn and re-encoded on a canvas in your browser. Nothing is uploaded — the whole resize happens in this tab.'),
-      ),
+              ),
     )
   },
 }

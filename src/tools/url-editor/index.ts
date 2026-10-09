@@ -116,8 +116,7 @@ const tool: Tool = {
         ),
         built,
         panel({ title: 'Encode / decode whole URL', icon: 'swap' }, codec),
-        note('All parsing happens locally.'),
-      ),
+              ),
     )
 
     parseInput()

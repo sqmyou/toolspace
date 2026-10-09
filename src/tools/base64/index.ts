@@ -111,8 +111,7 @@ const tool: Tool = {
             }),
           ),
         ),
-        note('Encoding and decoding happen in your browser; files never leave your machine.'),
-      ),
+              ),
     )
   },
 }

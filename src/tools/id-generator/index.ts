@@ -77,8 +77,7 @@ const tool: Tool = {
           icon: 'download',
           onClick: () => download('ids.txt', list.body.textContent ?? ''),
         })),
-        note('Identifiers are generated with the browser’s cryptographically secure random source.'),
-      ),
+              ),
     )
 
     run()

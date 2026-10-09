@@ -425,8 +425,7 @@ const tool: Tool = {
         ),
         panel({ title: 'Programs', icon: 'sliders' }, programBody),
         note(`Functions: ${FUNCTION_NAMES.join(', ')}. Constants: pi, tau, e, phi. Use "ans" to reuse the last committed result.`),
-        note('Everything is evaluated in your browser. Nothing leaves this tab.'),
-      ),
+              ),
     )
 
     renderHistory()

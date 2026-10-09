@@ -139,7 +139,7 @@ const tool: Tool = {
           button('Download dump', { icon: 'download', onClick: () => download('dump.txt', dump.textContent ?? '') }),
         ),
         conversions,
-        note('Text is encoded as UTF-8. Invalid bytes are shown as a replacement character rather than failing. Files are read in the browser only.'),
+        note('Text is encoded as UTF-8. Invalid bytes are shown as a replacement character rather than failing.'),
       ),
     )
 

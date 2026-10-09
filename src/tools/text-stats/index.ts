@@ -1,7 +1,6 @@
 import {
   actions,
   button,
-  note,
   panel,
   stat,
   stats,
@@ -13,8 +12,8 @@ import type { Tool } from '../../core/types'
 import { analyzeText, readingEaseLabel } from './stats'
 
 const SAMPLE =
-  'toolspace keeps every tool in your browser. Nothing you paste here is ever uploaded, ' +
-  'which is the whole point: your text stays on your machine.'
+  'The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs — ' +
+  'a sample long enough to move every reading score.'
 
 function formatDuration(seconds: number): string {
   if (seconds <= 0) return '0s'
@@ -108,8 +107,7 @@ const tool: Tool = {
         ),
         panel({ title: 'Counts', icon: 'hash' }, figures),
         panel({ title: 'Readability', icon: 'eye' }, readability),
-        note('Analysis runs entirely in your browser.'),
-      ),
+              ),
     )
 
     input.value = SAMPLE

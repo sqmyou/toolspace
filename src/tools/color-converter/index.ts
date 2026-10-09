@@ -146,8 +146,7 @@ const tool: Tool = {
           sample,
           checks,
         ),
-        note('All conversion and contrast maths runs locally. Nothing is sent anywhere.'),
-      ),
+              ),
     )
 
     update()

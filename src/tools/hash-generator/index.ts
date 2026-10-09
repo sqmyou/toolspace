@@ -82,8 +82,7 @@ const tool: Tool = {
         ),
         error,
         panel({ title: 'Digests', icon: 'shield' }, output),
-        note('Hashing runs in your browser. Your input and secret are never uploaded.'),
-      ),
+              ),
     )
 
     run()

@@ -33,3 +33,4 @@ pnpm-debug.log*
 # Local dev scratch (puppeteer sweeps, CSP harness)
 *.mjs
 serve-csp.py
+.agent_tmp/

@@ -230,8 +230,7 @@ const tool: Tool = {
         panel({ title: 'Image', icon: 'uploadCloud' }, drop.root, status, warning, frame.root),
         panel({ title: 'Picked colour', icon: 'pipette' }, pickedPanel),
         panel({ title: 'Dominant palette', icon: 'palette' }, paletteStrip, swatchList, paletteActions),
-        note('Sampling and palette extraction run on a canvas in this tab. The image is never uploaded.'),
-      ),
+              ),
     )
 
     frame.root.append(canvas)

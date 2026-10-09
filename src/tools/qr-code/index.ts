@@ -81,8 +81,7 @@ const tool: Tool = {
         ),
         preview.root,
         actions(svgButton, pngButton),
-        note('Your text is encoded locally and never uploaded. The downloaded file has no tracking.'),
-      ),
+              ),
     )
 
     void run()

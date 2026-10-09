@@ -1,18 +1,18 @@
 # AGENTS.md
 
-Repository notes for agents. Keep this file current when you learn something
-that is not obvious from the code.
+Notes for anyone working in this repo. Keep this file current when you learn
+something that is not obvious from the code.
 
 ## What this is
 
-toolspace — privacy-first developer tools. Static SPA, no backend. Deployed on
+toolspace — a static SPA of small browser tools. No backend. Deployed on
 Cloudflare Workers (live: https://toolspace.sirsamyoudev.workers.dev). CI runs
 typecheck, test and build (`.github/workflows/ci.yml`); Cloudflare's Git
 integration does the deploy, so pushing to `main` is what ships.
 
 ## Hard rules
 
-- **Nothing a user pastes is ever uploaded.** No backend to send it to.
+- **A tool runs in the browser.** There is no backend to send anything to.
 - **No new runtime dependencies** beyond the two already allowed
   (`qrcode-generator`, `sql-formatter`). A tool must be implementable with the
   platform and what is already here.
@@ -26,10 +26,10 @@ integration does the deploy, so pushing to `main` is what ships.
   README "Network tools". Currently allowed: `i.ytimg.com`, `dns.google`,
   `api.github.com` (+ `avatars.githubusercontent.com` for images),
   `cdn.cloudflare.steamstatic.com` (images only), `en.wikipedia.org`
-  (+ `upload.wikimedia.org` / `thumb.wikimedia.org`), `api.frankfurter.dev`, `registry.npmjs.org`,
-  `api.npmjs.org`, `public.api.bsky.app` (+ `cdn.bsky.app`),
-  `api.open-meteo.com` (+ `geocoding-api.open-meteo.com`). Pair each JSON host
-  with its image host; they are separate CSP directives.
+  (+ `upload.wikimedia.org` / `thumb.wikimedia.org`), `api.frankfurter.dev`,
+  `registry.npmjs.org`, `api.npmjs.org`, `public.api.bsky.app`
+  (+ `cdn.bsky.app`), `api.open-meteo.com` (+ `geocoding-api.open-meteo.com`).
+  Pair each JSON host with its image host; they are separate CSP directives.
 - **CORS is the real limit, not CSP.** A static SPA can only call an API that
   sends `access-control-allow-origin`. Roblox is a closed case: every JSON API
   (`users.roblox.com`, `badges.roblox.com`, ...) reflects ACAO *only* for
@@ -49,13 +49,14 @@ integration does the deploy, so pushing to `main` is what ships.
   `import.meta.glob('../tools/*/index.ts')`. There is no central registry —
   creating the folder is the registration.
 - A tool is `index.ts` (UI, exports `render(root)`), a pure-logic module, a
-  `.test.ts` beside it, and `tool.css`. Keep logic out of the DOM layer so it
-  stays testable.
-- Build UI with the `el(tag, attrs, ...children)` helper from `core/dom`.
-- Reuse classes from `src/styles/main.css` (`ts-button`, `ts-field`, `ts-note`,
-  …). Per-tool styles go in that tool's `tool.css`.
+  `.test.ts` beside it, and optional `tool.css`. Keep logic out of the DOM layer
+  so it stays testable.
+- Build UI with the `el(tag, attrs, ...children)` helper from `core/dom` and the
+  shared kit in `core/components.ts` (`panel`, `split`, `grid`, `card`, `stats`,
+  `field`, `actions`, `note`, …). Per-tool styles go in that tool's `tool.css`.
 - `src/core/identity.ts` derives a per-tool sigil and category hue from the
-  slug. Add new categories to `CATEGORY_HUES` there or they fall back to blue.
+  slug. Categories are a fixed list — add new ones to `CATEGORY_HUES` there or
+  they fall back to blue.
 
 ## Commands
 
@@ -64,6 +65,16 @@ npm run typecheck
 npm test
 npm run build
 ```
+
+## Copy rules
+
+The privacy story should be stated **once per page at most**, and only where it
+is actionable:
+
+- Local tools carry **no** privacy note. Silence is the default.
+- Network tools carry one `ts-tool-remote` badge in the header (host + one
+  sentence), driven by `Tool.remote`. Do not repeat it in the body.
+- Do not open tool descriptions or sample text with the privacy pitch.
 
 ## Gotchas
 
@@ -83,13 +94,13 @@ npm run build
   omitted from the tool — it is indistinguishable from the placeholder.
   `i.ytimg.com` sends `access-control-allow-origin: *` and no cookies, so a
   canvas read (and thus a real download) works.
-- Adding a third-party image host means updating the CSP in `public/_headers`
-  **and** the honesty copy in `src/ui/app.ts` and `README.md`.
+- Adding a third-party image host means updating the CSP in `public/_headers`,
+  the README host table, and the home-page copy.
 - **A bare `python3 -m http.server` does not apply `_headers`,** so it cannot
   reproduce a CSP bug. To exercise the real policy, read the
   `Content-Security-Policy` line out of `public/_headers` and send it from a
   small custom handler; that is how the `blob:` gap in `img-src` was found.
-  `frame-ancestors 'none'` also blocks iframe test harnesses on purpose - relax
+  `frame-ancestors 'none'` also blocks iframe test harnesses on purpose — relax
   that one directive in the local server, not in the repo.
 - **Image uploads need `blob:` in `img-src`.** Image tools hand the chosen file
   to an `<img>` as an object URL. Without `blob:` the load is refused and the

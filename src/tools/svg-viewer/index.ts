@@ -170,7 +170,7 @@ const tool: Tool = {
         panel({ title: 'What is inside', icon: 'layers' }, statsStrip, tagLine),
         panel({ title: 'Colours', icon: 'palette' }, colors),
         panel({ title: 'Use it', icon: 'copy' }, useRows),
-        note('The preview is rendered as an image, so scripts never run. Scripts, event handlers and javascript: links are removed from the copyable output. Nothing is uploaded.'),
+        note('The preview is rendered as an image, so scripts never run. Scripts, event handlers and javascript: links are removed from the copyable output.'),
       ),
     )
 

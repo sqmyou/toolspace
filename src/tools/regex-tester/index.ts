@@ -78,8 +78,7 @@ const tool: Tool = {
         panel({ title: 'Test text', icon: 'text' }, field(sample, { label: 'Test text' }), preview),
         panel({ title: 'Matches', icon: 'list' }, matches),
         panel({ title: 'Explanation', icon: 'info' }, explanation),
-        note('The expression runs in your browser against your text only.'),
-      ),
+              ),
     )
 
     render()

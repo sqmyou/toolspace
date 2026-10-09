@@ -4,9 +4,14 @@ Thanks for wanting to help. This guide is short on purpose.
 
 ## The one rule
 
-**No network calls.** Every tool must run entirely in the browser. If your idea
-needs a server, an external API, or a database, it belongs in a different
-project.
+**A tool runs in the browser.** If your idea needs a server of your own, a
+database, or a credentialed API, it belongs in a different project.
+
+There is one narrow exception: a tool may make a direct request to a public,
+key-less, CORS-open service for a lookup the user asked for. Those tools must
+declare it (`Tool.remote`), get the origin added to `public/_headers`, and be
+listed in the README. See the README's *Network tools* section before you
+start one — most ideas do not qualify.
 
 ## Setup
 
@@ -28,9 +33,10 @@ npm run dev
 2. Rename `slug` in `index.ts` to match the folder name (`my-tool`).
 3. Write the logic in a plain module and cover it with tests. Keep DOM code out
    of the logic so it can be tested without a browser — this is the single thing
-   that makes tools maintainable and is expected in review.
-4. Build the UI in `render(root)` using the `el()` helper. Reuse existing CSS
-   classes rather than adding bespoke styles where you can.
+   that makes tools maintainable.
+4. Build the UI in `render(root)` using the `el()` helper and the kit in
+   `core/components.ts`. Reuse existing classes rather than adding bespoke
+   styles where you can.
 5. Verify:
 
    ```bash
@@ -53,8 +59,7 @@ src/tools/my-tool/
 ## Expectations
 
 - **Small and focused.** One tool does one job.
-- **Tested.** Behaviour is covered by unit tests. Snapshot-free, real inputs and
-  outputs.
+- **Tested.** Behaviour is covered by unit tests. Real inputs and outputs.
 - **Readable.** Match the style of the surrounding code. Comments explain *why*,
   not *what*.
 - **No new dependencies** without a good reason. The project's speed and
@@ -67,18 +72,6 @@ src/tools/my-tool/
 - One tool or fix per pull request.
 - The pull request description should say what the tool does and how you tested
   it.
-
-## About AI
-
-You're free to use AI tools while contributing — this project takes no position
-on how code gets written. What matters is that:
-
-- you understand what you're submitting and can explain it if asked;
-- it is tested and follows the conventions above;
-- commit messages and pull request descriptions are your own words.
-
-Code that looks plausible but isn't understood won't survive review. That
-applies to everyone, AI-assisted or not.
 
 ## Reporting bugs
 

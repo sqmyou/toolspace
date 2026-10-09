@@ -23,8 +23,8 @@ import {
 } from './count'
 
 const SAMPLE =
-  'toolspace keeps every tool in your browser. Nothing you paste here is ever uploaded, ' +
-  'which is the whole point: your text stays on your machine.'
+  'The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs — ' +
+  'a sample long enough to move every counter, and short enough to edit.'
 
 const tool: Tool = {
   slug: 'letter-counter',
@@ -142,7 +142,7 @@ const tool: Tool = {
         counts,
         panel({ title: 'Most-used letters', icon: 'chart' }, freqGrid),
         panel({ title: 'Platform limits', icon: 'ruler' }, platformBar, limitBody),
-        note('Counting is character-based and treats CJK and emoji as you would expect. Everything runs locally.'),
+        note('Counting is character-based and treats CJK and emoji as you would expect.'),
       ),
     )
 

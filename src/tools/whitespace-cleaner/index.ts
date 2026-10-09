@@ -126,7 +126,7 @@ const tool: Tool = {
           ),
         ),
         resultBlock,
-        note('Rules run in a fixed order so the same input always gives the same output. Nothing is uploaded.'),
+        note('Rules run in a fixed order so the same input always gives the same output.'),
       ),
     )
 

@@ -84,8 +84,7 @@ const tool: Tool = {
           error,
         ),
         panel({ title: 'Details', icon: 'info' }, output),
-        note('Keys are parsed in your browser. Fingerprints are computed locally — nothing is uploaded.'),
-      ),
+              ),
     )
   },
 }

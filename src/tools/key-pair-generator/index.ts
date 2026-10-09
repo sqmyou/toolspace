@@ -67,7 +67,7 @@ const tool: Tool = {
           { title: 'Key pair', icon: 'key' },
           actions(field(algorithm, { label: 'Algorithm' }), generate, status),
           error,
-          note('The private key is generated in your browser and is never transmitted. Keep it secret.', 'warn'),
+          note('The private key is generated on this device. Keep it secret.', 'warn'),
         ),
         publicKey,
         privateKey,

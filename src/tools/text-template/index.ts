@@ -80,7 +80,7 @@ const tool: Tool = {
         ),
         panel({ title: 'Placeholders', icon: 'tag' }, vars),
         output,
-        note('Values are HTML-escaped by default; use {{{triple braces}}} for raw output. Templates are rendered locally and cannot run code.'),
+        note('Values are HTML-escaped by default; use {{{triple braces}}} for raw output. Templates cannot run code.'),
       ),
     )
 

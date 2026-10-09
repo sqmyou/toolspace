@@ -79,8 +79,7 @@ const tool: Tool = {
           copyButton(() => rendered, { label: 'Copy' }),
           button('Download', { icon: 'download', onClick: () => download('output.txt', rendered, 'text/plain') }),
         ),
-        note('Values often hold secrets — they are converted entirely in your browser and never sent anywhere.'),
-      ),
+              ),
     )
 
     run()

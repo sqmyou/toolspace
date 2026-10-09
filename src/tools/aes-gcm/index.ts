@@ -18,7 +18,7 @@ import { decrypt, encrypt, isBundle } from './aes'
 const tool: Tool = {
   slug: 'aes-gcm',
   name: 'AES-GCM Encryptor / Decryptor',
-  description: 'Encrypt and decrypt text with a passphrase using AES-256-GCM in your browser.',
+  description: 'Encrypt and decrypt text with a passphrase using AES-256-GCM.',
   category: 'Crypto',
   keywords: ['aes', 'gcm', 'encrypt', 'decrypt', 'pbkdf2', 'cipher', 'webcrypto'],
   render(root) {
@@ -70,8 +70,7 @@ const tool: Tool = {
         panel(
           { title: 'Passphrase', icon: 'key' },
           field(passphrase, { label: 'Passphrase' }),
-          note('The same passphrase must be used to decrypt. It never leaves this page.'),
-        ),
+                  ),
         panel(
           { title: 'Encrypt', icon: 'lock' },
           field(plaintext, { label: 'Plaintext' }),
@@ -88,8 +87,7 @@ const tool: Tool = {
         actions(
           button('Download result', { icon: 'download', onClick: () => download('encrypted.txt', result) }),
         ),
-        note('AES-256-GCM with PBKDF2-SHA256 (250,000 iterations). The passphrase and text never leave this page.'),
-      ),
+              ),
     )
 
     refreshHint()

@@ -101,7 +101,7 @@ const tool: Tool = {
           clampError,
           clampOut,
         ),
-        note('Conversions use the CSS reference pixel (96dpi). Everything is computed locally.'),
+        note('Conversions use the CSS reference pixel (96dpi).'),
       ),
     )
 

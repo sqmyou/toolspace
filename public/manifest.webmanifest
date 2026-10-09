@@ -1,7 +1,7 @@
 {
   "name": "toolspace",
   "short_name": "toolspace",
-  "description": "Developer tools that never upload your stuff. Runs entirely in your browser.",
+  "description": "Small, fast tools that run in your browser. No account, no tracking, no ads.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -126,7 +126,7 @@ const tool: Tool = {
         resultRow,
         fitPanel,
         actionsRow,
-        note('Only the file header is read, so nothing is uploaded and large files stay on the machine. Dimensions come from the format header, not from decoding the image.'),
+        note('Only the file header is read. Dimensions come from the format header, not from decoding the image.'),
       ),
     )
 

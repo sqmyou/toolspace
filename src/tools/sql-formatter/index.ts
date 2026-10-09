@@ -79,8 +79,7 @@ const tool: Tool = {
           error,
         ),
         output,
-        note('Formatting happens entirely in your browser. Your queries are never uploaded.'),
-      ),
+              ),
     )
 
     run()

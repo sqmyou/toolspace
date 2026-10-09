@@ -6,7 +6,6 @@ import {
   download,
   field,
   grid,
-  note,
   outputBlock,
   panel,
   select,
@@ -74,8 +73,7 @@ const tool: Tool = {
           copyButton(() => output.body.textContent ?? '', { label: 'Copy' }),
           button('Download', { icon: 'download', onClick: () => download('lorem-ipsum.txt', output.body.textContent ?? '') }),
         ),
-        note('Text is generated in your browser.'),
-      ),
+              ),
     )
 
     generate()

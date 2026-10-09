@@ -4,7 +4,6 @@ import {
   copyRow,
   field,
   kvList,
-  note,
   panel,
   textarea,
   toolLayout,
@@ -59,8 +58,7 @@ const tool: Tool = {
           } }))),
         ),
         panel({ title: 'Parsed', icon: 'check' }, list),
-        note('Parsing is heuristic and runs locally; nothing is sent anywhere.'),
-      ),
+              ),
     )
 
     run()

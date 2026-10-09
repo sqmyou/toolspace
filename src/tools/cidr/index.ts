@@ -71,8 +71,7 @@ const tool: Tool = {
           error,
         ),
         panel({ title: 'Breakdown', icon: 'layers' }, rows),
-        note('All subnet maths runs locally with arbitrary-precision arithmetic.'),
-      ),
+              ),
     )
 
     run()

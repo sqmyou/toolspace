@@ -136,8 +136,7 @@ const tool: Tool = {
         ),
         actions(summary),
         output,
-        note('Decoding happens in your browser. Certificates are never uploaded or validated against the network.'),
-      ),
+              ),
     )
   },
 }

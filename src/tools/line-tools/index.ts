@@ -4,7 +4,6 @@ import {
   checkbox,
   field,
   grid,
-  note,
   outputBlock,
   panel,
   select,
@@ -131,8 +130,7 @@ const tool: Tool = {
             onClick: () => download('lines.txt', rendered, 'text/plain'),
           }),
         ),
-        note('All processing happens in your browser.'),
-      ),
+              ),
     )
 
     run()

@@ -104,7 +104,7 @@ const tool: Tool = {
           actions(copyButton(() => report, { label: 'Copy report', size: 'sm' }), button('Download report', { icon: 'download', onClick: () => download('compose-check.txt', report) })),
           issueList,
         ),
-        note('The YAML subset Compose files use is parsed here, so nothing is uploaded. Errors would stop the file working; warnings are things worth a second look.'),
+        note('The YAML subset Compose files use is parsed here. Errors would stop the file working; warnings are things worth a second look.'),
       ),
     )
 

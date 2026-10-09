@@ -122,8 +122,7 @@ const tool: Tool = {
         ),
         panel({ title: 'Counter-based (HOTP)', icon: 'hash' }, field(counter, { label: 'Counter' }), hotpRow),
         panel({ title: 'Provisioning', icon: 'external' }, grid(220, field(account, { label: 'Account' }), field(issuer, { label: 'Issuer' })), uriOut),
-        note('Secrets stay in this page. Codes are computed with the WebCrypto API in your browser and are never sent anywhere.'),
-      ),
+              ),
     )
 
     refresh()

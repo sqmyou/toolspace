@@ -286,7 +286,7 @@ const tool: Tool = {
         section(
           'How it is measured',
           note(
-            'A "word" is five characters, the convention that makes prose and code comparable. WPM counts only the characters still standing, so a correction costs time but not a character; raw WPM counts every correct keypress and is the flattering number. Accuracy is correct keypresses over all keypresses, so backspacing cannot erase a mistake from the score. Consistency is derived from how evenly your inter-key gaps fell. Everything runs in this tab — your text is never sent anywhere.',
+            'A "word" is five characters, the convention that makes prose and code comparable. WPM counts only the characters still standing, so a correction costs time but not a character; raw WPM counts every correct keypress and is the flattering number. Accuracy is correct keypresses over all keypresses, so backspacing cannot erase a mistake from the score. Consistency is derived from how evenly your inter-key gaps fell.',
           ),
         ),
       ),

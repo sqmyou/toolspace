@@ -791,53 +791,34 @@ a { color: inherit; }
 
 .ts-tool-actions { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; align-items: center; }
 
-/* The body column and its info rail. Under 1000px the rail drops below the
-   body and becomes a two-up strip, so the reading order stays body-first. */
+/* The body runs the full container now that the info rail is gone. */
 .ts-tool-body { display: block; }
-.ts-tool-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
-  gap: 26px;
-  align-items: start;
-}
-.ts-tool-layout__main { min-width: 0; }
-.ts-tool-rail {
+
+/* The one marker a network tool carries: the host it talks to, plus its note.
+   Local tools render nothing here, so silence is the default state. */
+.ts-tool-remote {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  position: sticky;
-  top: calc(var(--header-h) + 16px);
-  min-width: 0;
-}
-.ts-rail-facts {
-  display: flex;
-  flex-direction: column;
-  gap: 11px;
+  gap: 4px;
+  margin: 16px 0 0;
+  padding: 9px 12px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-soft);
-  padding: 15px 16px;
-}
-.ts-rail-fact { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.ts-rail-fact__label {
-  font-family: var(--mono);
-  font-size: var(--text-2xs);
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-  color: var(--faint);
-}
-.ts-rail-fact__value { font-size: var(--text-base); color: var(--fg); }
-.ts-rail-fact__value.is-hue { color: hsl(var(--h, 205) 68% 68%); }
-.ts-rail-note { color: var(--muted); font-size: var(--text-base); line-height: 1.55; margin: 0; }
-.ts-rail-note--remote {
-  padding: 10px 12px;
-  border: 1px solid var(--border-strong);
   border-left: 2px solid var(--warn);
   border-radius: var(--radius-sm);
-  background: var(--bg-soft);
-  color: var(--muted);
+  background: color-mix(in srgb, var(--warn) 7%, transparent);
+  font-size: var(--text-sm);
+  line-height: 1.5;
 }
-.ts-rail-note--remote strong { color: var(--warn); font-weight: 600; }
+.ts-tool-remote__head { display: inline-flex; align-items: center; gap: 6px; }
+.ts-tool-remote__head svg { flex: none; color: var(--warn); }
+.ts-tool-remote__host {
+  font-family: var(--mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.02em;
+  color: var(--warn);
+  overflow-wrap: anywhere;
+}
+.ts-tool-remote__note { color: var(--muted); }
 
 /* The "network" tag: a quiet, honest marker that a tool leaves the tab. It
    sits on cards and index rows so the offline/online split is visible before
@@ -859,29 +840,6 @@ a { color: inherit; }
 }
 .ts-tag-network svg { flex: none; }
 .ts-dot-sep { color: var(--faint); margin: 0 5px; }
-.ts-rail-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-soft);
-  color: var(--muted);
-  text-decoration: none;
-  font-size: var(--text-base);
-  transition: border-color 0.15s ease, color 0.15s ease;
-}
-.ts-rail-link:hover { border-color: var(--border-strong); color: var(--accent); }
-@media (max-width: 1000px) {
-  .ts-tool-layout { grid-template-columns: 1fr; gap: 20px; }
-  .ts-tool-rail {
-    position: static;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  }
-}
 
 .ts-tool-nav {
   display: grid;
@@ -891,6 +849,22 @@ a { color: inherit; }
   padding-top: 22px;
   border-top: 1px solid var(--border);
 }
+.ts-tool-nav__back {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  color: var(--muted);
+  text-decoration: none;
+  font-size: var(--text-base);
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.ts-tool-nav__back:hover { border-color: var(--border-strong); color: var(--accent); }
 .ts-tool-nav__link {
   display: flex;
   flex-direction: column;

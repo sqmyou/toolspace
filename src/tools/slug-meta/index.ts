@@ -29,7 +29,7 @@ const tool: Tool = {
     const title = textField({ value: 'The Quick Brown Fox & Friends', onInput: () => run() })
     const description = textarea({
       rows: 3,
-      value: 'A privacy-first collection of developer tools that run entirely in your browser.',
+      value: 'A small collection of fast, focused tools.',
       onInput: () => run(),
     })
     const url = textField({ value: 'https://toolspace.sirsamyoudev.workers.dev/tools/slug-meta', mono: true, onInput: () => run() })

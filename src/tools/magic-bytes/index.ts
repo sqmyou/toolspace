@@ -94,7 +94,7 @@ const tool: Tool = {
         ),
         panel({ title: 'Detected', icon: 'search' }, verdict, list),
         ascii,
-        note('Several formats share a prefix, so every match is listed with the number of bytes its signature pinned down. Reading the file stays on the machine.'),
+        note('Several formats share a prefix, so every match is listed with the number of bytes its signature pinned down.'),
       ),
     )
 

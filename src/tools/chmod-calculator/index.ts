@@ -146,8 +146,7 @@ const tool: Tool = {
         panel({ title: 'Result', icon: 'check' }, actions(octalOut, symbolicOut)),
         panel({ title: 'What it means', icon: 'info' }, explained),
         commandBlock,
-        note('Everything is computed locally — no file is ever touched.'),
-      ),
+              ),
     )
 
     redraw()

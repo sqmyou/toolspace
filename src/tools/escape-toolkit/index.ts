@@ -79,7 +79,7 @@ const tool: Tool = {
           error,
         ),
         output,
-        note('Everything is escaped locally. The CSV flavour also blocks spreadsheet formula injection.'),
+        note('The CSV flavour also blocks spreadsheet formula injection.'),
       ),
     )
 

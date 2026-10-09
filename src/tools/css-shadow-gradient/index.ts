@@ -2,7 +2,6 @@ import {
   button,
   checkbox,
   colorField,
-  note,
   outputBlock,
   panel,
   segmented,
@@ -148,8 +147,7 @@ const tool: Tool = {
           } }),
         ),
         output,
-        note('Everything is generated locally; nothing is uploaded.'),
-      ),
+              ),
     )
 
     renderStops()

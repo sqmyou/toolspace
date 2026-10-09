@@ -38,7 +38,7 @@ function captioned(label: string, frame: HTMLElement): HTMLElement {
 const tool: Tool = {
   slug: 'image-converter',
   name: 'Image Converter',
-  description: 'Resize and convert images to PNG, JPEG or WebP entirely in your browser.',
+  description: 'Resize and convert images to PNG, JPEG or WebP.',
   category: 'Media',
   keywords: ['image', 'convert', 'resize', 'png', 'jpeg', 'webp', 'compress', 'canvas'],
   render(root) {
@@ -217,8 +217,7 @@ const tool: Tool = {
         info,
         emptyInfo,
         actions(downloadButton),
-        note('Images are decoded, resized and re-encoded with canvas in your browser. Nothing is uploaded.'),
-      ),
+              ),
     )
 
     syncQualityVisibility()

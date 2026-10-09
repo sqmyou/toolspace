@@ -71,8 +71,7 @@ const tool: Tool = {
         panel({ title: 'By filename', icon: 'file' }, filename, fileRows),
         panel({ title: 'By MIME type', icon: 'type' }, typeInput, typeRow),
         panel({ title: 'Browse', icon: 'filter' }, browse, browseList),
-        note('A curated table of common web types, resolved in your browser.'),
-      ),
+              ),
     )
 
     runFilename()

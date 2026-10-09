@@ -2,7 +2,6 @@ import {
   badge,
   field,
   grid,
-  note,
   panel,
   segmented,
   textarea,
@@ -83,8 +82,7 @@ const tool: Tool = {
           ),
         ),
         panel({ title: 'Changes', icon: 'diff' }, summary, output),
-        note('Diffing happens in your browser; nothing is uploaded.'),
-      ),
+              ),
     )
 
     render()

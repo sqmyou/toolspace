@@ -1,32 +1,36 @@
 # toolspace
 
-**A junk drawer of developer tools that never upload your stuff.**
+**Small, fast tools that run in your browser.**
 
-No ads. No sign-up. No server. Open a tool, use it, close the tab. Nothing you
-type or paste ever leaves your browser.
+No account. No tracking. No build step to use them. Open a tool, use it, close
+the tab. Most of them never touch the network at all.
 
 ---
 
-## Why this exists
+## Why
 
-Need to decode a JWT at 2am and the top result wants you to accept cookies,
-watch an ad, or — worse — paste a production token into a stranger's server.
-The alternatives are slow desktop apps you install for one job and use twice.
+You need to decode a JWT at 2am and the top result wants you to accept cookies,
+sit through an ad, or paste a production token into a stranger's server. The
+alternative is a desktop app you install for one job and open twice a year.
 
-`toolspace` is the opposite: one static page, dozens of small tools, all
-running locally. It loads fast, works offline, and costs nothing to host
-because there is no backend to host.
+toolspace is the opposite: one static page, a hundred small tools, and no
+backend to speak of. It loads fast, works offline, and costs nothing to host
+because there is nothing to host.
 
-## What makes it different
+## What's here
 
-- **Your data stays put.** Every tool is a pure function over your input. There
-  is no network request after the page loads (see the one exception below, which
-  you can switch off).
+- **Your input stays put.** Each tool is a pure function over what you give it.
+  There is no backend and no analytics.
 - **Offline by default.** Install it as a PWA and it keeps working on a plane.
-- **Actually fast.** No framework at runtime, no analytics, no third-party
-  scripts. The whole app is a few kilobytes.
-- **Built to be extended.** Drop a folder in `src/tools/` and it appears in the
-  catalogue. No central list to edit, so contributors don't collide.
+- **Fast.** No framework at runtime, no third-party scripts. The whole app is a
+  few kilobytes.
+- **Easy to extend.** Drop a folder in `src/tools/` and it shows up in the
+  catalogue. No central list to edit, so contributors never collide.
+
+A handful of tools do use the network — a public lookup you asked for, sent
+straight from your browser to the service that has the data. They are marked
+everywhere they appear, and you can switch them off entirely. The specifics are
+under [Network tools](#network-tools) below.
 
 ## Quickstart
 
@@ -57,6 +61,7 @@ src/
     types.ts      # the Tool interface everything implements
     registry.ts   # auto-discovers tools via import.meta.glob
     dom.ts        # tiny `el()` helper, so tools need no framework
+    components.ts # the shared UI kit
   ui/
     app.ts        # shell, search, theme, hash routing
   tools/
@@ -75,78 +80,56 @@ A tool is one folder with a default export. Roughly ten minutes:
 1. Copy `templates/tool/` to `src/tools/<your-slug>/`.
 2. Fill in the metadata in `index.ts` — `slug`, `name`, `description`,
    `category`, optional `keywords`.
-3. Put the actual work in a separate file (`logic.ts` or similar) and test it.
-   Anything that touches the DOM can't be unit tested, so keep logic out of it.
-4. Write `render(root)` to build your UI with `el()`. Reuse the classes in
-   `src/styles/main.css` (`ts-button`, `ts-field`, `ts-output`, …) so it looks
-   native to the app.
+3. Put the actual work in a separate module and test it. Keep it out of the DOM
+   layer so it stays testable.
+4. Write `render(root)` to build the UI with `el()`, using the kit in
+   `core/components.ts` and the classes in `src/styles/main.css`.
 5. Run `npm test` and `npm run typecheck`, then open a pull request.
 
 The `slug` must match the folder name. The folder is picked up automatically.
 
-The hard rule: **nothing you paste is ever uploaded.** A tool runs entirely in
-the browser, and there is no backend to send anything to.
+The default rule: **a tool runs entirely in the browser.** There is no backend
+to send anything to.
 
-There is a small, documented set of network tools. Each one is a *direct
-browser-to-service request* for a public lookup the user explicitly asked for;
-none of them go through a proxy, carry a token, or send cookies, and all of
-them are marked with a `network` tag everywhere they are listed. The origins
-are:
+## Network tools
 
-- **`i.ytimg.com`** — the YouTube thumbnail grabber loads the public thumbnail
-  image, because that is where YouTube stores it. It carries no user data
-  beyond the video id already in the URL.
-- **`dns.google`** — the DNS lookup asks Google's public resolver for the
-  records of the domain you type. The domain name is the only thing sent.
-- **`api.github.com`** (and `avatars.githubusercontent.com` for the image) —
-  the GitHub profile lookup reads the *public* profile and repository data for
-  the username you type. No token, no sign-in, no personal data.
-- **`cdn.cloudflare.steamstatic.com`** — the Steam artwork grabber loads the
-  public store images (header, capsule, library, hero) for the app id you type,
-  straight from Steam's CDN. There is no API key and no account data involved.
-- **`en.wikipedia.org`** (and `upload.wikimedia.org` / `thumb.wikimedia.org` for its images) — the
-  Wikipedia summary tool reads the public article summary for the title you
-  type, and loads its lead image.
-- **`api.frankfurter.dev`** — the currency converter reads the European Central
-  Bank's daily reference rates for the currency pair you pick. No key, no
-  account.
-- **`registry.npmjs.org`** (and `api.npmjs.org`) — the npm package tool reads
-  the public metadata and download count for the package name you type.
-- **`public.api.bsky.app`** (and `cdn.bsky.app` for images) — the Bluesky
-  profile tool reads the public profile, avatar and banner for the handle you
-  type. No sign-in, no token.
-- **`api.open-meteo.com`** (and `geocoding-api.open-meteo.com`) — the weather
-  tool turns the place name you type into coordinates and reads the forecast.
-  No key, no cookies.
+A few tools need data that lives somewhere else. Each one is a direct
+browser-to-service request for a public lookup the person explicitly asked for:
+no proxy, no token, no cookies, and every one is marked with a `network` tag
+wherever it is listed. The origins the CSP allows are:
 
-These are the only third-party origins the CSP allows, and any tool that needs
-more than this does not belong here. Crucially, they are all optional: the home
-page has a **Network tools** switch, and turning it off hides every
-network-backed tool from the index, the search and the command palette, and
-blocks deep links to them, so the app becomes strictly offline. The switch is
-the reason the privacy promise still holds — a user who wants zero requests
-gets zero requests.
+| Host | Tool | What leaves the tab |
+| --- | --- | --- |
+| `i.ytimg.com` | YouTube Thumbnail | the public thumbnail for the video id in the link |
+| `dns.google` | DNS Lookup | the domain name you type |
+| `api.github.com`, `avatars.githubusercontent.com` | GitHub Profile | the username you type |
+| `cdn.cloudflare.steamstatic.com` | Steam Artwork | the app id you type |
+| `en.wikipedia.org`, `upload.wikimedia.org`, `thumb.wikimedia.org` | Wikipedia Summary | the article title you type |
+| `api.frankfurter.dev` | Currency Converter | the currency pair you pick |
+| `registry.npmjs.org`, `api.npmjs.org` | npm Package | the package name you type |
+| `public.api.bsky.app`, `cdn.bsky.app` | Bluesky Profile | the handle you type |
+| `api.open-meteo.com`, `geocoding-api.open-meteo.com` | Weather | the place name you type |
 
-*What cannot be built here is part of the promise too:* Roblox serves no
-cross-origin data at all — its JSON APIs allow only Roblox's own origin, and
-per-user images sit behind that same wall — so a Roblox tool is impossible
-rather than merely absent.
+Those are the only third-party origins the policy permits, and none of them
+need more than this. They are also optional: the home page has a **Network
+tools** switch, and turning it off hides every network-backed tool from the
+index, the search and the command palette and blocks deep links to them. The
+app becomes strictly offline.
 
-A tool declares its network use in code (`Tool.remote` in `src/core/types.ts`),
-and the shell derives the tag, the tool-page notice, the offline counts and the
-switch behaviour from that declaration. Adding a network tool without
-disclosing it is not possible by omission — you must add the origin here, in
-the CSP (`public/_headers`), and in the home-page copy in the same change.
+*A tool that needs more than this does not belong here.* Roblox is the worked
+example: its JSON APIs allow only Roblox's own origin, and per-user images sit
+behind the same wall, so a Roblox tool is impossible rather than merely absent.
+
+A tool declares its network use in code (`Tool.remote`), and the shell derives
+the tag, the notice on the tool page and the offline counts from that
+declaration. You cannot add a network tool by omission — the origin has to go
+in `public/_headers`, in this README, and in the home-page copy in the same
+change.
 
 ## Contributing
 
 Contributions are welcome, from a typo fix to a new tool. See
-[CONTRIBUTING.md](CONTRIBUTING.md) for the details.
-
-On the use of AI: use whatever tools you like. You are responsible for the code
-you submit — make sure you understand it, that it is tested, and that it matches
-the conventions here. Write your own commit messages and pull request
-descriptions. This project is about good tools, not about how they were typed.
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

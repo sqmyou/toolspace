@@ -112,8 +112,7 @@ const tool: Tool = {
             },
           }),
         ),
-        note('Conversion happens in your browser; nothing is uploaded.'),
-      ),
+              ),
     )
 
     run()

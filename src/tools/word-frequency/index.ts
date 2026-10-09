@@ -128,7 +128,7 @@ const tool: Tool = {
         ),
         actions(summary, copyButton(() => exportText, { label: 'Copy TSV', size: 'sm' })),
         results,
-        note('Words keep internal apostrophes and hyphens. Everything is counted in your browser.'),
+        note('Words keep internal apostrophes and hyphens.'),
       ),
     )
 
