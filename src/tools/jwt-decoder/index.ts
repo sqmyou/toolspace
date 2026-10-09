@@ -1,11 +1,14 @@
 import {
+  actions,
   badge,
+  button,
   field,
   findings,
   findingRow,
   note,
   outputBlock,
   panel,
+  segmented,
   textarea,
   textField,
   toolLayout,
@@ -13,7 +16,7 @@ import {
 } from '../../core/components'
 import { el } from '../../core/dom'
 import type { Tool } from '../../core/types'
-import { analyzeClaims, decodeJwt, JwtError, verifyJwt, type DecodedJwt } from './jwt'
+import { analyzeClaims, decodeJwt, JwtError, signJwt, verifyJwt, type DecodedJwt } from './jwt'
 
 const SAMPLE =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
@@ -21,6 +24,8 @@ const SAMPLE =
   '2uUbpZ2x-cfydShrzm9fw1-gAyk5kZ7ImgMEK2yX1G8'
 
 const LEVEL_TONES: Record<string, Tone> = { ok: 'ok', info: 'neutral', warning: 'warn', error: 'danger' }
+
+type SignAlg = 'HS256' | 'HS384' | 'HS512'
 
 const tool: Tool = {
   slug: 'jwt-decoder',
@@ -38,6 +43,29 @@ const tool: Tool = {
     const payload = outputBlock('', { label: 'Payload', copy: () => payload.body.textContent ?? '' })
     const verifyOut = el('div', { class: 'ts-k-actions' })
     let token = 0
+    let currentAlg: SignAlg = 'HS256'
+
+    const signPayload = textarea({
+      rows: 4,
+      value: '{\n  "sub": "1234567890",\n  "name": "Ada Lovelace",\n  "iat": 1700000000\n}',
+      placeholder: 'Payload as a JSON object…',
+    })
+    const signSecret = textField({ type: 'password', placeholder: 'Shared secret for HS256…' })
+    const algorithm = segmented({
+      label: 'Signing algorithm',
+      value: 'HS256',
+      items: [
+        { value: 'HS256', label: 'HS256' },
+        { value: 'HS384', label: 'HS384' },
+        { value: 'HS512', label: 'HS512' },
+      ],
+      onChange: (value) => {
+        currentAlg = value as SignAlg
+      },
+    })
+    const signError = note('', 'danger')
+    signError.hidden = true
+    const signed = outputBlock('', { label: 'Signed token', copy: () => signed.body.textContent ?? '' })
 
     async function decode() {
       const current = ++token
@@ -85,6 +113,44 @@ const tool: Tool = {
       }
     }
 
+    function signIt() {
+      signError.hidden = true
+      const raw = signPayload.value.trim()
+      if (!raw) {
+        signError.textContent = 'Enter the payload JSON to sign.'
+        signError.hidden = false
+        return
+      }
+      let parsed: Record<string, unknown>
+      try {
+        const value = JSON.parse(raw)
+        if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new Error('not an object')
+        parsed = value as Record<string, unknown>
+      } catch {
+        signError.textContent = 'The payload must be a JSON object, for example {"sub":"123"}.'
+        signError.hidden = false
+        return
+      }
+      if (!signSecret.value) {
+        signError.textContent = 'Enter the shared secret to sign with.'
+        signError.hidden = false
+        return
+      }
+      void (async () => {
+        const alg = currentAlg
+        try {
+          const jwt = await signJwt({ alg, typ: 'JWT' }, parsed, signSecret.value, alg)
+          if (alg !== currentAlg) return
+          signed.body.replaceChildren(jwt)
+          signed.setMeta(`${alg} · ${jwt.length} chars`)
+          verifyOut.replaceChildren(badge('Signed locally in your browser. The secret never left this page.', 'ok'))
+        } catch (err) {
+          signError.textContent = err instanceof Error ? err.message : 'Could not sign this payload.'
+          signError.hidden = false
+        }
+      })()
+    }
+
     root.append(
       toolLayout(
         { wide: true },
@@ -97,7 +163,15 @@ const tool: Tool = {
         ),
         panel({ title: 'Claims', icon: 'shield' }, claims),
         el('div', { class: 'ts-k-split' }, header, payload),
-        note('Decoding and verification happen in your browser. Your token and key are never uploaded.'),
+        panel(
+          { title: 'Sign a token', icon: 'wand' },
+          field(signPayload, { label: 'Payload (JSON)' }),
+          el('div', { class: 'ts-k-split' }, field(signSecret, { label: 'Shared secret (HS)' }), field(algorithm, { label: 'Algorithm' })),
+          signError,
+          actions(button('Sign token', { icon: 'sparkle', variant: 'primary', onClick: signIt })),
+          signed,
+        ),
+        note('Decoding, verification and signing all happen in your browser. Your token, payload and key are never uploaded.'),
       ),
     )
 
