@@ -1,4 +1,5 @@
 import { el } from '../../core/dom'
+import { panel, toolLayout } from '../../core/components'
 import type { Tool } from '../../core/types'
 import { flip, flipMany, longestStreak, tally, type Side } from './coin'
 
@@ -93,27 +94,36 @@ const tool: Tool = {
     })
 
     root.append(
-      el(
-        'div',
-        { class: 'ts-flip' },
-        el(
-          'p',
-          { class: 'ts-flip-hint' },
-          'Click Flip, or focus the button and press ',
-          el('kbd', { class: 'ts-flip-key' }, 'Space'),
-          '.',
+      toolLayout(
+        {},
+        panel(
+          { title: 'Toss', icon: 'refresh' },
+          el(
+            'div',
+            { class: 'ts-flip' },
+            el(
+              'p',
+              { class: 'ts-flip-hint' },
+              'Click Flip, or focus the button and press ',
+              el('kbd', { class: 'ts-flip-key' }, 'Space'),
+              '.',
+            ),
+            stage,
+            result,
+            el('div', { class: 'ts-flip-actions' }, flipBtn, el('div', { class: 'ts-flip-batchwrap' }, batchSize, batchBtn), reset),
+          ),
         ),
-        stage,
-        result,
-        el('div', { class: 'ts-flip-actions' }, flipBtn, el('div', { class: 'ts-flip-batchwrap' }, batchSize, batchBtn), reset),
-        el(
-          'div',
-          { class: 'ts-k-stats' },
-          el('div', { class: 'ts-k-stat' }, headsValue, el('span', { class: 'ts-k-stat__label' }, 'Heads')),
-          el('div', { class: 'ts-k-stat' }, tailsValue, el('span', { class: 'ts-k-stat__label' }, 'Tails')),
-          el('div', { class: 'ts-k-stat' }, streakValue, el('span', { class: 'ts-k-stat__label' }, 'Longest streak')),
+        panel(
+          { title: 'Totals' },
+          el(
+            'div',
+            { class: 'ts-k-stats' },
+            el('div', { class: 'ts-k-stat' }, headsValue, el('span', { class: 'ts-k-stat__label' }, 'Heads')),
+            el('div', { class: 'ts-k-stat' }, tailsValue, el('span', { class: 'ts-k-stat__label' }, 'Tails')),
+            el('div', { class: 'ts-k-stat' }, streakValue, el('span', { class: 'ts-k-stat__label' }, 'Longest streak')),
+          ),
+          recent,
         ),
-        recent,
       ),
     )
 

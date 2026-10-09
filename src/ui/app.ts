@@ -303,9 +303,7 @@ function sectionHead(title: string, meta: string, tint?: number): HTMLElement {
   )
 }
 
-/** Families at or above this size get the bento treatment; the rest get rows. */
-const BIG_FAMILY = 8
-
+/** Families all get the bento; the lead tool in each takes the feature tile. */
 function home(): HTMLElement {
   const results = el('section', { class: 'ts-section' })
 
@@ -320,20 +318,39 @@ function home(): HTMLElement {
   const catBar = el('div', { class: 'ts-cat-bar', role: 'group', 'aria-label': 'Filter by category' })
   let category = ''
 
-  /** The no-query view: big families as a bento, the long tail as dense rows. */
+  /** The no-query view: every family as a bento, then a dense index of all. */
   function familySections(): HTMLElement[] {
     return visibleCategories().map((name) => {
       const group = visibleTools().filter((tool) => tool.category === name)
-      const big = group.length >= BIG_FAMILY
       return el(
         'div',
-        { class: `ts-section ts-family ts-reveal${big ? ' is-feature' : ' is-dense'}` },
+        { class: 'ts-section ts-family ts-reveal is-feature' },
         sectionHead(name, `${group.length}`, categoryHue(name)),
-        big
-          ? el('div', { class: 'ts-bento' }, ...group.map((tool, i) => toolCard(tool, i === 0)))
-          : el('div', { class: 'ts-row-grid' }, ...group.map(toolRow)),
+        el('div', { class: 'ts-bento' }, ...group.map((tool, i) => toolCard(tool, i === 0))),
       )
     })
+  }
+
+  /**
+   * The full catalogue as dense rows, folded away by default. The list is the
+   * one place the row format earns its keep — it is an index, not a feature
+   * wall. Rows are not reveal-animated: they start inside a closed <details>,
+   * where the observer cannot measure them.
+   */
+  function allToolsIndex(): HTMLElement {
+    const all = [...visibleTools()].sort((a, b) => a.name.localeCompare(b.name))
+    return el(
+      'details',
+      { class: 'ts-all' },
+      el(
+        'summary',
+        { class: 'ts-all__summary' },
+        el('span', { class: 'ts-section-mark', 'aria-hidden': 'true' }),
+        el('span', { class: 'ts-all__title' }, 'All tools'),
+        el('span', { class: 'ts-section-meta' }, `${all.length} A–Z`),
+      ),
+      el('div', { class: 'ts-row-grid' }, ...all.map(toolRow)),
+    )
   }
 
   function renderGrid() {
@@ -353,6 +370,7 @@ function home(): HTMLElement {
       return
     }
     results.append(...familySections())
+    results.append(allToolsIndex())
   }
 
   function renderChips() {
