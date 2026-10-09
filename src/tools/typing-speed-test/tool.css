@@ -1,0 +1,105 @@
+/* Typing Speed Test. The text block is the interface; the settings are a thin
+   strip above it and the numbers only appear once you have stopped. */
+
+.ts-type-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  padding: 0 4px 12px;
+}
+.ts-type-group { display: flex; align-items: center; gap: 3px; }
+.ts-type-group__label {
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+  margin-right: 4px;
+}
+.ts-type-chip {
+  font: inherit;
+  font-size: var(--text-sm);
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--faint);
+  cursor: pointer;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+.ts-type-chip:hover { color: var(--fg); background: var(--bg-soft); }
+.ts-type-chip.is-active { color: hsl(var(--h, 48) 85% 62%); background: hsl(var(--h, 48) 85% 55% / 0.1); }
+
+.ts-type-timer {
+  padding: 0 4px 10px;
+  font-family: var(--mono);
+  font-size: var(--text-sm);
+  color: hsl(var(--h, 48) 80% 60%);
+  min-height: 1.2em;
+}
+
+.ts-type-stage {
+  position: relative;
+  padding: 18px 6px 26px;
+  cursor: text;
+}
+
+.ts-type-text {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  font-family: var(--mono);
+  font-size: clamp(19px, 2.4vw, 26px);
+  line-height: 1.65;
+  color: var(--faint);
+  user-select: none;
+}
+.ts-type-char { position: relative; transition: color 0.06s ease; }
+.ts-type-char.is-rest { color: var(--faint); }
+.ts-type-char.is-ok { color: var(--fg); }
+.ts-type-char.is-bad {
+  color: #f2707a;
+  text-decoration: underline;
+  text-decoration-color: rgb(242 112 122 / 0.6);
+  text-underline-offset: 4px;
+}
+.ts-type-char.is-current { color: var(--fg); }
+
+.ts-type-caret {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  background: hsl(var(--h, 48) 88% 60%);
+  border-radius: 1px;
+  display: none;
+  will-change: transform;
+  transition: transform 0.08s ease;
+}
+.ts-type-caret::after {
+  content: '';
+  position: absolute;
+  inset: -2px -3px;
+  box-shadow: 0 0 14px hsl(var(--h, 48) 88% 55% / 0.5);
+  border-radius: 3px;
+}
+
+/* A real input, but visually silent: the caret and the coloured characters are
+   the feedback, and a visible box would break the illusion. It stays in the
+   tab order and reachable by keyboard, which is what matters for a11y. */
+.ts-type-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+  left: -9999px;
+}
+
+.ts-type-results { display: flex; flex-direction: column; gap: 12px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ts-type-caret { transition: none; }
+  .ts-type-char { transition: none; }
+}

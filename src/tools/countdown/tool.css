@@ -1,0 +1,66 @@
+/* Countdown Timer. A ring around the readout gives the one number a body,
+   which reads better at a glance than a bare string of digits. */
+
+.ts-cd-face {
+  display: grid;
+  place-items: center;
+  padding: 10px 0 4px;
+}
+
+.ts-cd-readout {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.ts-cd-clock {
+  font-family: var(--display, var(--mono));
+  font-size: clamp(44px, 11vw, 72px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.2s ease;
+}
+.ts-cd-clock.is-low { color: hsl(var(--h, 48) 85% 62%); }
+.ts-cd-clock.is-done { color: hsl(var(--h, 48) 85% 62%); animation: ts-cd-pulse 0.7s ease infinite alternate; }
+@keyframes ts-cd-pulse { to { opacity: 0.55; } }
+
+.ts-cd-human { color: var(--faint); font-size: var(--text-sm); font-family: var(--mono); }
+
+.ts-cd-ring {
+  grid-area: 1 / 1;
+  --ts-cd-progress: 0%;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: conic-gradient(
+    hsl(var(--h, 48) 88% 60%) var(--ts-cd-progress),
+    var(--border) var(--ts-cd-progress)
+  );
+  mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+  transition: background 0.3s linear;
+}
+
+.ts-cd-add { display: flex; gap: 8px; flex-wrap: wrap; }
+.ts-cd-status {
+  margin: 0;
+  color: var(--faint);
+  font-size: var(--text-sm);
+}
+.ts-cd-status[data-tone='run'] { color: var(--muted); }
+.ts-cd-status[data-tone='done'] { color: hsl(var(--h, 48) 85% 62%); font-weight: 600; }
+
+.ts-cd-chime { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: var(--text-base); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ts-cd-clock.is-done { animation: none; }
+  .ts-cd-ring { transition: none; }
+}
+
+@media (max-width: 420px) {
+  .ts-cd-ring { width: 180px; height: 180px; }
+}
