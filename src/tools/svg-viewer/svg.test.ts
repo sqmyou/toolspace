@@ -4,6 +4,7 @@ import {
   formatBytes,
   inspectSvg,
   looksLikeSvg,
+  optimizeSvg,
   parseLength,
   parseViewBox,
   sanitizeSvg,
@@ -171,5 +172,69 @@ describe('formatBytes', () => {
     expect(formatBytes(512)).toBe('512 B')
     expect(formatBytes(2048)).toBe('2.0 KB')
     expect(formatBytes(2 * 1024 * 1024)).toBe('2.00 MB')
+  })
+})
+
+describe('optimizeSvg', () => {
+  const pretty = `<?xml version="1.0" encoding="UTF-8"?>
+<!-- a comment -->
+<svg xmlns="http://www.w3.org/2000/svg"  width="120"   height="80" >
+  <metadata>author: nobody</metadata>
+  <rect  x="0"  y="0"   width="120" height="80" fill="#3366ff" />
+  <text x="5" y="20">  keep   this spacing  </text>
+</svg>
+`
+
+  it('shrinks the output', () => {
+    const result = optimizeSvg(pretty)
+    expect(result.after).toBeLessThan(result.before)
+  })
+
+  it('removes the declaration, comments and metadata', () => {
+    const { markup } = optimizeSvg(pretty)
+    expect(markup).not.toContain('<?xml')
+    expect(markup).not.toContain('a comment')
+    expect(markup).not.toContain('<metadata')
+  })
+
+  it('keeps the whitespace inside <text>', () => {
+    expect(optimizeSvg(pretty).markup).toContain('  keep   this spacing  ')
+  })
+
+  it('tidies attribute spacing without touching values', () => {
+    const { markup } = optimizeSvg(pretty)
+    expect(markup).toContain('width="120"')
+    expect(markup).not.toMatch(/width\s+="/)
+  })
+
+  it('leaves a data URI in an attribute untouched', () => {
+    const source = '<svg><image href="data:image/png;base64,AAA  BBB"/></svg>'
+    expect(optimizeSvg(source).markup).toContain('data:image/png;base64,AAA  BBB')
+  })
+
+  it('reports what it did', () => {
+    const steps = optimizeSvg(pretty).steps.join(' | ')
+    expect(steps).toMatch(/comment/)
+    expect(steps).toMatch(/metadata/)
+    expect(steps).toMatch(/XML declaration/)
+  })
+
+  it('is idempotent', () => {
+    const once = optimizeSvg(pretty).markup
+    expect(optimizeSvg(once).markup).toBe(once)
+  })
+
+  it('leaves an already-minimal document alone', () => {
+    const already = '<svg xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1"/></svg>'
+    expect(optimizeSvg(already).markup).toBe(already)
+  })
+
+  it('keeps a style element and its contents', () => {
+    const source = '<svg><style>.a{fill:red}</style><rect class="a"/></svg>'
+    expect(optimizeSvg(source).markup).toContain('.a{fill:red}')
+  })
+
+  it('drops whitespace between elements in the sample', () => {
+    expect(optimizeSvg(pretty).markup).not.toMatch(/\n\s*<rect/)
   })
 })

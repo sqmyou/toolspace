@@ -178,3 +178,169 @@ export function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
 }
+
+/* -------------------------------------------------------------------------- */
+/* Optimiser                                                                   */
+/* -------------------------------------------------------------------------- */
+
+/** Elements whose text content is significant and must not be reflowed. */
+const PRE_CONTENT = new Set([
+  'text',
+  'tspan',
+  'textpath',
+  'altglyph',
+  'title',
+  'desc',
+  'style',
+  'script',
+  'foreignobject',
+])
+
+export interface OptimizeResult {
+  markup: string
+  before: number
+  after: number
+  /** Human-readable notes for the changes that were actually made. */
+  steps: string[]
+}
+
+function bytes(text: string): number {
+  return new TextEncoder().encode(text).length
+}
+
+/** Collapse whitespace and drop space around `=` and `>`, honouring quotes. */
+function tidyTag(tag: string): string {
+  let out = ''
+  let quote = ''
+  for (let i = 0; i < tag.length; i++) {
+    const char = tag[i]
+    if (quote) {
+      out += char
+      if (char === quote) quote = ''
+      continue
+    }
+    if (char === '"' || char === "'") {
+      quote = char
+      out += char
+      continue
+    }
+    if (char === '=') {
+      out = `${out.replace(/\s+$/, '')}=`
+      while (/\s/.test(tag[i + 1] ?? '')) i += 1
+      continue
+    }
+    if (/\s/.test(char)) {
+      if (out !== '' && !/\s$/.test(out)) out += ' '
+      continue
+    }
+    out += char
+  }
+  return out.replace(/\s+>/g, '>').replace(/<\s+/g, '<')
+}
+
+/**
+ * Shrink SVG markup without changing how it renders.
+ *
+ * The only edits are ones that cannot affect output: comments, the XML
+ * declaration, `<metadata>` blocks and redundant whitespace. Whitespace between
+ * elements is dropped, but never inside an element whose text is meaningful
+ * (`<text>`, `<title>`, `<style>`, and friends), and never inside a quoted
+ * attribute value.
+ */
+export function optimizeSvg(source: string): OptimizeResult {
+  const before = bytes(source)
+  const steps: string[] = []
+  let markup = source
+
+  const metadata = markup.match(/<metadata\b[\s\S]*?<\/metadata\s*>/gi)
+  if (metadata) {
+    markup = markup.replace(/<metadata\b[\s\S]*?<\/metadata\s*>/gi, '')
+    steps.push(`removed ${metadata.length} <metadata> block${metadata.length === 1 ? '' : 's'}`)
+  }
+
+  let out = ''
+  let i = 0
+  let comments = 0
+  let declarations = 0
+  let tidied = false
+  let collapsedBetweenTags = false
+  const stack: string[] = []
+
+  while (i < markup.length) {
+    if (markup[i] === '<') {
+      if (markup.startsWith('<!--', i)) {
+        const end = markup.indexOf('-->', i + 4)
+        i = end === -1 ? markup.length : end + 3
+        comments += 1
+        continue
+      }
+      if (markup.startsWith('<?', i)) {
+        const end = markup.indexOf('?>', i + 2)
+        i = end === -1 ? markup.length : end + 2
+        declarations += 1
+        continue
+      }
+      if (markup.startsWith('<![CDATA[', i)) {
+        const end = markup.indexOf(']]>', i + 9)
+        const stop = end === -1 ? markup.length : end + 3
+        out += markup.slice(i, stop)
+        i = stop
+        continue
+      }
+      if (markup.startsWith('<!', i)) {
+        const end = markup.indexOf('>', i + 2)
+        i = end === -1 ? markup.length : end + 1
+        declarations += 1
+        continue
+      }
+
+      let j = i + 1
+      let quote = ''
+      while (j < markup.length) {
+        const char = markup[j]
+        if (quote) {
+          if (char === quote) quote = ''
+        } else if (char === '"' || char === "'") {
+          quote = char
+        } else if (char === '>') {
+          j += 1
+          break
+        }
+        j += 1
+      }
+
+      const rawTag = markup.slice(i, j)
+      i = j
+      const name = /^<\s*\/?\s*([A-Za-z][\w:.-]*)/.exec(rawTag)?.[1]?.toLowerCase() ?? ''
+      const closing = /^<\s*\//.test(rawTag)
+      const selfClosing = /\/\s*>$/.test(rawTag)
+      if (closing) {
+        const at = stack.lastIndexOf(name)
+        if (at !== -1) stack.splice(at)
+      } else if (name && !selfClosing) {
+        stack.push(name)
+      }
+      const tidiedTag = tidyTag(rawTag)
+      if (tidiedTag !== rawTag) tidied = true
+      out += tidiedTag
+      continue
+    }
+
+    const next = markup.indexOf('<', i)
+    const text = next === -1 ? markup.slice(i) : markup.slice(i, next)
+    i = next === -1 ? markup.length : next
+    const inPreformatted = stack.some((entry) => PRE_CONTENT.has(entry))
+    if (inPreformatted || text.trim() !== '') {
+      out += text
+    } else if (text !== '') {
+      collapsedBetweenTags = true
+    }
+  }
+
+  if (comments) steps.push(`removed ${comments} comment${comments === 1 ? '' : 's'}`)
+  if (declarations) steps.push('removed the XML declaration')
+  if (collapsedBetweenTags) steps.push('collapsed whitespace between elements')
+  if (tidied) steps.push('tidied attribute spacing')
+
+  return { markup: out, before, after: bytes(out), steps }
+}

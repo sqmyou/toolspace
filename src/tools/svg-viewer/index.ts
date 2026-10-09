@@ -1,6 +1,7 @@
 import {
   actions,
   button,
+  checkbox,
   copyRow,
   mediaFrame,
   note,
@@ -12,7 +13,7 @@ import {
 } from '../../core/components'
 import { download, readFileAsText } from '../../core/ui'
 import type { Tool } from '../../core/types'
-import { formatBytes, inspectSvg, looksLikeSvg, sanitizeSvg, svgCssUrl, svgDataUri } from './svg'
+import { formatBytes, inspectSvg, looksLikeSvg, optimizeSvg, sanitizeSvg, svgCssUrl, svgDataUri } from './svg'
 
 const SAMPLE = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
   <defs>
@@ -35,6 +36,7 @@ const tool: Tool = {
   keywords: ['svg', 'vector', 'view', 'preview', 'sanitize', 'clean', 'data uri', 'css', 'icon', 'image'],
   render(root) {
     let raw = SAMPLE
+    let optimize = false
 
     const frame = mediaFrame({ alt: 'SVG preview', checker: true, maxHeight: 300 })
     const warning = note('', 'warn')
@@ -45,6 +47,8 @@ const tool: Tool = {
     const statsStrip = stats()
     const tagLine = document.createElement('p')
     tagLine.className = 'ts-k-hint'
+    const optimizeLine = document.createElement('p')
+    optimizeLine.className = 'ts-k-hint'
     const colors = document.createElement('div')
     colors.className = 'ts-k-colors'
     const useRows = document.createElement('div')
@@ -52,11 +56,19 @@ const tool: Tool = {
 
     const editor = textarea({ rows: 10, value: raw })
 
+    /** The markup the tool hands out: sanitised, and optionally optimised. */
+    function emittedMarkup(): string {
+      const clean = sanitizeSvg(raw).markup
+      return optimize ? optimizeSvg(clean).markup : clean
+    }
+
     function renderOutputs() {
       const clean = sanitizeSvg(raw)
       const info = inspectSvg(raw)
+      const optimized = optimize ? optimizeSvg(clean.markup) : null
+      const emitted = emittedMarkup()
 
-      frame.image.src = svgDataUri(clean.markup)
+      frame.image.src = svgDataUri(emitted)
       status.textContent = `${info.width ?? '—'} × ${info.height ?? '—'}${info.width ? info.units : ''} · ${
         info.viewBox ? `viewBox ${info.viewBox.width}×${info.viewBox.height}` : 'no viewBox'
       } · ${info.elementCount} elements · ${formatBytes(info.sizeBytes)}`
@@ -93,9 +105,20 @@ const tool: Tool = {
       )
 
       useRows.replaceChildren(
-        copyRow('Data URI', svgDataUri(clean.markup)),
-        copyRow('CSS', svgCssUrl(clean.markup)),
+        copyRow('Data URI', svgDataUri(emitted)),
+        copyRow('CSS', svgCssUrl(emitted)),
       )
+
+      if (optimized) {
+        const saved = optimized.before - optimized.after
+        const percent = optimized.before === 0 ? 0 : Math.round((saved / optimized.before) * 100)
+        const detail = optimized.steps.length ? ` — ${optimized.steps.join(', ')}` : ' — nothing left to remove'
+        optimizeLine.textContent = `Optimised ${formatBytes(optimized.before)} → ${formatBytes(
+          optimized.after,
+        )} (${percent}% smaller)${detail}.`
+      } else {
+        optimizeLine.textContent = 'Turn on “Optimise output” to strip comments, metadata and spare whitespace.'
+      }
     }
 
     function colorChip(color: string): HTMLElement {
@@ -140,6 +163,16 @@ const tool: Tool = {
       renderOutputs()
     }
 
+    const optimizeToggle = checkbox({
+      label: 'Optimise output',
+      hint: 'Strip comments, metadata and spare whitespace',
+      checked: false,
+      onChange: (checked) => {
+        optimize = checked
+        renderOutputs()
+      },
+    })
+
     root.append(
       toolLayout(
         { wide: true },
@@ -155,14 +188,16 @@ const tool: Tool = {
           { title: 'Preview', icon: 'eye' },
           frame.root,
           status,
+          optimizeToggle,
+          optimizeLine,
           actions(
             button('Download cleaned SVG', {
               icon: 'download',
-              onClick: () => download('cleaned.svg', sanitizeSvg(raw).markup, 'image/svg+xml'),
+              onClick: () => download('cleaned.svg', emittedMarkup(), 'image/svg+xml'),
             }),
             button('Download data URI', {
               icon: 'download',
-              onClick: () => download('svg-data-uri.txt', svgDataUri(sanitizeSvg(raw).markup), 'text/plain'),
+              onClick: () => download('svg-data-uri.txt', svgDataUri(emittedMarkup()), 'text/plain'),
             }),
           ),
         ),
