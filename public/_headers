@@ -1,5 +1,5 @@
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://i.ytimg.com; font-src 'self'; connect-src 'self' https://i.ytimg.com; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://i.ytimg.com; media-src 'self' blob:; font-src 'self'; connect-src 'self' https://i.ytimg.com; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
   Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=(), usb=()
@@ -8,6 +8,11 @@
 # an object URL to an <img>. Without it the browser refuses the load and every
 # upload looks like a corrupt file. blob: is same-origin, in-memory and never
 # leaves the tab, so this does not weaken the privacy promise.
+#
+# media-src allows blob: for the same reason: the GIF Maker decodes a chosen
+# video through an object URL on a <video>. media-src is not covered by
+# default-src in the directive list above, so without this the element has no
+# permitted source at all. Same in-tab object URL, never a remote fetch.
 
 # i.ytimg.com is the single third-party origin toolspace is allowed to talk to,
 # and only for the YouTube thumbnail grabber. The app is a hash-routed SPA, so
