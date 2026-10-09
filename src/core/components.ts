@@ -568,6 +568,8 @@ export interface OutputBlock extends HTMLElement {
   setValue: (value: string | Node) => void
   /** Change the head label, e.g. to report a live status. */
   setLabel: (label: string) => void
+  /** Read back the current head label text. */
+  getLabel: () => string
   /** Change the head meta text. */
   setMeta: (text: string) => void
 }
@@ -592,6 +594,7 @@ export function outputBlock(value: string | Node, options: OutputOptions = {}): 
     setLabel: (text: string) => {
       label.textContent = text
     },
+    getLabel: () => label.textContent ?? '',
     setMeta,
   })
 }

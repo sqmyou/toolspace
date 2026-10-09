@@ -8,6 +8,9 @@ export function detectDelimiter(input: string): Delimiter {
   let best: Delimiter = ','
   let bestScore = -1
   for (const delimiter of candidates) {
+    // A delimiter that never appears still "parses" as one wide column, which
+    // would outscore a real comma file that merely has a ragged row. Skip it.
+    if (!sample.includes(delimiter)) continue
     const rows = parseCsv(sample, delimiter)
     if (rows.length === 0) continue
     const widths = rows.map((row) => row.length)
@@ -140,4 +143,82 @@ export function jsonToCsv(input: string, delimiter: Delimiter = ','): { csv: str
     lines.push(headers.map((header) => quote(cellToString(item?.[header]), delimiter)).join(delimiter))
   }
   return { csv: lines.join('\n') }
+}
+
+/* -------------------------------------------------------------------------
+   CSV <-> Markdown table
+   ------------------------------------------------------------------------- */
+
+/** Escape the characters that would break a Markdown table cell. */
+function mdCell(value: string): string {
+  return value.replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>')
+}
+
+export interface CsvToMarkdownOptions {
+  delimiter?: Delimiter
+  hasHeader?: boolean
+}
+
+/** Render CSV (or TSV) as a Markdown table. */
+export function csvToMarkdown(input: string, options: CsvToMarkdownOptions = {}): string {
+  const delimiter = options.delimiter ?? detectDelimiter(input)
+  const rows = parseCsv(input, delimiter)
+  if (rows.length === 0) return ''
+
+  const hasHeader = options.hasHeader ?? true
+  const width = Math.max(...rows.map((row) => row.length))
+  const heading = hasHeader ? rows[0] : Array.from({ length: width }, (_, i) => `Column ${i + 1}`)
+  const body = hasHeader ? rows.slice(1) : rows
+
+  const line = (cells: string[]) => `| ${Array.from({ length: width }, (_, i) => mdCell(cells[i] ?? '')).join(' | ')} |`
+  const separator = `| ${Array.from({ length: width }, () => '---').join(' | ')} |`
+
+  return [line(heading), separator, ...body.map(line)].join('\n')
+}
+
+/** Split a Markdown table row on unescaped pipes. */
+function splitMarkdownRow(row: string): string[] {
+  let text = row.trim()
+  if (text.startsWith('|')) text = text.slice(1)
+  if (text.endsWith('|')) text = text.slice(0, -1)
+
+  const cells: string[] = []
+  let current = ''
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]
+    if (char === '\\' && text[i + 1] === '|') {
+      current += '|'
+      i++
+    } else if (char === '|') {
+      cells.push(current.trim())
+      current = ''
+    } else {
+      current += char
+    }
+  }
+  cells.push(current.trim())
+  return cells
+}
+
+export interface MarkdownToCsvResult {
+  csv: string
+  error?: string
+}
+
+/** Convert a Markdown table back to CSV. */
+export function markdownToCsv(input: string, delimiter: Delimiter = ','): MarkdownToCsvResult {
+  const lines = input
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith('|') || line.endsWith('|'))
+  if (lines.length === 0) return { csv: '', error: 'No Markdown table rows found (a row starts or ends with "|").' }
+
+  const isSeparator = (row: string) => row.split('|').every((cell) => /^[\s:=-]*$/.test(cell))
+  const rows = lines.map(splitMarkdownRow).filter((_, index) => !(index === 1 && isSeparator(lines[index])))
+  if (rows.length === 0) return { csv: '', error: 'The table has no rows.' }
+
+  const csv = rows
+    .map((cells) => cells.map((cell) => quote(cell.replace(/<br\s*\/?>/gi, '\n'), delimiter)).join(delimiter))
+    .join('\n')
+  return { csv }
 }

@@ -1,8 +1,10 @@
 import {
   actions,
   button,
+  copyRow,
   download,
   field,
+  kvList,
   note,
   outputBlock,
   panel,
@@ -12,7 +14,7 @@ import {
 } from '../../core/components'
 import { el } from '../../core/dom'
 import type { Tool } from '../../core/types'
-import { generateMany, type IdFormat } from './id'
+import { generateMany, parseUuid, type IdFormat } from './id'
 
 const FORMATS: { value: IdFormat; label: string; hint: string }[] = [
   { value: 'uuid-v4', label: 'UUID v4', hint: 'Random 128-bit identifier' },
@@ -26,9 +28,9 @@ const FORMATS: { value: IdFormat; label: string; hint: string }[] = [
 const tool: Tool = {
   slug: 'id-generator',
   name: 'ID Generator',
-  description: 'Generate UUIDs, ULIDs, Nano IDs, hex ids and ObjectIds.',
+  description: 'Generate UUIDs, ULIDs, Nano IDs, hex ids and ObjectIds, and validate a UUID.',
   category: 'Data',
-  keywords: ['uuid', 'v4', 'v7', 'ulid', 'nanoid', 'objectid', 'guid', 'identifier'],
+  keywords: ['uuid', 'v4', 'v7', 'ulid', 'nanoid', 'objectid', 'guid', 'identifier', 'validate', 'validate uuid'],
   render(root) {
     let format: IdFormat = 'uuid-v4'
     const count = textField({ type: 'number', value: '5', mono: true, onInput: () => run() })
@@ -59,6 +61,29 @@ const tool: Tool = {
       }
     }
 
+    const checkInput = textField({ placeholder: 'Paste a UUID to validate…', mono: true, onInput: () => check() })
+    const checkError = note('', 'danger')
+    checkError.hidden = true
+    const checkRows = kvList()
+
+    function check() {
+      const result = parseUuid(checkInput.value)
+      if (!result.valid) {
+        checkRows.replaceChildren()
+        checkError.textContent = result.error ?? 'Not a UUID.'
+        checkError.hidden = false
+        return
+      }
+      checkError.hidden = true
+      const rows = [
+        copyRow('Canonical', result.canonical),
+        copyRow('Variant', result.variant ?? 'Unknown', { copy: false }),
+      ]
+      if (result.version != null) rows.push(copyRow('Version', String(result.version), { copy: false }))
+      if (result.timestamp) rows.push(copyRow('Embedded time', result.timestamp.toISOString()))
+      checkRows.replaceChildren(...rows)
+    }
+
     root.append(
       toolLayout(
         { wide: true },
@@ -77,10 +102,17 @@ const tool: Tool = {
           icon: 'download',
           onClick: () => download('ids.txt', list.body.textContent ?? ''),
         })),
+        panel(
+          { title: 'Validate a UUID', icon: 'check' },
+          field(checkInput, { label: 'UUID', hint: 'Braces, a urn:uuid: prefix, upper case and the unhyphenated 32-character form all work.' }),
+          checkError,
+          checkRows,
+        ),
               ),
     )
 
     run()
+    check()
   },
 }
 
