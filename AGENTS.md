@@ -69,6 +69,20 @@ picker in `src/ui/app.ts` is only paint; it never touches storage directly.
 `public/theme-init.js` mirrors the accent maths so the colour lands before the
 bundle paints — if you change the storage shape, change both.
 
+## Settings
+
+`src/core/settings.ts` is the single typed blob (`toolspace:settings`) behind
+the Settings page; `src/ui/settings.ts` is a view over it. Anything user-facing
+that persists goes here rather than in a new localStorage key.
+
+The search shortcut is the one setting with its own logic. It is stored as
+canonical tokens (`['mod','k']`, where `mod` is Cmd-or-Ctrl) and
+`src/core/shortcut.ts` owns parsing, matching and display. The shell matches the
+chord in `app.ts`, and repaints the header `<kbd>` from the same tokens, so the
+label cannot drift from the binding. The capture control arms a document-level
+`keydown` listener — a button-scoped one would swallow nothing on Safari, which
+does not focus a button on click.
+
 ## Commands
 
 ```

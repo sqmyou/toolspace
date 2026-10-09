@@ -78,15 +78,6 @@
 .ts-chart-slice { stroke: var(--bg); stroke-width: 1.5; }
 .ts-chart-pielabel { fill: var(--fg); font-size: 11px; font-weight: 600; }
 
-.ts-chart-swatch--0 { background: #5b8def; }
-.ts-chart-swatch--1 { background: #f2707a; }
-.ts-chart-swatch--2 { background: #3ddc97; }
-.ts-chart-swatch--3 { background: #e6b450; }
-.ts-chart-swatch--4 { background: #b07cf0; }
-.ts-chart-swatch--5 { background: #2ec5d3; }
-.ts-chart-swatch--6 { background: #ef8f5a; }
-.ts-chart-swatch--7 { background: #8fb339; }
-
 .ts-chart-legend {
   display: flex;
   flex-wrap: wrap;
@@ -108,3 +99,34 @@
   border-radius: 3px;
   display: inline-block;
 }
+
+.ts-chart-colors {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px 14px;
+}
+.ts-chart-colorrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  color: var(--muted);
+  min-width: 0;
+}
+.ts-chart-colorrow > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ts-chart-color {
+  flex: none;
+  width: 34px;
+  height: 24px;
+  padding: 1px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+  cursor: pointer;
+}
+.ts-chart-colorfoot { display: flex; justify-content: flex-end; margin-top: 8px; }
+.ts-chart-colorfoot:has(> .ts-chart-resetcolors[hidden]) { display: none; }

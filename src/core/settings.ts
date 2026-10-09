@@ -10,6 +10,8 @@
  * attributes; the stylesheet does the rest. That keeps the DOM work in one
  * place and means the view never has to know how a setting is honoured.
  */
+import { DEFAULT_SHORTCUT, isValidShortcut } from './shortcut'
+
 const KEY = 'toolspace:settings'
 
 export interface Settings {
@@ -29,6 +31,8 @@ export interface Settings {
   autoCopy: boolean
   /** Remember the tools you opened, and show them on the home page. */
   recents: boolean
+  /** The chord that opens the tool search, as canonical tokens. */
+  searchShortcut: string[]
 }
 
 export const DEFAULTS: Settings = {
@@ -40,6 +44,7 @@ export const DEFAULTS: Settings = {
   showStats: true,
   autoCopy: false,
   recents: true,
+  searchShortcut: [...DEFAULT_SHORTCUT],
 }
 
 /** The options offered for each enumerated setting, in display order. */
@@ -82,6 +87,9 @@ function coerce(raw: unknown): Settings {
     value.contentWidth === 'wide'
   ) {
     out.contentWidth = value.contentWidth
+  }
+  if (Array.isArray(value.searchShortcut) && value.searchShortcut.every((token) => typeof token === 'string') && isValidShortcut(value.searchShortcut)) {
+    out.searchShortcut = [...value.searchShortcut]
   }
   return out
 }
@@ -126,6 +134,11 @@ export function resetSettings(): void {
 /** Whether tools that use the network are available. Defaults true. */
 export function networkEnabled(): boolean {
   return settings().networkTools
+}
+
+/** The chord that opens the tool search, as canonical tokens. */
+export function searchShortcut(): string[] {
+  return settings().searchShortcut
 }
 
 export function setNetworkEnabled(enabled: boolean): void {

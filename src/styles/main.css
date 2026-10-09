@@ -2077,6 +2077,29 @@ input[type="range"] { accent-color: var(--accent-strong); width: 100%; }
 .ts-set-color__controls { display: flex; align-items: center; gap: 6px; }
 .ts-set-hex { width: 8ch; }
 
+.ts-set-shortcut-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.ts-set-shortcut {
+  font: inherit;
+  font-family: var(--mono);
+  font-size: var(--text-sm);
+  min-width: 7ch;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+  color: var(--fg);
+  cursor: pointer;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.ts-set-shortcut:hover { border-color: var(--border-strong); }
+.ts-set-shortcut.is-capturing {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  color: var(--accent);
+}
+.ts-set-shortcut__hint { font-size: var(--text-2xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--faint); }
+.ts-set-shortcut__hint.is-capturing { color: var(--accent); }
+
 .ts-set-advanced { grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 12px; }
 .ts-set-advanced summary { cursor: pointer; font-size: var(--text-sm); color: var(--muted); }
 .ts-set-advanced summary:hover { color: var(--fg); }

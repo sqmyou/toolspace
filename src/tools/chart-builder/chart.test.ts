@@ -10,6 +10,7 @@ import {
   niceFloor,
   parseGrid,
   pieSlices,
+  PALETTE,
   renderChart,
   sniffDelimiter,
   splitLine,
@@ -219,5 +220,25 @@ describe('renderChart', () => {
   it('omits gridlines when the grid is off', () => {
     const svg = renderChart(data, { type: 'line', title: '', showLegend: true, showGrid: false })
     expect(svg).not.toContain('ts-chart-grid')
+  })
+
+  it('uses a custom colour for a series', () => {
+    const svg = renderChart(data, { type: 'line', title: '', showLegend: true, showGrid: true, colors: ['#123456'] })
+    expect(svg).toContain('#123456')
+    expect(svg).not.toContain(PALETTE[0])
+  })
+
+  it('falls back to the palette when an override is null or invalid', () => {
+    const svg = renderChart(data, { type: 'bar', title: '', showLegend: true, showGrid: true, colors: [null] })
+    expect(svg).toContain(PALETTE[0])
+    const bad = renderChart(data, { type: 'bar', title: '', showLegend: true, showGrid: true, colors: ['red; background:url(x)'] })
+    expect(bad).toContain(PALETTE[0])
+    expect(bad).not.toContain('url(')
+  })
+
+  it('colours pie slices from the override index', () => {
+    const svg = renderChart(data, { type: 'pie', title: '', showLegend: true, showGrid: false, colors: [null, '#000000'] })
+    expect(svg).toContain('#000000')
+    expect(svg).toContain(PALETTE[0])
   })
 })

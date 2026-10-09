@@ -1,7 +1,8 @@
 import { clear, el } from '../core/dom'
 import { favourites, onFavouritesChange } from '../core/favourites'
 import { clearRecents, onRecentsChange, recents } from '../core/recents'
-import { CHOICES, resetSettings, setSetting, settings } from '../core/settings'
+import { CHOICES, resetSettings, searchShortcut, setSetting, settings } from '../core/settings'
+import { DEFAULT_SHORTCUT, chordFromEvent, formatShortcut, tokensFromChord } from '../core/shortcut'
 import {
   PRESETS,
   activeTheme,
@@ -200,6 +201,11 @@ export function settingsPage(): HTMLElement {
           'Recently opened',
           'Keep a short list of the tools you open and show it on the home page.',
           switchControl('Recently opened', prefs.recents, (on) => setSetting('recents', on)),
+        ),
+        row(
+          'Search shortcut',
+          'The keyboard chord that opens tool search. Press it, or Reset for the default.',
+          shortcutControl(),
         ),
         row(
           'Motion',
@@ -482,4 +488,101 @@ function segmentedControl<K extends 'density' | 'motion' | 'contentWidth'>(
       ),
     ),
   )
+}
+
+/**
+ * The search-shortcut picker: a focusable button that captures the next chord
+ * the user presses. Escape cancels, Backspace clears. The stored value is the
+ * canonical token list, so the app and this control always agree.
+ */
+function shortcutControl(): HTMLElement {
+  const apple = /Mac|iPhone|iPad/.test(navigator.platform ?? '')
+  let capture = false
+
+  const display = el('span', { class: 'ts-set-shortcut__chord' }, '')
+  const button = el(
+    'button',
+    { type: 'button', class: 'ts-set-shortcut', 'aria-label': 'Change search shortcut' },
+    display,
+  )
+  const hint = el('span', { class: 'ts-set-shortcut__hint' })
+
+  function paint() {
+    display.textContent = formatShortcut(searchShortcut(), apple)
+    button.classList.toggle('is-capturing', capture)
+    button.setAttribute('aria-label', capture ? 'Press a key combination' : `Search shortcut: ${formatShortcut(searchShortcut(), apple)}`)
+    hint.textContent = capture ? 'Press a chord… Esc to cancel' : 'Click, then press the keys'
+    hint.classList.toggle('is-capturing', capture)
+  }
+
+  function stop() {
+    capture = false
+    document.removeEventListener('keydown', onCapture, true)
+    document.removeEventListener('click', onOutside, true)
+    window.removeEventListener('hashchange', stop)
+    paint()
+  }
+
+  function onOutside(event: Event) {
+    if (!event.composedPath().includes(button)) stop()
+  }
+
+  button.addEventListener('click', () => {
+    if (capture) {
+      stop()
+      return
+    }
+    capture = true
+    document.addEventListener('keydown', onCapture, true)
+    document.addEventListener('click', onOutside, true)
+    window.addEventListener('hashchange', stop)
+    paint()
+  })
+
+  /**
+   * Armed on document, not the button: Safari does not focus a button on click,
+   * so a button-scoped listener would swallow nothing there. Capture phase plus
+   * stopPropagation keeps the app's own shortcut handler from also firing.
+   * Any click outside, or a route change, disarms it again.
+   */
+  function onCapture(event: KeyboardEvent) {
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.key === 'Escape') {
+      stop()
+      return
+    }
+    if (event.key === 'Backspace' || event.key === 'Delete') {
+      stop()
+      setSetting('searchShortcut', [...DEFAULT_SHORTCUT])
+      return
+    }
+    const { chord, modifiersOnly } = chordFromEvent(event)
+    if (modifiersOnly) {
+      display.textContent = formatShortcut(
+        [
+          ...(event.metaKey || event.ctrlKey ? ['mod'] : []),
+          ...(event.altKey ? ['alt'] : []),
+          ...(event.shiftKey ? ['shift'] : []),
+        ],
+        apple,
+      ) || '…'
+      return
+    }
+    const tokens = chord ? tokensFromChord(chord) : null
+    if (tokens) {
+      stop()
+      // Writing the setting re-renders the page, so the control is rebuilt
+      // with the new chord rather than patched in place.
+      setSetting('searchShortcut', tokens)
+    } else {
+      hint.textContent = 'Use a modifier plus one key'
+    }
+  }
+
+  /** Prevent the arming click itself from immediately disarming via onOutside. */
+  button.addEventListener('click', (event) => event.stopPropagation())
+
+  paint()
+  return el('div', { class: 'ts-set-shortcut-wrap' }, button, hint)
 }

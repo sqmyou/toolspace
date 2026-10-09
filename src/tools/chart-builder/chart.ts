@@ -8,6 +8,13 @@
 
 export const PALETTE = ['#5b8def', '#f2707a', '#3ddc97', '#e6b450', '#b07cf0', '#2ec5d3', '#ef8f5a', '#8fb339']
 
+/** The colour for one series or pie slice: the override if valid, else the palette. */
+function colorAt(colors: (string | null)[] | undefined, index: number): string {
+  const override = colors?.[index]
+  if (typeof override === 'string' && /^#[0-9a-f]{6}$/i.test(override)) return override
+  return PALETTE[index % PALETTE.length]
+}
+
 export type ChartType = 'line' | 'bar' | 'area' | 'scatter' | 'pie'
 
 export const CHART_TYPES: { value: ChartType; label: string }[] = [
@@ -44,6 +51,8 @@ export interface ChartOptions {
   title: string
   showLegend: boolean
   showGrid: boolean
+  /** Per-series overrides; `null` (or missing) falls back to the palette. */
+  colors?: (string | null)[]
 }
 
 /**
@@ -341,7 +350,7 @@ export function renderChart(dataset: Dataset, options: ChartOptions): string {
 
   const seriesEls: string[] = []
   usable.forEach((s, sIndex) => {
-    const color = PALETTE[sIndex % PALETTE.length]
+    const color = colorAt(options.colors, sIndex)
     if (options.type === 'bar') {
       const groupWidth = band * 0.68
       const barWidth = groupWidth / usable.length
@@ -391,7 +400,7 @@ function renderPie(rows: Row[], options: ChartOptions, geo: Geometry): string {
   if (slices.length === 0) return ''
   const parts = slices
     .map((slice, index) => {
-      const color = PALETTE[index % PALETTE.length]
+      const color = colorAt(options.colors, index)
       const lx = cx + radius * 0.62 * Math.cos(slice.midAngle)
       const ly = cy + radius * 0.62 * Math.sin(slice.midAngle)
       return `<path class="ts-chart-slice" d="${slice.path}" fill="${color}" /><text class="ts-chart-pielabel" x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle">${Math.round(slice.fraction * 100)}%</text>`

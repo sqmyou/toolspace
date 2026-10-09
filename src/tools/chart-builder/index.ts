@@ -7,6 +7,7 @@ import {
   buildDataset,
   CHART_TYPES,
   type ChartType,
+  PALETTE,
   parseGrid,
   renderChart,
 } from './chart'
@@ -49,6 +50,13 @@ const tool: Tool = {
     let categoryIndex = 0
     let hasHeader = true
     let svg = ''
+    // Overrides, keyed by the slot index the renderer uses (series order, or
+    // pie-slice order). A missing key means "use the palette colour".
+    const colorOverrides: (string | null)[] = []
+
+    function paletteFor(index: number): string {
+      return PALETTE[index % PALETTE.length]
+    }
 
     const typeControl = segmented({
       label: 'Chart type',
@@ -116,7 +124,10 @@ const tool: Tool = {
     function render() {
       renderPreview()
       const dataset = currentDataset()
-      svg = renderChart(dataset, { type: chartType, title, showLegend, showGrid })
+      const colorItems = chartType === 'pie'
+        ? dataset.categories.map((label, index) => ({ label, index }))
+        : dataset.series.map((series, index) => ({ label: series.name, index }))
+      svg = renderChart(dataset, { type: chartType, title, showLegend, showGrid, colors: colorOverrides })
       if (svg) {
         canvas.replaceChildren(el('div', { class: 'ts-chart-frame', innerHTML: svg }))
         empty.hidden = true
@@ -124,13 +135,38 @@ const tool: Tool = {
         canvas.replaceChildren(empty)
         empty.hidden = false
       }
+      renderColors(colorItems)
       const legendItems = chartType === 'pie'
         ? dataset.categories.map((label, index) => ({ label, index }))
         : dataset.series.map((series, index) => ({ label: series.name, index }))
       legendBox.replaceChildren(
-        ...legendItems.map((item) => el('span', { class: 'ts-chart-legend__item' }, el('i', { class: `ts-chart-swatch ts-chart-swatch--${item.index % 8}` }), item.label)),
+        ...legendItems.map((item) => el('span', { class: 'ts-chart-legend__item' }, el('i', { class: 'ts-chart-swatch', style: `background:${colorOverrides[item.index] ?? paletteFor(item.index)}` }), item.label)),
       )
       legendBox.hidden = !showLegend || legendItems.length < 2
+    }
+
+    /**
+     * One colour control per series (or pie slice). Changing a swatch redraws
+     * the chart and the legend so the two never disagree.
+     */
+    function renderColors(items: { label: string; index: number }[]): void {
+      colorList.replaceChildren(
+        ...items.map((item) => {
+          const value = colorOverrides[item.index] ?? paletteFor(item.index)
+          const swatch = el('input', {
+            class: 'ts-chart-color',
+            type: 'color',
+            value,
+            'aria-label': `Colour for ${item.label}`,
+          }) as HTMLInputElement
+          swatch.addEventListener('input', () => {
+            colorOverrides[item.index] = swatch.value
+            render()
+          })
+          return el('label', { class: 'ts-chart-colorrow' }, swatch, el('span', {}, item.label))
+        }),
+      )
+      resetColors.hidden = items.length === 0 || colorOverrides.every((color) => color === null || color === undefined)
     }
 
     function downloadSvg() {
@@ -163,6 +199,20 @@ const tool: Tool = {
     const headerToggle = checkbox({ label: 'First row is a header', checked: true, onChange: (checked) => { hasHeader = checked; render() } })
 
     const titleField = textField({ value: '', placeholder: 'Chart title', onInput: (value) => { title = value; render() } })
+
+    const colorList = el('div', { class: 'ts-chart-colors' })
+    const resetColors = el(
+      'button',
+      {
+        type: 'button',
+        class: 'ts-k-button ts-chart-resetcolors',
+        onclick: () => {
+          colorOverrides.length = 0
+          render()
+        },
+      },
+      'Reset colours',
+    ) as HTMLButtonElement
 
     const fileInput = el('input', { type: 'file', accept: '.csv,.tsv,.txt,text/csv', class: 'ts-chart-file' }) as HTMLInputElement
     fileInput.addEventListener('change', async () => {
@@ -199,6 +249,8 @@ const tool: Tool = {
             field(categorySelect, { label: 'Category (x-axis)' }),
             field(valueList, { label: 'Series (y-axis)' }),
           ),
+          field(colorList, { label: 'Series colours' }),
+          el('div', { class: 'ts-chart-colorfoot' }, resetColors),
           actions(
             copyButton(() => svg, { label: 'Copy SVG', size: 'sm' }),
             button('Download SVG', { icon: 'download', onClick: downloadSvg }),

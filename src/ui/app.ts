@@ -5,7 +5,8 @@ import { categoryHue, sigilTile } from '../core/identity'
 import { applyMeta } from '../core/meta'
 import { remember } from '../core/recents'
 import { findTool, searchTools, tools } from '../core/registry'
-import { networkEnabled, onSettingsChange, setting } from '../core/settings'
+import { networkEnabled, onSettingsChange, searchShortcut, setting } from '../core/settings'
+import { formatShortcut, matchesShortcut } from '../core/shortcut'
 import { activeTheme, applyThemeToDocument } from '../core/theme'
 import type { Tool } from '../core/types'
 import { privacyPage } from './privacy'
@@ -716,6 +717,16 @@ export function mountApp(app: HTMLElement): void {
     location.hash = `#/${slug}`
   })
 
+  const searchLabel = el('span', { class: 'ts-search-trigger-label' }, 'Search tools…')
+  const searchKbd = el('kbd', {}, 'Ctrl K')
+
+  function paintShortcut() {
+    // macOS shows ⌘ rather than Ctrl; the chord itself is platform-neutral.
+    const apple = /Mac|iPhone|iPad/.test(navigator.platform ?? '')
+    const text = formatShortcut(searchShortcut(), apple)
+    searchKbd.textContent = text || 'Ctrl K'
+  }
+
   const searchTrigger = el(
     'button',
     {
@@ -725,8 +736,8 @@ export function mountApp(app: HTMLElement): void {
       onclick: () => palette.open(),
     },
     iconEl('search', 15),
-    el('span', { class: 'ts-search-trigger-label' }, 'Search tools…'),
-    el('kbd', {}, 'Ctrl K'),
+    searchLabel,
+    searchKbd,
   )
 
   const brandMark = el('span', { class: 'ts-brand-mark', 'aria-hidden': 'true' })
@@ -811,7 +822,7 @@ export function mountApp(app: HTMLElement): void {
   }
 
   window.addEventListener('keydown', (e: KeyboardEvent) => {
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+    if (matchesShortcut(searchShortcut(), e)) {
       e.preventDefault()
       palette.open()
     }
@@ -819,9 +830,14 @@ export function mountApp(app: HTMLElement): void {
   window.addEventListener('scroll', updateToTop, { passive: true })
   window.addEventListener('hashchange', fromHash)
   // Switching network tools off or on rebuilds the current view, so a hidden
-  // tool cannot linger on the page and the counts stay truthful.
-  onSettingsChange(fromHash)
+  // tool cannot linger on the page and the counts stay truthful. The same hook
+  // repaints the search shortcut label when the binding changes.
+  onSettingsChange(() => {
+    paintShortcut()
+    fromHash()
+  })
 
+  paintShortcut()
   app.append(offlineBanner(), header, main, footer(), toTop)
   fromHash()
 }
