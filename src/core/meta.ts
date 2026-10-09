@@ -22,7 +22,7 @@ export const SITE_DESCRIPTION =
 
 /** A single-line title: `Name — toolspace`, or the brand alone for home. */
 export function pageTitle(name?: string): string {
-  return name ? `${name} — ${BRAND}` : `${BRAND} — small, fast tools that run in your browser`
+  return name ? `${name} — ${BRAND}` : BRAND
 }
 
 /** The absolute URL for a hash route: `/` maps to the bare origin. */

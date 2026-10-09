@@ -57,9 +57,8 @@ describe('pageTitle', () => {
     expect(pageTitle('JWT Decoder')).toBe('JWT Decoder — toolspace')
   })
 
-  it('falls back to the site title', () => {
-    expect(pageTitle()).toContain('toolspace')
-    expect(pageTitle()).toContain('run in your browser')
+  it('falls back to the bare brand for home', () => {
+    expect(pageTitle()).toBe('toolspace')
   })
 })
 
