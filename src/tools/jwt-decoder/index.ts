@@ -1,3 +1,16 @@
+import {
+  badge,
+  field,
+  findings,
+  findingRow,
+  note,
+  outputBlock,
+  panel,
+  textarea,
+  textField,
+  toolLayout,
+  type Tone,
+} from '../../core/components'
 import { el } from '../../core/dom'
 import type { Tool } from '../../core/types'
 import { analyzeClaims, decodeJwt, JwtError, verifyJwt, type DecodedJwt } from './jwt'
@@ -7,6 +20,8 @@ const SAMPLE =
   'eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkFkYSBMb3ZlbGFjZSIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoxODkzNDU2MDAwfQ.' +
   '2uUbpZ2x-cfydShrzm9fw1-gAyk5kZ7ImgMEK2yX1G8'
 
+const LEVEL_TONES: Record<string, Tone> = { ok: 'ok', info: 'neutral', warning: 'warn', error: 'danger' }
+
 const tool: Tool = {
   slug: 'jwt-decoder',
   name: 'JWT Decoder & Verifier',
@@ -14,36 +29,14 @@ const tool: Tool = {
   category: 'Security',
   keywords: ['jwt', 'json web token', 'decode', 'verify', 'signature', 'bearer', 'token', 'hs256', 'rs256'],
   render(root) {
-    const input = el('textarea', {
-      class: 'ts-output ts-textarea',
-      rows: 4,
-      spellcheck: false,
-      placeholder: 'Paste a JWT (header.payload.signature)…',
-      value: SAMPLE,
-    }) as HTMLTextAreaElement
-
-    const secret = el('input', {
-      class: 'ts-input ts-mono',
-      type: 'password',
-      spellcheck: false,
-      placeholder: 'Secret (HS) or PEM/JWK public key…',
-      'aria-label': 'Verification key',
-    }) as HTMLInputElement
-
-    const error = el('p', { class: 'ts-error', hidden: true })
-    const claims = el('div', { class: 'ts-claims' })
-    const segments = el('div', { class: 'ts-json-grid' })
-    const verifyOut = el('div', { class: 'ts-verify-out' })
-
-    function jsonBlock(label: string, json: string) {
-      return el(
-        'div',
-        { class: 'ts-json-block' },
-        el('div', { class: 'ts-json-head' }, el('span', {}, label), el('span', { class: 'ts-muted' }, 'JSON')),
-        el('pre', { class: 'ts-pre' }, json),
-      )
-    }
-
+    const input = textarea({ rows: 4, value: SAMPLE, placeholder: 'Paste a JWT (header.payload.signature)…', onInput: () => decode() })
+    const secret = textField({ type: 'password', placeholder: 'Secret (HS) or PEM/JWK public key…', onInput: () => decode() })
+    const error = note('', 'danger')
+    error.hidden = true
+    const claims = findings()
+    const header = outputBlock('', { label: 'Header', copy: () => header.body.textContent ?? '' })
+    const payload = outputBlock('', { label: 'Payload', copy: () => payload.body.textContent ?? '' })
+    const verifyOut = el('div', { class: 'ts-k-actions' })
     let token = 0
 
     async function decode() {
@@ -51,19 +44,22 @@ const tool: Tool = {
       try {
         const decoded: DecodedJwt = decodeJwt(input.value)
         error.hidden = true
-        segments.replaceChildren(jsonBlock('Header', decoded.headerJson), jsonBlock('Payload', decoded.payloadJson))
+        header.body.replaceChildren(decoded.headerJson)
+        header.setMeta('JSON')
+        payload.body.replaceChildren(decoded.payloadJson)
+        payload.setMeta('JSON')
 
-        const notes = analyzeClaims(decoded.payload)
         claims.replaceChildren(
-          ...notes.map((note) =>
-            el('div', { class: `ts-claim ts-claim-${note.level}` }, el('span', { class: 'ts-claim-dot' }), note.message),
+          ...analyzeClaims(decoded.payload).map((item) =>
+            findingRow({ status: item.level, tone: LEVEL_TONES[item.level] ?? 'neutral', name: 'claim', message: item.message }),
           ),
         )
 
         await runVerify(decoded, current)
       } catch (err) {
         if (current !== token) return
-        segments.replaceChildren()
+        header.body.replaceChildren('')
+        payload.body.replaceChildren('')
         claims.replaceChildren()
         verifyOut.replaceChildren()
         error.textContent = err instanceof JwtError ? err.message : 'Could not decode this token.'
@@ -74,42 +70,34 @@ const tool: Tool = {
     async function runVerify(decoded: DecodedJwt, current: number) {
       const algorithm = String(decoded.header.alg ?? '')
       if (!secret.value.trim()) {
-        verifyOut.replaceChildren(el('p', { class: 'ts-muted' }, `Signature not checked. Enter a key to verify this ${algorithm || 'token'}.`))
+        verifyOut.replaceChildren(badge(`Signature not checked — enter a key to verify this ${algorithm || 'token'}`, 'neutral'))
         return
       }
       try {
         const result = await verifyJwt(input.value, { key: secret.value })
         if (current !== token) return
         verifyOut.replaceChildren(
-          el(
-            'div',
-            { class: `ts-claim ts-claim-${result.valid ? 'ok' : 'error'}` },
-            el('span', { class: 'ts-claim-dot' }),
-            result.valid ? `Signature valid (${result.algorithm}).` : `Signature invalid: ${result.reason ?? 'no match.'}`,
-          ),
+          badge(result.valid ? `Signature valid (${result.algorithm})` : `Signature invalid: ${result.reason ?? 'no match.'}`, result.valid ? 'ok' : 'danger'),
         )
       } catch (err) {
         if (current !== token) return
-        verifyOut.replaceChildren(
-          el('div', { class: 'ts-claim ts-claim-warning' }, el('span', { class: 'ts-claim-dot' }), err instanceof Error ? err.message : 'Could not verify.'),
-        )
+        verifyOut.replaceChildren(badge(err instanceof Error ? err.message : 'Could not verify.', 'warn'))
       }
     }
 
-    input.addEventListener('input', decode)
-    secret.addEventListener('input', decode)
-
     root.append(
-      el(
-        'div',
-        { class: 'ts-tool ts-tool-wide' },
-        el('div', { class: 'ts-field' }, el('label', {}, 'Token'), input),
-        el('div', { class: 'ts-field' }, el('label', {}, 'Verification key'), secret),
-        error,
-        claims,
-        segments,
-        verifyOut,
-        el('p', { class: 'ts-note' }, 'Decoding and verification happen in your browser. Your token and key are never uploaded.'),
+      toolLayout(
+        { wide: true },
+        panel(
+          { title: 'Token', icon: 'key2' },
+          field(input, { label: 'Token' }),
+          field(secret, { label: 'Verification key' }),
+          error,
+          verifyOut,
+        ),
+        panel({ title: 'Claims', icon: 'shield' }, claims),
+        el('div', { class: 'ts-k-split' }, header, payload),
+        note('Decoding and verification happen in your browser. Your token and key are never uploaded.'),
       ),
     )
 

@@ -252,6 +252,37 @@ export function slider(options: SliderOptions): HTMLElement {
    Findings
    ------------------------------------------------------------------------- */
 
+export interface CardOptions {
+  title?: string
+  /** Small pill on the right of the head, e.g. "active" or "expired". */
+  meta?: string
+  metaTone?: Tone
+}
+
+export type Card = HTMLElement & { body: HTMLElement }
+
+/**
+ * A repeated record card — one cookie, one file, one matched line. Unlike a
+ * panel these are meant to be stacked, so they are quieter and denser.
+ */
+export function card(options: CardOptions = {}, ...children: (Node | string)[]): Card {
+  const body = el('div', { class: 'ts-k-card__body' })
+  body.append(...children)
+  const root = el('div', { class: 'ts-k-card' })
+  if (options.title) {
+    const head = el('div', { class: 'ts-k-card__head' }, el('code', { class: 'ts-k-card__title' }, options.title))
+    if (options.meta) head.append(badge(options.meta, options.metaTone))
+    root.append(head)
+  }
+  root.append(body)
+  return Object.assign(root, { body })
+}
+
+/** A vertical stack of cards. */
+export function cards(...children: (Node | string)[]): HTMLElement {
+  return el('div', { class: 'ts-k-cards' }, ...children)
+}
+
 export interface FindingRowOptions {
   /** Short status word shown in the left gutter, e.g. "Good" or "Missing". */
   status: string
