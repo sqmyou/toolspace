@@ -1,0 +1,32 @@
+/* Number Base Converter. The digits dominate this tool, so the value field is
+   monospaced and slightly larger, the selectors sit on a comfortable target
+   size, and long digit strings wrap instead of forcing a sideways scroll. */
+
+.ts-nb-live {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ts-nb-select {
+  min-width: 8.5rem;
+}
+
+.ts-nb-bases .ts-k-kv__value {
+  word-break: break-all;
+  white-space: normal;
+  line-height: 1.5;
+}
+
+/* The value can be a huge paste; keep it single-line but scroll it rather
+   than growing the panel, and never let it push the layout wider than 360px. */
+.ts-tool-body .ts-nb-select {
+  max-width: 100%;
+}
+
+@media (max-width: 420px) {
+  .ts-nb-select {
+    min-width: 0;
+    width: 100%;
+  }
+}
