@@ -20,6 +20,36 @@ Apr,61,38
 May,58,36
 Jun,72,41`
 
+/**
+ * Series colours are remembered per browser. They are keyed by slot index
+ * (series order, or pie-slice order), which is what the renderer uses, so a
+ * saved palette lines up as long as the columns keep their order. A stored
+ * value that is not a colour string is dropped rather than trusted.
+ */
+const COLORS_KEY = 'toolspace:chart-builder-colors'
+
+function loadColors(): (string | null)[] {
+  try {
+    const raw = localStorage.getItem(COLORS_KEY)
+    if (!raw) return []
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.map((value) => (typeof value === 'string' ? value : null))
+  } catch {
+    return []
+  }
+}
+
+function saveColors(colors: (string | null)[]): void {
+  try {
+    const trimmed = colors.map((color) => (typeof color === 'string' ? color : null))
+    while (trimmed.length && trimmed[trimmed.length - 1] == null) trimmed.pop()
+    localStorage.setItem(COLORS_KEY, JSON.stringify(trimmed))
+  } catch {
+    /* private mode: colours still apply for this session */
+  }
+}
+
 const tool: Tool = {
   slug: 'chart-builder',
   name: 'Chart Builder',
@@ -52,7 +82,7 @@ const tool: Tool = {
     let svg = ''
     // Overrides, keyed by the slot index the renderer uses (series order, or
     // pie-slice order). A missing key means "use the palette colour".
-    const colorOverrides: (string | null)[] = []
+    const colorOverrides: (string | null)[] = loadColors()
 
     function paletteFor(index: number): string {
       return PALETTE[index % PALETTE.length]
@@ -161,6 +191,7 @@ const tool: Tool = {
           }) as HTMLInputElement
           swatch.addEventListener('input', () => {
             colorOverrides[item.index] = swatch.value
+            saveColors(colorOverrides)
             render()
           })
           return el('label', { class: 'ts-chart-colorrow' }, swatch, el('span', {}, item.label))
@@ -208,6 +239,7 @@ const tool: Tool = {
         class: 'ts-k-button ts-chart-resetcolors',
         onclick: () => {
           colorOverrides.length = 0
+          saveColors(colorOverrides)
           render()
         },
       },
@@ -261,7 +293,7 @@ const tool: Tool = {
         ),
         section(
           'About this tool',
-          note('Everything is drawn locally with SVG — no chart library, no network, nothing leaves the tab. Handles CSV, TSV, semicolon and pipe tables, Markdown tables and JSON arrays of objects (converted to a grid first).'),
+          note('Everything is drawn locally with SVG — no chart library, no network, nothing leaves the tab. Handles CSV, TSV, semicolon and pipe tables, Markdown tables and JSON arrays of objects (converted to a grid first). Series colours are remembered in this browser.'),
         ),
       ),
     )
