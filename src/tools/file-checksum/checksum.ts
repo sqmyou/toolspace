@@ -33,17 +33,23 @@ function table(): Uint32Array {
   return result
 }
 
-export function crc32(bytes: Uint8Array): string {
+/** The raw 32-bit checksum as an unsigned integer. */
+export function crc32Int(bytes: Uint8Array): number {
   const lookup = table()
   let crc = 0xffffffff
   for (const byte of bytes) crc = lookup[(crc ^ byte) & 0xff] ^ (crc >>> 8)
-  return ((crc ^ 0xffffffff) >>> 0).toString(16).padStart(8, '0')
+  return (crc ^ 0xffffffff) >>> 0
+}
+
+export function crc32(bytes: Uint8Array): string {
+  return crc32Int(bytes).toString(16).padStart(8, '0')
 }
 
 export function crc32Text(text: string): string {
   return crc32(encoder.encode(text))
 }
 
+/** Every digest the tool computes, keyed the way the UI and verify use them. */
 export interface ChecksumResult {
   size: number
   crc32: string
@@ -65,4 +71,110 @@ export async function checksumBytes(bytes: Uint8Array): Promise<ChecksumResult> 
 
 export function checksumText(text: string): Promise<ChecksumResult> {
   return checksumBytes(encoder.encode(text))
+}
+
+/** Result field holding each algorithm's digest. */
+const FIELD: Record<string, keyof ChecksumResult> = {
+  'CRC-32': 'crc32',
+  'SHA-1': 'sha1',
+  'SHA-256': 'sha256',
+  'SHA-384': 'sha384',
+  'SHA-512': 'sha512',
+}
+
+/**
+ * Which algorithm a hex digest belongs to, keyed by how many hex characters it
+ * has. CRC-32 and SHA-1 through SHA-512 are the only lengths this tool can
+ * check against, and no two of them collide.
+ */
+export const DIGEST_LENGTHS: Record<number, string> = {
+  8: 'CRC-32',
+  40: 'SHA-1',
+  64: 'SHA-256',
+  96: 'SHA-384',
+  128: 'SHA-512',
+}
+
+/** The algorithms this tool recognises, in digest-length order. */
+export const DIGEST_ALGORITHMS = Object.values(DIGEST_LENGTHS)
+
+/** Read a digest out of a result by its algorithm name. */
+export function digestFor(result: ChecksumResult, algorithm: string): string {
+  const field = FIELD[algorithm]
+  return field ? String(result[field]) : ''
+}
+
+/**
+ * Turn a pasted hash into bare lowercase hex, or null when it is not hex.
+ * Tolerates the shapes people actually paste: spaces, colons and dashes as
+ * group separators, a `0x` prefix, and upper case. `sha256sum` output is two
+ * hex tokens, so callers should split the line first.
+ */
+export function normalizeHex(input: string): string | null {
+  const stripped = input
+    .trim()
+    .replace(/^0x/i, '')
+    .replace(/[\s:_-]/g, '')
+    .toLowerCase()
+  if (!stripped) return null
+  return /^[0-9a-f]+$/.test(stripped) ? stripped : null
+}
+
+/** Identify a hex digest's algorithm from its length, or null if unknown. */
+export function identifyDigest(hex: string): { algorithm: string; hex: string } | null {
+  const normalized = normalizeHex(hex)
+  if (!normalized) return null
+  const algorithm = DIGEST_LENGTHS[normalized.length]
+  return algorithm ? { algorithm, hex: normalized } : null
+}
+
+export type VerifyStatus = 'match' | 'mismatch' | 'unknown'
+
+export interface VerifyResult {
+  status: VerifyStatus
+  /** The recognised algorithm, present only when the pasted value identifies one. */
+  algorithm?: string
+  /** The pasted value reduced to bare lowercase hex. */
+  hex: string
+}
+
+/**
+ * Compare a pasted hash against a computed result. A value that is not hex, or
+ * whose length matches no known algorithm, yields `unknown` rather than a bare
+ * "no match", so the UI can say what is actually wrong.
+ */
+export function verify(expected: string, result: ChecksumResult): VerifyResult {
+  const normalized = normalizeHex(expected)
+  if (!normalized) return { status: 'unknown', hex: '' }
+  const identified = identifyDigest(normalized)
+  if (!identified) return { status: 'unknown', hex: normalized }
+  const actual = digestFor(result, identified.algorithm).toLowerCase()
+  return {
+    status: actual === identified.hex ? 'match' : 'mismatch',
+    algorithm: identified.algorithm,
+    hex: identified.hex,
+  }
+}
+
+/**
+ * Pull a digest out of pasted checksum-file output. Handles the two common
+ * layouts `sha256sum`/`shasum` write — `"<hex>  <filename>"` and BSD's
+ * `"SHA256 (<filename>) = <hex>"` — plus a bare hash. Returns the algorithm
+ * and hex when the line names a digest this tool knows, else null.
+ */
+export function parseExpectedLine(line: string): { algorithm: string; hex: string } | null {
+  const text = line.trim()
+  if (!text) return null
+
+  const bsd = text.match(/^(?:SHA1|SHA256|SHA384|SHA512|CRC32)\s*\(.*?\)\s*=\s*([0-9a-fA-F\s:-]+)$/i)
+  if (bsd) return identifyDigest(bsd[1])
+
+  // A hex run is the digest; ignore a trailing filename token.
+  const tokens = text.split(/\s+/)
+  for (const token of tokens) {
+    const identified = identifyDigest(token)
+    if (identified) return identified
+  }
+  // Fall back to the whole line, which covers colon/dash grouped digests.
+  return identifyDigest(text.replace(/\s.*$/, ''))
 }

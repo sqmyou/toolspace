@@ -1,0 +1,21 @@
+/* Live results block: the empty-state note and the digest list stack. */
+.ts-fc-live {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* A 128-character SHA-512 digest wraps inside its column rather than widening
+   the panel. `overflow-wrap: anywhere` is inherited from the kit; the smaller
+   mono size keeps five long digests from dominating the page. */
+.ts-fc-digests .ts-k-kv__value {
+  min-width: 0;
+  font-size: var(--text-sm);
+  letter-spacing: 0.01em;
+}
+
+@media (max-width: 560px) {
+  .ts-fc-digests .ts-k-kv__value {
+    font-size: var(--text-xs);
+  }
+}
